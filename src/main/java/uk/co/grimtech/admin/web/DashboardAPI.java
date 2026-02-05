@@ -60,6 +60,8 @@ public class DashboardAPI {
             return broadcastMessage(body);
         } else if (path.equals("/api/plugins")) {
             return getPlugins();
+        } else if (path.equals("/api/chat")) {
+            return getChatLog();
         }
         
         return "{\"error\": \"Invalid endpoint\"}";
@@ -264,6 +266,10 @@ public class DashboardAPI {
             plugins.add(pObj);
         }
         return GSON.toJson(plugins);
+    }
+
+    private static String getChatLog() {
+        return GSON.toJson(ChatLog.getMessages());
     }
 
     private static String kickPlayer(String body) {

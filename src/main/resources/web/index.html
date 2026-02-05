@@ -375,6 +375,79 @@
             border-left: 3px solid var(--hytale-gold-dark);
         }
 
+        /* Console Styles */
+        .console-container {
+            height: 300px;
+            background: #000000;
+            border: 1px solid var(--hytale-border);
+            border-radius: 4px;
+            padding: 1rem;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.8125rem;
+            color: #d1dde4;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .console-entry {
+            line-height: 1.4;
+        }
+
+        .console-time {
+            color: var(--hytale-gold);
+            margin-right: 0.5rem;
+        }
+
+        .console-sender {
+            color: var(--hytale-gold-light);
+            font-weight: 700;
+            margin-right: 0.5rem;
+        }
+
+        /* Custom Scrollbar Styling */
+        /* For Webkit browsers (Chrome, Safari, Edge) */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--hytale-gold-dark);
+            border-radius: 4px;
+            border: 2px solid rgba(0, 0, 0, 0.3);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--hytale-gold);
+        }
+
+        /* For Firefox */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: var(--hytale-gold-dark) rgba(0, 0, 0, 0.3);
+        }
+
+        /* Console-specific scrollbar (darker for terminal feel) */
+        .console-container::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+
+        .console-container::-webkit-scrollbar-thumb {
+            background: #2a2a2a;
+            border-color: #0a0a0a;
+        }
+
+        .console-container::-webkit-scrollbar-thumb:hover {
+            background: #3a3a3a;
+        }
+
         .broadcast-group {
             display: flex;
             gap: 1rem;
@@ -485,6 +558,19 @@
                 <div class="hytale-panel" style="margin-top: 2rem">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
+                            <h2>Server Console</h2>
+                        </div>
+                        <div style="padding: 1rem">
+                            <div id="console-log" class="console-container">
+                                <div class="console-entry">Initializing console...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hytale-panel" style="margin-top: 2rem">
+                    <div class="hytale-panel-inner">
+                        <div class="card-header">
                             <h2>Custom Mods</h2>
                         </div>
                         <div id="plugin-list" class="plugin-list" style="padding: 1rem"></div>
@@ -534,8 +620,10 @@
 
         function startSync() {
             setInterval(fetchStats, 2000);
+            setInterval(fetchChat, 2000);
             fetchStats();
             fetchMods();
+            fetchChat();
         }
 
         async function fetchStats(isInit = false) {
@@ -621,6 +709,41 @@
                 });
             } catch (e) {
                 console.error('Failed to fetch mods', e);
+            }
+        }
+
+        async function fetchChat() {
+            if (!dashboardToken) return;
+            try {
+                const res = await fetch('/api/chat', {
+                    headers: { 'X-Admin-Token': dashboardToken }
+                });
+                const messages = await res.json();
+                renderChat(messages);
+            } catch (e) {
+                console.error('Failed to fetch chat', e);
+            }
+        }
+
+        function renderChat(messages) {
+            const container = document.getElementById('console-log');
+            const atBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
+            
+            container.innerHTML = '';
+            messages.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = 'console-entry';
+                const timeStr = new Date(msg.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                div.innerHTML = `
+                    <span class="console-time">[${timeStr}]</span>
+                    <span class="console-sender">${msg.sender}:</span>
+                    <span class="console-text">${msg.message}</span>
+                `;
+                container.appendChild(div);
+            });
+
+            if (atBottom) {
+                container.scrollTop = container.scrollHeight;
             }
         }
 

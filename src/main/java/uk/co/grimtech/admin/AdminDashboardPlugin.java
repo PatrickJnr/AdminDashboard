@@ -5,6 +5,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.event.events.player.PlayerChatEvent;
+import uk.co.grimtech.admin.web.ChatLog;
 import uk.co.grimtech.admin.web.HytaleHttpServer;
 import javax.annotation.Nonnull;
 import java.io.File;
@@ -44,6 +46,16 @@ public class AdminDashboardPlugin extends JavaPlugin {
             httpServer = new HytaleHttpServer(port);
             httpServer.start();
             LOGGER.info("[AdminDashboard] HTTP Server started on port " + port);
+            
+            // Register Chat Listener using registerAsyncGlobal for IAsyncEvent
+            getEventRegistry().registerAsyncGlobal(PlayerChatEvent.class, future -> 
+                future.thenApply(event -> {
+                    if (!event.isCancelled()) {
+                        ChatLog.addMessage(event.getSender().getUsername(), event.getContent());
+                    }
+                    return event;
+                })
+            );
         } catch (Exception e) {
             LOGGER.severe("[AdminDashboard] Failed to start HTTP Server: " + e.getMessage());
             e.printStackTrace();
