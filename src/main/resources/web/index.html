@@ -6,34 +6,41 @@
     <title>Hytale Admin Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
+            --bg-color: #0b1120;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
             --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.3);
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
-            --success: #22c55e;
-            --danger: #ef4444;
+            --success: #10b981;
+            --danger: #f43f5e;
+            --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Outfit', sans-serif;
         }
 
         body {
             background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(129, 140, 248, 0.1) 0px, transparent 50%);
             color: var(--text-primary);
             min-height: 100vh;
-            padding: 2rem;
+            padding: 2.5rem;
+            line-height: 1.5;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1240px;
             margin: 0 auto;
         }
 
@@ -41,54 +48,107 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid #334155;
+            margin-bottom: 3rem;
+            padding: 1.5rem 2rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
         }
 
         h1 {
-            font-size: 1.5rem;
+            font-size: 1.75rem;
             font-weight: 700;
-            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
+        .refresh-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            background: rgba(56, 189, 248, 0.1);
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            color: var(--accent);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.5rem;
-            margin-bottom: 2rem;
+            margin-bottom: 3rem;
         }
 
         .stat-card {
-            background: var(--card-bg);
-            padding: 1.5rem;
-            border-radius: 12px;
-            border: 1px solid #334155;
-            transition: transform 0.2s ease;
+            background: var(--glass-bg);
+            backdrop-filter: blur(8px);
+            padding: 1.75rem;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
         }
 
         .stat-card:hover {
-            transform: translateY(-4px);
+            transform: translateY(-8px);
+            border-color: rgba(56, 189, 248, 0.3);
+        }
+
+        .stat-card:hover::after {
+            opacity: 1;
         }
 
         .stat-label {
             color: var(--text-secondary);
             font-size: 0.875rem;
+            font-weight: 500;
             margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .stat-value {
-            font-size: 1.5rem;
-            font-weight: 600;
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
         }
 
-        .player-list {
-            background: var(--card-bg);
-            border-radius: 12px;
-            border: 1px solid #334155;
+        .main-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--card-shadow);
             overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         table {
@@ -98,56 +158,153 @@
 
         th {
             text-align: left;
-            padding: 1rem;
-            background: #334155;
+            padding: 1.25rem 2rem;
+            background: rgba(30, 41, 59, 0.4);
             font-size: 0.75rem;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.1em;
             color: var(--text-secondary);
+            font-weight: 600;
         }
 
         td {
-            padding: 1rem;
-            border-bottom: 1px solid #334155;
+            padding: 1.25rem 2rem;
+            border-bottom: 1px solid var(--glass-border);
+            vertical-align: middle;
         }
 
-        tr:last-child td {
-            border-bottom: none;
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: #334155;
+            object-fit: cover;
+            border: 2px solid var(--glass-border);
+            transition: transform 0.2s;
+        }
+
+        .avatar:hover {
+            transform: scale(1.1);
         }
 
         .badge {
-            padding: 0.25rem 0.5rem;
-            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.375rem 0.75rem;
+            border-radius: 10px;
             font-size: 0.75rem;
             font-weight: 600;
         }
 
-        .badge-success { background: rgba(34, 197, 94, 0.1); color: var(--success); }
-        .badge-info { background: rgba(56, 189, 248, 0.1); color: var(--accent); }
+        .badge-success { 
+            background: rgba(16, 185, 129, 0.15); 
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background: currentColor;
+            border-radius: 50%;
+            animation: pulse-kf 2s infinite;
+        }
+
+        @keyframes pulse-kf {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .health-bar-container {
+            width: 120px;
+            height: 8px;
+            background: #334155;
+            border-radius: 9999px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .health-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #f43f5e, #fb7185);
+            border-radius: 9999px;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
         .btn {
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            border: none;
+            padding: 0.625rem 1.25rem;
+            border-radius: 12px;
+            border: 1px solid transparent;
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.875rem;
-            transition: all 0.2s;
+            font-size: 0.8125rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            border-color: var(--glass-border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.25);
         }
 
         .btn-danger {
-            background: rgba(239, 68, 68, 0.1);
+            background: rgba(244, 63, 94, 0.1);
             color: var(--danger);
+            border-color: rgba(244, 63, 94, 0.2);
         }
 
         .btn-danger:hover {
             background: var(--danger);
             color: white;
+            box-shadow: 0 4px 12px rgba(244, 63, 94, 0.3);
         }
 
-        #refresh-status {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
+        #server-time {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--accent);
+            background: rgba(56, 189, 248, 0.05);
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            border: 1px solid rgba(56, 189, 248, 0.1);
+        }
+
+        .search-input {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 0.625rem 1rem;
+            color: white;
+            font-size: 0.875rem;
+            width: 250px;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-glow);
         }
     </style>
 </head>
@@ -156,89 +313,131 @@
         <header>
             <div>
                 <h1>Admin Dashboard</h1>
-                <p id="refresh-status">Auto-refreshing every 5s</p>
+                <div class="refresh-pill">
+                    <span style="opacity: 0.8">●</span>
+                    Live Sync Active
+                </div>
             </div>
             <div id="server-time">00:00:00</div>
         </header>
 
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-label">Online Players</div>
+                <div class="stat-label">Active Players</div>
                 <div class="stat-value" id="count-online">0</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Server Uptime</div>
-                <div class="stat-value" id="uptime">0h 0m</div>
+            <div class="stat-card" style="border-bottom: 1px solid rgba(16, 185, 129, 0.3)">
+                <div class="stat-label">TPS</div>
+                <div class="stat-value" id="tps" style="color: var(--success)">30.0</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">TPS</div>
-                <div class="stat-value" id="tps">20.0</div>
+                <div class="stat-label">Uptime</div>
+                <div class="stat-value" id="uptime">0h 15m</div>
             </div>
         </div>
 
-        <div class="player-list">
+        <div class="main-card">
+            <div class="card-header">
+                <h2 style="font-size: 1.125rem">Online Players</h2>
+                <input type="text" class="search-input" placeholder="Search players..." id="search">
+            </div>
             <table>
                 <thead>
                     <tr>
-                        <th>Player</th>
+                        <th>Identity</th>
                         <th>Status</th>
-                        <th>Location</th>
-                        <th>Inventory</th>
-                        <th>Actions</th>
+                        <th>Vitals</th>
+                        <th>Position</th>
+                        <th>Commands</th>
                     </tr>
                 </thead>
                 <tbody id="player-table-body">
-                    <!-- Players will be injected here -->
+                    <!-- Dynamic Rows -->
                 </tbody>
             </table>
         </div>
     </div>
 
     <script>
+        let allPlayers = [];
+
         async function fetchStats() {
             try {
                 const response = await fetch('/api/players');
-                const players = await response.json();
-                renderPlayers(players);
-                document.getElementById('count-online').textContent = players.length;
+                allPlayers = await response.json();
+                renderPlayers();
+                document.getElementById('count-online').textContent = allPlayers.length;
             } catch (e) {
                 console.error('Failed to fetch stats', e);
             }
         }
 
-        function renderPlayers(players) {
+        function renderPlayers() {
             const tbody = document.getElementById('player-table-body');
+            const searchTerm = document.getElementById('search').value.toLowerCase();
             tbody.innerHTML = '';
             
-            players.forEach(p => {
+            const filtered = allPlayers.filter(p => p.name.toLowerCase().includes(searchTerm));
+
+            filtered.forEach(p => {
                 const tr = document.createElement('tr');
+                const healthPct = (p.health / p.maxHealth) * 100 || 0;
+                
                 tr.innerHTML = `
                     <td>
-                        <div style="font-weight: 600">${p.name}</div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary)">${p.uuid.substring(0, 8)}...</div>
+                        <div class="player-info">
+                            <img src="${p.avatarUrl || ''}" class="avatar" onerror="this.src='/api/avatar/patrickjr'">
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.9375rem">${p.name}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); font-family: monospace">${p.uuid.substring(0, 8)}...</div>
+                            </div>
+                        </div>
                     </td>
-                    <td><span class="badge badge-success">Online</span></td>
-                    <td>${p.x}, ${p.y}, ${p.z}</td>
-                    <td><button class="btn" style="background: #334155; color: white" onclick="viewInv('${p.uuid}')">View</button></td>
                     <td>
-                        <button class="btn btn-danger" onclick="kickPlayer('${p.uuid}')">Kick</button>
+                        <span class="badge badge-success">
+                            <span class="pulse"></span>
+                            Online
+                        </span>
+                    </td>
+                    <td>
+                        <div style="font-size: 0.8125rem; font-weight: 600; margin-bottom: 2px">${Math.round(p.health)} / ${Math.round(p.maxHealth)} HP</div>
+                        <div class="health-bar-container">
+                            <div class="health-bar" style="width: ${healthPct}%"></div>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-size: 0.8125rem; font-family: 'Monaco', monospace">
+                            <span style="color: var(--accent)">X:</span> ${Math.round(p.x)} 
+                            <span style="color: var(--accent)">Y:</span> ${Math.round(p.y)} 
+                            <span style="color: var(--accent)">Z:</span> ${Math.round(p.z)}
+                        </div>
+                        <div style="font-size: 0.6875rem; color: var(--text-secondary); margin-top: 2px">${p.gameMode}</div>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem">
+                            <button class="btn btn-secondary" onclick="viewInv('${p.uuid}')">Inventory</button>
+                            <button class="btn btn-danger" onclick="kickPlayer('${p.uuid}')">Kick</button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
+        document.getElementById('search').addEventListener('input', renderPlayers);
+
         function viewInv(uuid) {
             alert('Opening inventory viewer for ' + uuid);
-            // Future: Modal with inventory grid
         }
 
         function kickPlayer(uuid) {
-            if (confirm('Kick this player?')) {
+            const p = allPlayers.find(x => x.uuid === uuid);
+            if (confirm(`Are you sure you want to kick ${p ? p.name : 'this player'}?`)) {
                 fetch('/api/kick', {
                     method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ uuid: uuid, reason: 'Kicked by Admin' })
-                });
+                }).then(() => fetchStats());
             }
         }
 

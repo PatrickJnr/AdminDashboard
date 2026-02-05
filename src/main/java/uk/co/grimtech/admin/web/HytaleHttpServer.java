@@ -6,6 +6,7 @@ import com.sun.net.httpserver.HttpServer;
 import uk.co.grimtech.admin.web.DashboardAPI;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -63,7 +64,7 @@ public class HytaleHttpServer {
         }
 
         private byte[] loadFromResources(String path) {
-            try (var is = getClass().getResourceAsStream(path)) {
+            try (InputStream is = getClass().getResourceAsStream(path)) {
                 if (is == null) return null;
                 return is.readAllBytes();
             } catch (IOException e) {
@@ -77,25 +78,56 @@ public class HytaleHttpServer {
         public void handle(HttpExchange t) throws IOException {
             String path = t.getRequestURI().getPath();
             String method = t.getRequestMethod();
-            String body = "";
             
+            // Set CORS headers early
+            t.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            t.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+            t.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type");
+
+            // Handle preflight requests
+            if ("OPTIONS".equalsIgnoreCase(method)) {
+                t.sendResponseHeaders(204, -1);
+                t.close();
+                return;
+            }
+
+            String body = "";
             if ("POST".equalsIgnoreCase(method)) {
                 try (Scanner scanner = new Scanner(t.getRequestBody(), StandardCharsets.UTF_8)) {
-                    body = scanner.useDelimiter("\\A").next();
+                    if (scanner.hasNext()) {
+                        body = scanner.useDelimiter("\\A").next();
+                    }
                 } catch (Exception e) {
                     body = "";
                 }
             }
 
-            String response = DashboardAPI.handleRequest(path, method, body);
+            String response;
+            int statusCode = 200;
+            try {
+                response = DashboardAPI.handleRequest(path, method, body);
+            } catch (Exception e) {
+                response = "{\"error\": \"Internal Server Error: " + e.getMessage() + "\"}";
+                statusCode = 500;
+                e.printStackTrace();
+            }
             
-            t.getResponseHeaders().set("Content-Type", "application/json");
-            t.getResponseHeaders().set("Access-Control-Allow-Origin", "*"); // For development
-            byte[] responseBytes = response.getBytes(StandardCharsets.UTF_8);
-            t.sendResponseHeaders(200, responseBytes.length);
-            OutputStream os = t.getResponseBody();
-            os.write(responseBytes);
-            os.close();
+            String contentType = "application/json";
+            byte[] responseBytes;
+            
+            if (response != null && response.startsWith("AVATAR_DATA:")) {
+                responseBytes = java.util.Base64.getDecoder().decode(response.substring(12));
+                contentType = "image/png";
+            } else {
+                responseBytes = response != null ? response.getBytes(StandardCharsets.UTF_8) : new byte[0];
+            }
+
+            t.getResponseHeaders().set("Content-Type", contentType);
+            t.sendResponseHeaders(statusCode, responseBytes.length);
+            try (OutputStream os = t.getResponseBody()) {
+                os.write(responseBytes);
+            }
+            t.close();
         }
     }
 }

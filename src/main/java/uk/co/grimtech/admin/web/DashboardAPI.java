@@ -14,17 +14,38 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
+import java.util.logging.Level;
 
 public class DashboardAPI {
     private static final Gson GSON = new Gson();
+    private static final Logger LOGGER = Logger.getLogger("AdminDashboardAPI");
 
     public static String handleRequest(String path, String method, String body) {
+        LOGGER.info("[API] " + method + " " + path);
         if (path.equals("/api/players")) {
             return getPlayers();
+        } else if (path.startsWith("/api/avatar/")) {
+            String identifier = path.substring("/api/avatar/".length());
+            byte[] avatar = AvatarCache.getAvatar(identifier);
+            if (avatar != null) {
+                // Return base64 or similar if we want to keep handleRequest returning String,
+                // or modify HytaleHttpServer to handle byte[] responses.
+                // For now, let's return a special marker or base64.
+                return "AVATAR_DATA:" + java.util.Base64.getEncoder().encodeToString(avatar);
+            }
+            return "{\"error\": \"Avatar not found\"}";
         } else if (path.startsWith("/api/player/") && path.endsWith("/inv")) {
             String uuidStr = path.substring(12, path.length() - 4);
             return getPlayerInventory(uuidStr);
@@ -39,41 +60,72 @@ public class DashboardAPI {
 
     private static String getPlayers() {
         JsonArray playersArray = new JsonArray();
-        List<PlayerRef> players = Universe.get().getPlayers();
-        
-        for (PlayerRef ref : players) {
-            JsonObject playerJson = new JsonObject();
-            playerJson.addProperty("name", ref.getUsername());
-            playerJson.addProperty("uuid", ref.getUuid().toString());
-            
-            // Try to get dynamic data if player is in a world
-            var entityRef = ref.getReference();
-            if (entityRef != null && entityRef.isValid()) {
-                var store = entityRef.getStore();
-                Player playerComp = store.getComponent(entityRef, Player.getComponentType());
-                if (playerComp != null) {
-                    EntityStatMap statMap = store.getComponent(entityRef, EntityStatMap.getComponentType());
-                    if (statMap != null) {
-                        EntityStatValue healthStat = statMap.get(DefaultEntityStatTypes.getHealth());
-                        if (healthStat != null) {
-                            playerJson.addProperty("health", healthStat.get());
-                            playerJson.addProperty("maxHealth", healthStat.getMax());
-                        }
-                    }
-                    playerJson.addProperty("gameMode", playerComp.getGameMode().toString());
+        try {
+            List<PlayerRef> players = Universe.get().getPlayers();
+            List<CompletableFuture<JsonObject>> futures = new ArrayList<>();
+
+            for (PlayerRef ref : players) {
+                // Thread-safe data from PlayerRef
+                final JsonObject playerJson = new JsonObject();
+                playerJson.addProperty("name", ref.getUsername());
+                playerJson.addProperty("uuid", ref.getUuid().toString());
+                playerJson.addProperty("avatarUrl", "/api/avatar/" + ref.getUsername());
+
+                Ref<EntityStore> entityRef = ref.getReference();
+                if (entityRef != null && entityRef.isValid()) {
+                    Store<EntityStore> store = entityRef.getStore();
+                    // Each Store/World has its own thread, execute there
+                    World world = store.getExternalData().getWorld();
                     
-                    TransformComponent transform = store.getComponent(entityRef, TransformComponent.getComponentType());
-                    if (transform != null) {
-                        Vector3d pos = transform.getPosition();
-                        playerJson.addProperty("x", Math.round(pos.x * 100.0) / 100.0);
-                        playerJson.addProperty("y", Math.round(pos.y * 100.0) / 100.0);
-                        playerJson.addProperty("z", Math.round(pos.z * 100.0) / 100.0);
-                    }
+                    CompletableFuture<JsonObject> future = CompletableFuture.supplyAsync(() -> {
+                        try {
+                            Player playerComp = store.getComponent(entityRef, Player.getComponentType());
+                            if (playerComp != null) {
+                                playerJson.addProperty("gameMode", playerComp.getGameMode().toString());
+                                
+                                EntityStatMap statMap = store.getComponent(entityRef, EntityStatMap.getComponentType());
+                                if (statMap != null) {
+                                    EntityStatValue healthStat = statMap.get(DefaultEntityStatTypes.getHealth());
+                                    if (healthStat != null) {
+                                        playerJson.addProperty("health", healthStat.get());
+                                        playerJson.addProperty("maxHealth", healthStat.getMax());
+                                    }
+                                }
+                            }
+
+                            TransformComponent transform = store.getComponent(entityRef, TransformComponent.getComponentType());
+                            if (transform != null) {
+                                Vector3d pos = transform.getPosition();
+                                playerJson.addProperty("x", Math.round(pos.x * 100.0) / 100.0);
+                                playerJson.addProperty("y", Math.round(pos.y * 100.0) / 100.0);
+                                playerJson.addProperty("z", Math.round(pos.z * 100.0) / 100.0);
+                            }
+                        } catch (Exception e) {
+                            LOGGER.log(Level.WARNING, "Error gathering dynamic data for " + ref.getUsername(), e);
+                        }
+                        return playerJson;
+                    }, world);
+                    futures.add(future);
+                } else {
+                    futures.add(CompletableFuture.completedFuture(playerJson));
                 }
             }
-            playersArray.add(playerJson);
+
+            // Wait for all worlds to report back (with timeout for safety)
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                    .get(2, TimeUnit.SECONDS);
+
+            for (CompletableFuture<JsonObject> future : futures) {
+                playersArray.add(future.join());
+            }
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error getting players: " + e.getMessage(), e);
+            JsonObject error = new JsonObject();
+            error.addProperty("error", e.getMessage());
+            return GSON.toJson(error);
         }
-        
+
         return GSON.toJson(playersArray);
     }
 
@@ -84,7 +136,7 @@ public class DashboardAPI {
             if (ref == null) return "{\"error\": \"Player not found\"}";
 
             JsonObject invJson = new JsonObject();
-            var entityRef = ref.getReference();
+            Ref<EntityStore> entityRef = ref.getReference();
             if (entityRef != null && entityRef.isValid()) {
                 Player playerComp = entityRef.getStore().getComponent(entityRef, Player.getComponentType());
                 if (playerComp != null) {
