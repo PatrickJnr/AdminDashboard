@@ -633,6 +633,16 @@
             line-height: 1.2;
         }
 
+        .item-icon {
+            width: 48px;
+            height: 48px;
+            image-rendering: pixelated; /* Keep pixel art crisp */
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
         .item-count {
             position: absolute;
             bottom: 4px;
@@ -964,11 +974,20 @@
                 const item = itemMap[i];
                 if (item && item.id) {
                     slot.classList.add('has-item');
-                    const itemName = document.createElement('div');
-                    itemName.className = 'item-name';
-                    itemName.textContent = item.id.split(':').pop().replace(/_/g, ' ');
-                    slot.appendChild(itemName);
                     
+                    // Add item icon
+                    const icon = document.createElement('img');
+                    icon.className = 'item-icon';
+                    icon.src = `/api/item/${encodeURIComponent(item.id)}/icon`;
+                    icon.alt = item.id;
+                    icon.title = item.id.split(':').pop().replace(/_/g, ' ');
+                    icon.onerror = function() {
+                        // Fallback if icon fails to load
+                        this.style.display = 'none';
+                    };
+                    slot.appendChild(icon);
+                    
+                    // Add item count badge
                     if (item.count && item.count > 1) {
                         const count = document.createElement('div');
                         count.className = 'item-count';

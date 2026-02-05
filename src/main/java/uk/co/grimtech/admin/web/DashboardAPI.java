@@ -51,6 +51,9 @@ public class DashboardAPI {
                 return "AVATAR_DATA:" + java.util.Base64.getEncoder().encodeToString(avatar);
             }
             return "{\"error\": \"Avatar not found\"}";
+        } else if (path.startsWith("/api/item/") && path.endsWith("/icon")) {
+            String itemId = path.substring(10, path.length() - 5); // Extract item ID
+            return getItemIcon(itemId);
         } else if (path.startsWith("/api/player/") && path.endsWith("/inv")) {
             String uuidStr = path.substring(12, path.length() - 4);
             return getPlayerInventory(uuidStr);
@@ -188,6 +191,42 @@ public class DashboardAPI {
             }
         }
         return items;
+    }
+
+    private static String getItemIcon(String itemId) {
+        try {
+            // Generate a simple placeholder icon as a colored square
+            // Color is based on hash of item ID for consistency
+            int hash = itemId.hashCode();
+            int r = (hash & 0xFF0000) >> 16;
+            int g = (hash & 0x00FF00) >> 8;
+            int b = (hash & 0x0000FF);
+            
+            // Create a 32x32 PNG with the color
+            java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(32, 32, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+            java.awt.Graphics2D g2d = img.createGraphics();
+            
+            // Fill with color
+            g2d.setColor(new java.awt.Color(r, g, b));
+            g2d.fillRect(0, 0, 32, 32);
+            
+            // Add border
+            g2d.setColor(new java.awt.Color(50, 50, 50));
+            g2d.drawRect(0, 0, 31, 31);
+            
+            g2d.dispose();
+            
+            // Convert to PNG bytes
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            javax.imageio.ImageIO.write(img, "PNG", baos);
+            byte[] imageBytes = baos.toByteArray();
+            
+            // Return as base64 with IMAGE_DATA prefix
+            return "IMAGE_DATA:" + java.util.Base64.getEncoder().encodeToString(imageBytes);
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error generating item icon for " + itemId, e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
     }
 
     private static String getServerStats() {

@@ -127,18 +127,22 @@ public class HytaleHttpServer {
                 return;
             }
 
-            // Token Validation
-            String authToken = t.getRequestHeaders().getFirst("X-Admin-Token");
-            String expectedToken = AdminDashboardPlugin.getAdminToken();
-            if (expectedToken != null && !expectedToken.equals(authToken)) {
-                String error = "{\"error\": \"Unauthorized - Invalid Token\"}";
-                t.getResponseHeaders().set("Content-Type", "application/json");
-                t.sendResponseHeaders(401, error.length());
-                try (OutputStream os = t.getResponseBody()) {
-                    os.write(error.getBytes(StandardCharsets.UTF_8));
+            // Token Validation (skip for public endpoints like item icons)
+            boolean isPublicEndpoint = path.startsWith("/api/item/") && path.endsWith("/icon");
+            
+            if (!isPublicEndpoint) {
+                String authToken = t.getRequestHeaders().getFirst("X-Admin-Token");
+                String expectedToken = AdminDashboardPlugin.getAdminToken();
+                if (expectedToken != null && !expectedToken.equals(authToken)) {
+                    String error = "{\"error\": \"Unauthorized - Invalid Token\"}";
+                    t.getResponseHeaders().set("Content-Type", "application/json");
+                    t.sendResponseHeaders(401, error.length());
+                    try (OutputStream os = t.getResponseBody()) {
+                        os.write(error.getBytes(StandardCharsets.UTF_8));
+                    }
+                    t.close();
+                    return;
                 }
-                t.close();
-                return;
             }
 
             String body = "";
@@ -167,6 +171,9 @@ public class HytaleHttpServer {
             
             if (response != null && response.startsWith("AVATAR_DATA:")) {
                 responseBytes = java.util.Base64.getDecoder().decode(response.substring(12));
+                contentType = "image/png";
+            } else if (response != null && response.startsWith("IMAGE_DATA:")) {
+                responseBytes = java.util.Base64.getDecoder().decode(response.substring(11));
                 contentType = "image/png";
             } else {
                 responseBytes = response != null ? response.getBytes(StandardCharsets.UTF_8) : new byte[0];
