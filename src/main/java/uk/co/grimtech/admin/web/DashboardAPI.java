@@ -144,17 +144,31 @@ public class DashboardAPI {
             PlayerRef ref = Universe.get().getPlayer(uuid);
             if (ref == null) return "{\"error\": \"Player not found\"}";
 
-            JsonObject invJson = new JsonObject();
             Ref<EntityStore> entityRef = ref.getReference();
-            if (entityRef != null && entityRef.isValid()) {
-                Player playerComp = entityRef.getStore().getComponent(entityRef, Player.getComponentType());
-                if (playerComp != null) {
-                    Inventory inv = playerComp.getInventory();
-                    invJson.add("hotbar", serializeContainer(inv.getHotbar()));
-                    invJson.add("storage", serializeContainer(inv.getStorage()));
-                    invJson.add("armor", serializeContainer(inv.getArmor()));
-                }
+            if (entityRef == null || !entityRef.isValid()) {
+                return "{\"error\": \"Player not in world\"}";
             }
+
+            Store<EntityStore> store = entityRef.getStore();
+            World world = store.getExternalData().getWorld();
+            
+            // Run on the world's thread
+            JsonObject invJson = CompletableFuture.supplyAsync(() -> {
+                JsonObject json = new JsonObject();
+                try {
+                    Player playerComp = store.getComponent(entityRef, Player.getComponentType());
+                    if (playerComp != null) {
+                        Inventory inv = playerComp.getInventory();
+                        json.add("hotbar", serializeContainer(inv.getHotbar()));
+                        json.add("storage", serializeContainer(inv.getStorage()));
+                        json.add("armor", serializeContainer(inv.getArmor()));
+                    }
+                } catch (Exception e) {
+                    json.addProperty("error", e.getMessage());
+                }
+                return json;
+            }, world).get(2, TimeUnit.SECONDS);
+
             return GSON.toJson(invJson);
         } catch (Exception e) {
             return "{\"error\": \"" + e.getMessage() + "\"}";

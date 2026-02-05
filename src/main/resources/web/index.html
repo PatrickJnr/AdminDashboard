@@ -502,6 +502,151 @@
             margin-left: 0.5rem;
         }
 
+        /* Inventory Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-container {
+            background: var(--bg-primary);
+            border: 2px solid var(--hytale-border);
+            border-radius: 8px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, rgba(21, 36, 58, 0.95), rgba(30, 50, 80, 0.95));
+            padding: 1.5rem;
+            border-bottom: 2px solid var(--hytale-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-family: 'Lexend', sans-serif;
+            font-size: 1.5rem;
+            color: var(--hytale-gold);
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: var(--hytale-gold);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .inv-section {
+            margin-bottom: 2rem;
+        }
+
+        .inv-section-title {
+            font-family: 'Lexend', sans-serif;
+            font-size: 1.125rem;
+            color: var(--hytale-gold-light);
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .inv-grid {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .inv-grid.hotbar {
+            grid-template-columns: repeat(9, 1fr);
+        }
+
+        .inv-grid.storage {
+            grid-template-columns: repeat(9, 1fr);
+        }
+
+        .inv-grid.armor {
+            grid-template-columns: repeat(4, 1fr);
+            max-width: 300px;
+        }
+
+        .inv-slot {
+            aspect-ratio: 1;
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid var(--hytale-border);
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .inv-slot:hover {
+            background: rgba(184, 147, 95, 0.1);
+            border-color: var(--hytale-gold);
+        }
+
+        .inv-slot.has-item {
+            background: rgba(21, 36, 58, 0.6);
+        }
+
+        .item-name {
+            font-size: 0.75rem;
+            color: var(--text-primary);
+            text-align: center;
+            word-break: break-word;
+            line-height: 1.2;
+        }
+
+        .item-count {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            background: var(--hytale-gold-dark);
+            color: var(--bg-primary);
+            font-size: 0.625rem;
+            font-weight: 700;
+            padding: 2px 4px;
+            border-radius: 3px;
+            min-width: 16px;
+            text-align: center;
+        }
+
         .broadcast-group .search-input {
             flex: 1;
         }
@@ -749,6 +894,117 @@
             toggle.classList.toggle('collapsed');
         }
 
+        async function viewInv(uuid) {
+            try {
+                // Check if modal exists
+                const modal = document.getElementById('inventory-modal');
+                if (!modal) {
+                    alert('ERROR: Modal element not found in DOM!');
+                    return;
+                }
+
+                const res = await fetch(`/api/player/${uuid}/inv`, {
+                    headers: { 'X-Admin-Token': dashboardToken }
+                });
+                const data = await res.json();
+                
+                if (data.error) {
+                    alert('Failed to load inventory: ' + data.error);
+                    return;
+                }
+
+                // Find player name
+                const player = allPlayers.find(p => p.uuid === uuid);
+                const nameEl = document.getElementById('inv-player-name');
+                if (nameEl) {
+                    nameEl.textContent = player ? `${player.name}'s Inventory` : 'Player Inventory';
+                }
+
+                // Render inventory sections
+                renderInventorySection('inv-hotbar', data.hotbar || []);
+                renderInventorySection('inv-storage', data.storage || []);
+                renderInventorySection('inv-armor', data.armor || []);
+
+                // Show modal
+                modal.classList.add('active');
+                modal.style.display = 'flex'; // Force display
+            } catch (e) {
+                alert('Failed to load inventory: ' + e.message);
+            }
+        }
+
+        function renderInventorySection(containerId, items) {
+            const container = document.getElementById(containerId);
+            if (!container) {
+                console.error('Container not found:', containerId);
+                return;
+            }
+            container.innerHTML = '';
+            
+            // Determine slot count based on section
+            let slotCount = 9; // default for hotbar
+            if (containerId === 'inv-storage') slotCount = 27;
+            if (containerId === 'inv-armor') slotCount = 4;
+            
+            // Create a map of slot index to item
+            const itemMap = {};
+            if (Array.isArray(items)) {
+                items.forEach(item => {
+                    if (item && item.slot !== undefined) {
+                        itemMap[item.slot] = item;
+                    }
+                });
+            }
+            
+            // Create all slots
+            for (let i = 0; i < slotCount; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'inv-slot';
+                
+                const item = itemMap[i];
+                if (item && item.id) {
+                    slot.classList.add('has-item');
+                    const itemName = document.createElement('div');
+                    itemName.className = 'item-name';
+                    itemName.textContent = item.id.split(':').pop().replace(/_/g, ' ');
+                    slot.appendChild(itemName);
+                    
+                    if (item.count && item.count > 1) {
+                        const count = document.createElement('div');
+                        count.className = 'item-count';
+                        count.textContent = item.count;
+                        slot.appendChild(count);
+                    }
+                }
+                
+                container.appendChild(slot);
+            }
+        }
+
+        function closeInventory() {
+            document.getElementById('inventory-modal').classList.remove('active');
+        }
+
+        // Initialize modal event listeners after DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // Close modal on escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeInventory();
+                }
+            });
+
+            // Close modal on overlay click
+            const modal = document.getElementById('inventory-modal');
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target.id === 'inventory-modal') {
+                        closeInventory();
+                    }
+                });
+            }
+        });
+
         async function fetchMods() {
             if (!dashboardToken) return;
             try {
@@ -917,10 +1173,6 @@
 
         document.getElementById('search').addEventListener('input', renderPlayers);
 
-        function viewInv(uuid) {
-            alert('Opening inventory viewer for ' + uuid);
-        }
-
         function kickPlayer(uuid) {
             const p = allPlayers.find(x => x.uuid === uuid);
             if (confirm(`Are you sure you want to kick ${p ? p.name : 'this player'}?`)) {
@@ -939,5 +1191,29 @@
         // but we can also run it independently for smoothness if needed.
         setInterval(updateServerTime, 1000);
     </script>
+
+    <!-- Inventory Modal -->
+    <div id="inventory-modal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 class="modal-title" id="inv-player-name">Player Inventory</h2>
+                <button class="modal-close" onclick="closeInventory()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="inv-section">
+                    <div class="inv-section-title">Hotbar</div>
+                    <div class="inv-grid hotbar" id="inv-hotbar"></div>
+                </div>
+                <div class="inv-section">
+                    <div class="inv-section-title">Storage</div>
+                    <div class="inv-grid storage" id="inv-storage"></div>
+                </div>
+                <div class="inv-section">
+                    <div class="inv-section-title">Armor</div>
+                    <div class="inv-grid armor" id="inv-armor"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

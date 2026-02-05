@@ -44,7 +44,24 @@ public class HytaleHttpServer {
         @Override
         public void handle(HttpExchange t) throws IOException {
             String path = t.getRequestURI().getPath();
-            if (path.equals("/")) path = "/index.html";
+            
+            // Redirect root to versioned path to bust cache
+            if (path.equals("/")) {
+                String version = String.valueOf(System.currentTimeMillis());
+                t.getResponseHeaders().set("Location", "/dashboard.html?v=" + version);
+                t.sendResponseHeaders(302, -1);
+                t.close();
+                return;
+            }
+            
+            // Strip query parameters for file lookup
+            if (path.contains("?")) {
+                path = path.substring(0, path.indexOf("?"));
+            }
+            
+            if (path.equals("/dashboard.html")) {
+                path = "/index.html";
+            }
             
             // For now, let's serve a simple embedded HTML if the file isn't found
             // In a real scenario, we'd load from resources
@@ -56,6 +73,24 @@ public class HytaleHttpServer {
                 os.write(error.getBytes());
                 os.close();
                 return;
+            }
+
+            // Add cache-control headers to prevent browser caching
+            t.getResponseHeaders().set("Cache-Control", "no-cache, no-store, must-revalidate");
+            t.getResponseHeaders().set("Pragma", "no-cache");
+            t.getResponseHeaders().set("Expires", "0");
+            
+            // Add ETag based on current timestamp for cache busting
+            String etag = "\"" + System.currentTimeMillis() + "\"";
+            t.getResponseHeaders().set("ETag", etag);
+
+            // If it's the HTML file, inject a version parameter into the content
+            if (path.endsWith(".html")) {
+                String html = new String(response, java.nio.charset.StandardCharsets.UTF_8);
+                String version = String.valueOf(System.currentTimeMillis());
+                // Inject version as a global variable at the start of the script
+                html = html.replace("<script>", "<script>\n        const APP_VERSION = '" + version + "';\n        ");
+                response = html.getBytes(java.nio.charset.StandardCharsets.UTF_8);
             }
 
             t.sendResponseHeaders(200, response.length);

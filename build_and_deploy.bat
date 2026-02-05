@@ -8,7 +8,7 @@ if not exist "logs" (
 )
 
 echo Packaging mod...
-call mvn package -Dmaven.test.skip=true > logs\build.log 2>&1
+call mvn clean package -Dmaven.test.skip=true > logs\build.log 2>&1
 if %ERRORLEVEL% neq 0 (
     echo Maven package failed! Check logs\build.log for details.
     type logs\build.log
