@@ -454,6 +454,54 @@
             margin-top: 1rem;
         }
 
+        /* Accordion Styles */
+        .accordion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        .accordion-header:hover {
+            background: rgba(184, 147, 95, 0.05);
+        }
+
+        .accordion-toggle {
+            font-size: 1.25rem;
+            color: var(--hytale-gold);
+            transition: transform 0.3s ease;
+            font-weight: bold;
+        }
+
+        .accordion-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .accordion-content {
+            max-height: 500px;
+            overflow-y: auto;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            opacity: 1;
+        }
+
+        .accordion-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+
+        .mod-count-badge {
+            background: var(--hytale-gold-dark);
+            color: var(--bg-primary);
+            padding: 0.25rem 0.625rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-left: 0.5rem;
+        }
+
         .broadcast-group .search-input {
             flex: 1;
         }
@@ -570,10 +618,16 @@
 
                 <div class="hytale-panel" style="margin-top: 2rem">
                     <div class="hytale-panel-inner">
-                        <div class="card-header">
-                            <h2>Custom Mods</h2>
+                        <div class="card-header accordion-header" onclick="toggleAccordion('mods-accordion')">
+                            <div>
+                                <h2 style="display: inline;">Custom Mods</h2>
+                                <span id="mod-count-badge" class="mod-count-badge">0</span>
+                            </div>
+                            <span class="accordion-toggle" id="mods-accordion-toggle">▼</span>
                         </div>
-                        <div id="plugin-list" class="plugin-list" style="padding: 1rem"></div>
+                        <div id="mods-accordion" class="accordion-content">
+                            <div id="plugin-list" class="plugin-list" style="padding: 1rem"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -688,6 +742,13 @@
             }
         }
 
+        function toggleAccordion(id) {
+            const content = document.getElementById(id);
+            const toggle = document.getElementById(id + '-toggle');
+            content.classList.toggle('collapsed');
+            toggle.classList.toggle('collapsed');
+        }
+
         async function fetchMods() {
             if (!dashboardToken) return;
             try {
@@ -696,6 +757,7 @@
                 });
                 const mods = await res.json();
                 document.getElementById('mod-count').textContent = mods.length;
+                document.getElementById('mod-count-badge').textContent = mods.length;
                 const list = document.getElementById('plugin-list');
                 list.innerHTML = '';
                 mods.forEach(mod => {
