@@ -1,5 +1,6 @@
 package uk.co.grimtech.admin.web;
 
+import uk.co.grimtech.admin.AdminDashboardPlugin;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -19,6 +20,10 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.plugin.JavaPlugin;
+import com.hypixel.hytale.server.core.plugin.PluginBase;
+import com.hypixel.hytale.server.core.plugin.PluginManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,10 +54,12 @@ public class DashboardAPI {
         } else if (path.startsWith("/api/player/") && path.endsWith("/inv")) {
             String uuidStr = path.substring(12, path.length() - 4);
             return getPlayerInventory(uuidStr);
-        } else if (path.equals("/api/kick") && method.equals("POST")) {
-            return kickPlayer(body);
         } else if (path.equals("/api/stats")) {
             return getServerStats();
+        } else if (path.equals("/api/broadcast") && method.equals("POST")) {
+            return broadcastMessage(body);
+        } else if (path.equals("/api/plugins")) {
+            return getPlugins();
         }
         
         return "{\"error\": \"Invalid endpoint\"}";
@@ -170,8 +177,93 @@ public class DashboardAPI {
     private static String getServerStats() {
         JsonObject stats = new JsonObject();
         stats.addProperty("onlinePlayers", Universe.get().getPlayers().size());
-        stats.addProperty("uptime", System.currentTimeMillis()); // Placeholder
+        
+        // Calculate Uptime
+        long uptimeMs = System.currentTimeMillis() - AdminDashboardPlugin.getStartTime();
+        stats.addProperty("uptimeMs", uptimeMs);
+        
+        // Calculate Actual TPS from first world
+        double tps = 30.0;
+        try {
+            java.util.Collection<World> worlds = Universe.get().getWorlds().values();
+            if (!worlds.isEmpty()) {
+                World world = worlds.iterator().next();
+                double avgTickNanos = world.getBufferedTickLengthMetricSet().getAverage(0);
+                if (avgTickNanos > 0) {
+                    tps = 1000000000.0 / avgTickNanos;
+                    // Cap at 30.0 as it can't realistically exceed it in Hytale's model
+                    if (tps > 30.0) tps = 30.0;
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.warning("Could not calculate actual TPS: " + e.getMessage());
+        }
+        stats.addProperty("tps", Math.round(tps * 10.0) / 10.0);
+
+        // Memory usage
+        Runtime runtime = Runtime.getRuntime();
+        long usedMemory = runtime.totalMemory() - runtime.freeMemory();
+        stats.addProperty("memoryUsed", usedMemory / (1024 * 1024)); // MB
+        stats.addProperty("memoryMax", runtime.maxMemory() / (1024 * 1024)); // MB
+
         return GSON.toJson(stats);
+    }
+
+    private static String broadcastMessage(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("message")) return "{\"error\": \"Missing message\"}";
+            String message = json.get("message").getAsString();
+            Universe.get().sendMessage(Message.raw("[Server] " + message));
+            return "{\"status\": \"success\"}";
+        } catch (Exception e) {
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static final java.util.Set<String> INTERNAL_PLUGINS = java.util.Set.of(
+        "WorldLocationCondition", "ServerManager", "SprintForce", "MigrationModule", "AssetModule", 
+        "ConsoleModule", "TimeModule", "CollisionModule", "DebugPlugin", "SplitVelocity", 
+        "Model", "CrouchSlide", "Universe", "TagSet", "UpdateModule", 
+        "AccessControlModule", "CommandMacro", "SafetyRoll", "HytaleGenerator", "ItemModule", 
+        "CommonAssetModule", "CosmeticsModule", "I18nModule", "LegacyModule", "LANDiscovery", 
+        "Mantling", "PermissionsModule", "Deployables", "BlockSetModule", "FlyCameraModule", 
+        "EntityModule", "BlockTick", "BlockHealthModule", "InteractionModule", "ServerPlayerListModule", 
+        "ConnectedBlocksModule", "BlockTypeModule", "BlockModule", "Weather", "Reputation", 
+        "Parkour", "ProjectileModule", "Teleport", "WorldGen", "BlockStateModule", 
+        "AssetEditor", "Ambience", "Teleporter", "BlockPhysics", "BuilderTools", 
+        "Farming", "Fluid", "Shop", "Crafting", "SingleplayerModule", 
+        "ShopReputation", "EntityStatsModule", "BlockSpawner", "PrefabSpawnerModule", "Instances", 
+        "Objectives", "Path", "EntityUIModule", "Stash", "StaminaModule", 
+        "ObjectiveShop", "ObjectiveReputation", "CreativeHub", "DamageModule", "Camera", 
+        "NPC", "Mounts", "Flock", "NPCEditor", "Memories", 
+        "NPCShop", "Beds", "Portals", "NPCCombatActionEvaluator", "NPCReputation", 
+        "Spawning", "NPCObjectives"
+    );
+
+    private static String getPlugins() {
+        JsonArray plugins = new JsonArray();
+        try {
+            List<PluginBase> loadedPlugins = PluginManager.get().getPlugins();
+            for (PluginBase plugin : loadedPlugins) {
+                String name = plugin.getManifest().getName();
+                if (INTERNAL_PLUGINS.contains(name)) continue;
+
+                JsonObject pObj = new JsonObject();
+                pObj.addProperty("name", name);
+                pObj.addProperty("version", plugin.getManifest().getVersion().toString());
+                pObj.addProperty("id", plugin.getIdentifier().toString());
+                plugins.add(pObj);
+            }
+        } catch (Exception e) {
+            LOGGER.warning("Error getting plugins: " + e.getMessage());
+            // Fallback for safety
+            JsonObject pObj = new JsonObject();
+            pObj.addProperty("name", "Admin Dashboard");
+            pObj.addProperty("version", "0.1");
+            plugins.add(pObj);
+        }
+        return GSON.toJson(plugins);
     }
 
     private static String kickPlayer(String body) {

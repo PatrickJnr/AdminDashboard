@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import uk.co.grimtech.admin.web.DashboardAPI;
+import uk.co.grimtech.admin.AdminDashboardPlugin;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -82,11 +83,25 @@ public class HytaleHttpServer {
             // Set CORS headers early
             t.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
             t.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-            t.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type");
+            t.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, X-Admin-Token");
 
             // Handle preflight requests
             if ("OPTIONS".equalsIgnoreCase(method)) {
                 t.sendResponseHeaders(204, -1);
+                t.close();
+                return;
+            }
+
+            // Token Validation
+            String authToken = t.getRequestHeaders().getFirst("X-Admin-Token");
+            String expectedToken = AdminDashboardPlugin.getAdminToken();
+            if (expectedToken != null && !expectedToken.equals(authToken)) {
+                String error = "{\"error\": \"Unauthorized - Invalid Token\"}";
+                t.getResponseHeaders().set("Content-Type", "application/json");
+                t.sendResponseHeaders(401, error.length());
+                try (OutputStream os = t.getResponseBody()) {
+                    os.write(error.getBytes(StandardCharsets.UTF_8));
+                }
                 t.close();
                 return;
             }
