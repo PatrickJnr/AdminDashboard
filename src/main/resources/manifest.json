@@ -1,0 +1,20 @@
+{
+  "Group": "uk.co.grimtech",
+  "Name": "AdminDashboard",
+  "Version": "${version}",
+  "Description": "A lightweight web-based administration dashboard for Hytale servers.",
+  "Authors": [
+    {
+      "Name": "PatrickJr",
+      "Email": "patrickcaulton423@gmail.com",
+      "Url": "https://grimtech.co.uk"
+    }
+  ],
+  "Website": "https://grimtech.co.uk",
+  "ServerVersion": "*",
+  "Dependencies": {},
+  "OptionalDependencies": {},
+  "DisabledByDefault": false,
+  "IncludesAssetPack": true,
+  "Main": "uk.co.grimtech.admin.AdminDashboardPlugin"
+}
