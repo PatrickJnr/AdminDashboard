@@ -14,10 +14,15 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.UUID;
 import java.util.logging.Logger;
+import java.util.logging.FileHandler;
+import java.util.logging.SimpleFormatter;
+import java.util.logging.Level;
+import java.util.logging.Handler;
 
 public class AdminDashboardPlugin extends JavaPlugin {
-    private static final Logger LOGGER = Logger.getLogger("AdminDashboard");
+    private static final Logger LOGGER = Logger.getLogger("AdminDebug");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static FileHandler fileHandler;
     private static long startTime;
     private static String adminToken;
     private HytaleHttpServer httpServer;
@@ -36,6 +41,7 @@ public class AdminDashboardPlugin extends JavaPlugin {
 
     @Override
     protected void setup() {
+        setupLogger();
         startTime = System.currentTimeMillis();
         LOGGER.info("[AdminDashboard] Starting Admin Dashboard Mod...");
         
@@ -84,10 +90,35 @@ public class AdminDashboardPlugin extends JavaPlugin {
                 try (FileWriter writer = new FileWriter(configFile)) {
                     GSON.toJson(config, writer);
                 }
-                LOGGER.info("[AdminDashboard] Generated new admin token: " + adminToken);
             }
         } catch (Exception e) {
             LOGGER.severe("[AdminDashboard] Failed to load/save config: " + e.getMessage());
+        }
+    }
+
+    private void setupLogger() {
+        try {
+            File logDir = new File("logs");
+            if (!logDir.exists()) logDir.mkdirs();
+            
+            File logFile = new File(logDir, "dashboard.log");
+            fileHandler = new FileHandler(logFile.getAbsolutePath(), true);
+            fileHandler.setFormatter(new SimpleFormatter());
+            fileHandler.setLevel(Level.ALL);
+            LOGGER.setLevel(Level.ALL);
+            
+            // Add to the main logger
+            LOGGER.addHandler(fileHandler);
+            LOGGER.setUseParentHandlers(false); // Stop spamming server.log
+            
+            // Force an immediate write to test
+            LOGGER.info("[AdminDebug] Logger initialized and file handler attached.");
+            fileHandler.flush();
+            
+            // Still log to console that logging has moved
+            Logger.getLogger("Global").info("[AdminDebug] Dedicated logging started in: " + logFile.getAbsolutePath());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "[AdminDashboard] Failed to initialize file logger", e);
         }
     }
 
@@ -96,6 +127,11 @@ public class AdminDashboardPlugin extends JavaPlugin {
         if (httpServer != null) {
             httpServer.stop();
             LOGGER.info("[AdminDashboard] HTTP Server stopped.");
+        }
+        
+        if (fileHandler != null) {
+            fileHandler.close();
+            LOGGER.removeHandler(fileHandler);
         }
     }
 }

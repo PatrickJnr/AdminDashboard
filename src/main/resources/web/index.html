@@ -1015,7 +1015,9 @@
                     icon.className = 'item-icon';
                     icon.src = `/api/item/${encodeURIComponent(item.id)}/icon`;
                     icon.alt = item.id;
+                    console.log(`[Inventory] Loading icon for ${item.id}: ${icon.src}`);
                     icon.onerror = function() {
+                        console.error(`[Inventory] Failed to load icon for ${item.id}: ${this.src}`);
                         this.style.display = 'none';
                     };
                     slot.appendChild(icon);

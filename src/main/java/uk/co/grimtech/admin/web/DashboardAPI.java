@@ -27,6 +27,8 @@ import com.hypixel.hytale.server.core.plugin.PluginManager;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.assetstore.AssetPack;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -40,10 +42,14 @@ import java.util.logging.Level;
 
 public class DashboardAPI {
     private static final Gson GSON = new Gson();
-    private static final Logger LOGGER = Logger.getLogger("AdminDashboardAPI");
+    private static final Logger LOGGER = Logger.getLogger("AdminDebug");
 
     public static String handleRequest(String path, String method, String body) {
         LOGGER.info("[API] " + method + " " + path);
+        // Explicit flush to ensure logs appear in dashboard.log
+        for (java.util.logging.Handler handler : LOGGER.getHandlers()) {
+            handler.flush();
+        }
         if (path.equals("/api/players")) {
             return getPlayers();
         } else if (path.startsWith("/api/avatar/")) {
@@ -200,7 +206,14 @@ public class DashboardAPI {
 
     private static String getItemIcon(String itemId) {
         try {
-            // 1. Resolve Namespace (e.g., "hytale:stone" -> "hytale")
+            // 0. URL Decode the itemId (e.g. hytale%3Astone -> hytale:stone)
+            String rawId = itemId;
+            itemId = URLDecoder.decode(itemId, StandardCharsets.UTF_8.name());
+            if (!rawId.equals(itemId)) {
+                LOGGER.info("[DashboardAPI] Decoded itemId: " + rawId + " -> " + itemId);
+            }
+
+            // 1. Resolve Namespace
             String namespace = "hytale";
             String assetId = itemId;
             if (itemId.contains(":")) {
@@ -209,47 +222,115 @@ public class DashboardAPI {
                 assetId = parts[1];
             }
 
-            // 2. Get AssetPack
-            AssetPack pack = AssetModule.get().getAssetPack(namespace);
+            // 2. Get AssetPack (Case-Insensitive)
+            AssetPack pack = findAssetPack(namespace);
             if (pack == null) {
-                // LOGGER.warning("Could not find AssetPack for namespace: " + namespace);
+                LOGGER.warning("[DashboardAPI] Could not find AssetPack for namespace (tried case-insensitive): " + namespace);
                 return getFallbackIcon(itemId);
             }
 
             // 3. Get Icon Path from Item config
             Item item = Item.getAssetStore().getAssetMap().getAsset(itemId);
+            if (item == null && !itemId.contains(":")) {
+                // Try with namespace if not present
+                item = Item.getAssetStore().getAssetMap().getAsset(namespace + ":" + assetId);
+            }
             if (item == null) {
-                // Try with just assetId if full itemId fails
-                item = Item.getAssetStore().getAssetMap().getAsset(assetId);
+                // Try with common name variations
+                item = Item.getAssetStore().getAssetMap().getAsset("hytale:" + assetId);
             }
 
             String iconPathStr = null;
             if (item != null) {
                 iconPathStr = item.getIcon();
+                LOGGER.info("[DashboardAPI] Resolved Item " + itemId + " icon from config: " + iconPathStr);
             } else {
                 // Manual resolution if Item not found in store
+                // Hytale usually puts icons in Icons/ItemsGenerated or Icons/Entities
                 iconPathStr = "Icons/ItemsGenerated/" + assetId + ".png";
+                LOGGER.info("[DashboardAPI] Item " + itemId + " not in store, using manual path prediction: " + iconPathStr);
             }
 
-            if (iconPathStr == null) return getFallbackIcon(itemId);
-
-            // 4. Resolve and Read PNG
-            Path root = pack.getRoot();
-            // Icons are usually in Common/
-            Path iconPath = root.resolve("Common").resolve(iconPathStr);
-            
-            if (!Files.exists(iconPath)) {
-                // LOGGER.warning("Icon file not found at " + iconPath);
+            if (iconPathStr == null || iconPathStr.isEmpty()) {
+                LOGGER.warning("[DashboardAPI] Icon path is null or empty for " + itemId);
                 return getFallbackIcon(itemId);
             }
 
+            // 4. Resolve and Read PNG
+            Path root = pack.getRoot();
+            Path iconPath = null;
+            
+            // Try different common Hytale asset structures
+            String[] searchBases = {
+                "Common",
+                "Assets/Common",
+                "Assets",
+                "" // Root directly
+            };
+
+            for (String base : searchBases) {
+                Path attempt = base.isEmpty() ? root.resolve(iconPathStr) : root.resolve(base).resolve(iconPathStr);
+                
+                // Try with and without .png extension
+                if (Files.exists(attempt)) {
+                    iconPath = attempt;
+                    break;
+                }
+                
+                if (!iconPathStr.toLowerCase().endsWith(".png")) {
+                    Path attemptWithPng = base.isEmpty() ? root.resolve(iconPathStr + ".png") : root.resolve(base).resolve(iconPathStr + ".png");
+                    if (Files.exists(attemptWithPng)) {
+                        iconPath = attemptWithPng;
+                        break;
+                    }
+                }
+            }
+
+            if (iconPath == null) {
+                LOGGER.warning("[DashboardAPI] Icon file NOT FOUND for " + itemId + " after trying all bases. IconPathStr: " + iconPathStr);
+                return getFallbackIcon(itemId);
+            }
+
+            LOGGER.info("[DashboardAPI] Final resolved path for " + itemId + ": " + iconPath.toAbsolutePath());
+
             byte[] imageBytes = Files.readAllBytes(iconPath);
+            LOGGER.info("[DashboardAPI] Successfully read " + imageBytes.length + " bytes for " + itemId);
             return "IMAGE_DATA:" + java.util.Base64.getEncoder().encodeToString(imageBytes);
 
         } catch (Exception e) {
-            // LOGGER.log(Level.WARNING, "Error extracting real icon for " + itemId, e);
+            LOGGER.log(Level.WARNING, "[DashboardAPI] Error extracting real icon for " + itemId, e);
             return getFallbackIcon(itemId);
         }
+    }
+
+    private static AssetPack findAssetPack(String namespace) {
+        // Log all available packs for debugging
+        StringBuilder packNames = new StringBuilder();
+        for (AssetPack p : AssetModule.get().getAssetPacks()) {
+            packNames.append(p.getName()).append(", ");
+        }
+        LOGGER.info("[DashboardAPI] Searching for namespace: " + namespace + " in available packs: [" + packNames.toString() + "]");
+
+        AssetPack pack = AssetModule.get().getAssetPack(namespace);
+        if (pack != null) return pack;
+
+        // Manual search across all registered packs for smarter matching
+        for (AssetPack p : AssetModule.get().getAssetPacks()) {
+            String name = p.getName();
+            // Exact match (case insensitive)
+            if (name.equalsIgnoreCase(namespace)) {
+                return p;
+            }
+            
+            // Hytale style namespace matching (e.g. "Hytale:Hytale" for "hytale")
+            if (name.contains(":")) {
+                String prefix = name.split(":")[0];
+                if (prefix.equalsIgnoreCase(namespace)) {
+                    return p;
+                }
+            }
+        }
+        return null;
     }
 
     private static String getFallbackIcon(String itemId) {
