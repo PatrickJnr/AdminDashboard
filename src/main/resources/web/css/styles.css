@@ -67,6 +67,7 @@
             background: url("https://www.hytale.com/static/images/container-corner.png") no-repeat 0 0;
             background-size: 14px;
             pointer-events: none;
+            z-index: 1;
         }
 
         .hytale-panel::before { top: 0; left: 0; transform: rotate(180deg); }
@@ -74,6 +75,7 @@
 
         .hytale-panel-inner {
             position: relative;
+            min-height: 20px;
         }
 
         .hytale-panel-inner::before, .hytale-panel-inner::after {
@@ -85,10 +87,19 @@
             background: url("https://www.hytale.com/static/images/container-corner.png") no-repeat 0 0;
             background-size: 14px;
             pointer-events: none;
+            z-index: 1;
         }
 
-        .hytale-panel-inner::before { bottom: 0; left: 0; transform: rotate(90deg); }
-        .hytale-panel-inner::after { bottom: 0; right: 0; }
+        .hytale-panel-inner::before { 
+            bottom: -1.5rem; 
+            left: -1.5rem; 
+            transform: rotate(90deg); 
+        }
+        
+        .hytale-panel-inner::after { 
+            bottom: -1.5rem; 
+            right: -1.5rem; 
+        }
 
         header {
             display: flex;
