@@ -146,6 +146,12 @@ async function fetchStats(isInit = false) {
         document.getElementById('player-count').textContent = stats.onlinePlayers;
         document.getElementById('server-tps').textContent = stats.tps.toFixed(1);
         
+        // Update memory if available
+        if (stats.memory) {
+            const memoryMB = Math.round(stats.memory / 1024 / 1024);
+            document.getElementById('server-memory').textContent = `${memoryMB} MB`;
+        }
+        
         const tpsEl = document.getElementById('server-tps');
         tpsEl.style.color = stats.tps > 18 ? '#a3cf93' : (stats.tps > 15 ? '#f4d06f' : '#b74545');
 
@@ -411,8 +417,8 @@ function renderPlayers() {
     if (filtered.length === 0 && searchTerm) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="5" class="empty-state">
-                    <div class="empty-state-icon">🔍</div>
+                <td colspan="8" class="empty-state">
+                    <div class="empty-state-icon"><span class="material-symbols-outlined">search_off</span></div>
                     <div class="empty-state-text">No players found</div>
                     <div class="empty-state-subtext">Try a different search term</div>
                 </td>
@@ -422,8 +428,8 @@ function renderPlayers() {
     } else if (filtered.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="5" class="empty-state">
-                    <div class="empty-state-icon">👥</div>
+                <td colspan="8" class="empty-state">
+                    <div class="empty-state-icon"><span class="material-symbols-outlined">group_off</span></div>
                     <div class="empty-state-text">No players online</div>
                     <div class="empty-state-subtext">Waiting for players to join...</div>
                 </td>
@@ -435,6 +441,9 @@ function renderPlayers() {
     filtered.forEach(p => {
         let tr = tbody.querySelector(`tr[data-uuid="${p.uuid}"]`);
         const healthPct = (p.health / p.maxHealth) * 100 || 0;
+        const staminaPct = p.stamina !== undefined ? (p.stamina / (p.maxStamina || 100)) * 100 : 100;
+        const manaPct = p.mana !== undefined ? (p.mana / (p.maxMana || 100)) * 100 : 100;
+        const defence = p.defence !== undefined ? p.defence : 0;
         const avatarUrl = p.avatarUrl || `/api/avatar/${p.name}`;
 
         if (!tr) {
@@ -459,9 +468,36 @@ function renderPlayers() {
                     </span>
                 </td>
                 <td>
-                    <div class="p-vitals" style="font-size: 0.8125rem; font-weight: 600; margin-bottom: 2px"></div>
+                    <div class="p-vitals" style="font-size: 0.8125rem; font-weight: 600; margin-bottom: 2px">
+                        <span class="material-symbols-outlined stat-icon health">favorite</span>
+                        <span class="p-health-text"></span>
+                    </div>
                     <div class="health-bar-container">
                         <div class="health-bar"></div>
+                    </div>
+                </td>
+                <td>
+                    <div style="font-size: 0.8125rem; font-weight: 600; margin-bottom: 2px">
+                        <span class="material-symbols-outlined stat-icon stamina">bolt</span>
+                        <span class="p-stamina-text"></span>
+                    </div>
+                    <div class="stat-bar-container">
+                        <div class="stamina-bar"></div>
+                    </div>
+                </td>
+                <td>
+                    <div style="font-size: 0.8125rem; font-weight: 600; margin-bottom: 2px">
+                        <span class="material-symbols-outlined stat-icon mana">auto_awesome</span>
+                        <span class="p-mana-text"></span>
+                    </div>
+                    <div class="stat-bar-container">
+                        <div class="mana-bar"></div>
+                    </div>
+                </td>
+                <td>
+                    <div style="text-align: center">
+                        <span class="material-symbols-outlined stat-icon defence">shield</span>
+                        <div class="defence-value p-defence"></div>
                     </div>
                 </td>
                 <td>
@@ -491,8 +527,22 @@ function renderPlayers() {
 
         tr.querySelector('.p-name').textContent = p.name;
         tr.querySelector('.p-uuid-short').textContent = p.uuid.substring(0, 8) + '...';
-        tr.querySelector('.p-vitals').textContent = `${Math.round(p.health)} / ${Math.round(p.maxHealth)} HP`;
+        tr.querySelector('.p-health-text').textContent = `${Math.round(p.health)}/${Math.round(p.maxHealth)}`;
         tr.querySelector('.health-bar').style.width = healthPct + '%';
+        
+        // Update stamina
+        const staminaText = p.stamina !== undefined ? `${Math.round(p.stamina)}/${Math.round(p.maxStamina || 100)}` : 'N/A';
+        tr.querySelector('.p-stamina-text').textContent = staminaText;
+        tr.querySelector('.stamina-bar').style.width = staminaPct + '%';
+        
+        // Update mana
+        const manaText = p.mana !== undefined ? `${Math.round(p.mana)}/${Math.round(p.maxMana || 100)}` : 'N/A';
+        tr.querySelector('.p-mana-text').textContent = manaText;
+        tr.querySelector('.mana-bar').style.width = manaPct + '%';
+        
+        // Update defence
+        tr.querySelector('.p-defence').textContent = defence;
+        
         tr.querySelector('.p-coords').innerHTML = `X: ${Math.round(p.x)} Y: ${Math.round(p.y)} Z: ${Math.round(p.z)}`;
         tr.querySelector('.p-gamemode').textContent = p.gameMode;
     });
