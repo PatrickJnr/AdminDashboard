@@ -353,6 +353,10 @@ async function fetchMods() {
             headers: { 'X-Admin-Token': dashboardToken }
         });
         const mods = await res.json();
+        
+        // Sort mods alphabetically by name
+        mods.sort((a, b) => a.name.localeCompare(b.name));
+        
         document.getElementById('mod-count').textContent = mods.length;
         document.getElementById('mod-count-badge').textContent = mods.length;
         const list = document.getElementById('plugin-list');
@@ -387,7 +391,6 @@ async function fetchMods() {
                                 <span class="material-symbols-outlined" style="font-size: 1rem;">open_in_new</span>
                             </a>` : ''}
                         </div>
-                        <div style="font-size: 0.75rem; color: var(--hytale-gold)">v${mod.version}</div>
                         ${metaInfo}
                     </div>
                 </div>
