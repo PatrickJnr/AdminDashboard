@@ -24,6 +24,11 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.PluginBase;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
+import com.hypixel.hytale.server.core.asset.AssetModule;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.assetstore.AssetPack;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -195,6 +200,60 @@ public class DashboardAPI {
 
     private static String getItemIcon(String itemId) {
         try {
+            // 1. Resolve Namespace (e.g., "hytale:stone" -> "hytale")
+            String namespace = "hytale";
+            String assetId = itemId;
+            if (itemId.contains(":")) {
+                String[] parts = itemId.split(":", 2);
+                namespace = parts[0];
+                assetId = parts[1];
+            }
+
+            // 2. Get AssetPack
+            AssetPack pack = AssetModule.get().getAssetPack(namespace);
+            if (pack == null) {
+                // LOGGER.warning("Could not find AssetPack for namespace: " + namespace);
+                return getFallbackIcon(itemId);
+            }
+
+            // 3. Get Icon Path from Item config
+            Item item = Item.getAssetStore().getAssetMap().getAsset(itemId);
+            if (item == null) {
+                // Try with just assetId if full itemId fails
+                item = Item.getAssetStore().getAssetMap().getAsset(assetId);
+            }
+
+            String iconPathStr = null;
+            if (item != null) {
+                iconPathStr = item.getIcon();
+            } else {
+                // Manual resolution if Item not found in store
+                iconPathStr = "Icons/ItemsGenerated/" + assetId + ".png";
+            }
+
+            if (iconPathStr == null) return getFallbackIcon(itemId);
+
+            // 4. Resolve and Read PNG
+            Path root = pack.getRoot();
+            // Icons are usually in Common/
+            Path iconPath = root.resolve("Common").resolve(iconPathStr);
+            
+            if (!Files.exists(iconPath)) {
+                // LOGGER.warning("Icon file not found at " + iconPath);
+                return getFallbackIcon(itemId);
+            }
+
+            byte[] imageBytes = Files.readAllBytes(iconPath);
+            return "IMAGE_DATA:" + java.util.Base64.getEncoder().encodeToString(imageBytes);
+
+        } catch (Exception e) {
+            // LOGGER.log(Level.WARNING, "Error extracting real icon for " + itemId, e);
+            return getFallbackIcon(itemId);
+        }
+    }
+
+    private static String getFallbackIcon(String itemId) {
+        try {
             // Determine color based on item category
             java.awt.Color color;
             String idLower = itemId.toLowerCase();
@@ -203,22 +262,22 @@ public class DashboardAPI {
                 color = new java.awt.Color(200, 50, 0); // Red/Orange for weapons
             } else if (idLower.startsWith("tool_")) {
                 color = new java.awt.Color(160, 160, 160); // Silver/Gray for tools
-            } else if (idLower.startsWith("ore_") || idLower.startsWith("ingredient_ore")) {
+            } else if (idLower.contains("ore_") || idLower.contains("ingredient_ore")) {
                 color = new java.awt.Color(139, 69, 19); // Brown for ores
             } else if (idLower.startsWith("armor_")) {
                 color = new java.awt.Color(30, 144, 255); // Blue for armor
-            } else if (idLower.startsWith("food_") || idLower.startsWith("ingredient_food")) {
+            } else if (idLower.contains("food_") || idLower.contains("ingredient_food")) {
                 color = new java.awt.Color(255, 105, 180); // Pink for food
             } else if (idLower.startsWith("block_") || idLower.startsWith("soil_")) {
                 color = new java.awt.Color(100, 100, 100); // Dark Gray for blocks
-            } else if (idLower.startsWith("ingredient_")) {
+            } else if (idLower.contains("ingredient_")) {
                 color = new java.awt.Color(154, 205, 50); // Yellow/Green for ingredients
             } else {
                 // Default to hash-based color for consistency
                 int hash = itemId.hashCode();
-                int r = (hash & 0xFF0000) >> 16;
-                int g = (hash & 0x00FF00) >> 8;
-                int b = (hash & 0x0000FF);
+                int r = Math.abs((hash & 0xFF0000) >> 16);
+                int g = Math.abs((hash & 0x00FF00) >> 8);
+                int b = Math.abs(hash & 0x0000FF);
                 color = new java.awt.Color(r, g, b);
             }
             
@@ -249,7 +308,7 @@ public class DashboardAPI {
             // Return as base64 with IMAGE_DATA prefix
             return "IMAGE_DATA:" + java.util.Base64.getEncoder().encodeToString(imageBytes);
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error generating item icon for " + itemId, e);
+            LOGGER.log(Level.WARNING, "Error generating fallback icon for " + itemId, e);
             return "{\"error\": \"" + e.getMessage() + "\"}";
         }
     }

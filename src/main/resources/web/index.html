@@ -1274,7 +1274,28 @@
 
     <!-- Inventory Modal -->
     <div id="inventory-modal" class="modal-overlay">
-        <!-- ... existing content ... -->
+        <div class="modal-container hytale-panel">
+            <div class="hytale-panel-inner">
+                <div class="modal-header">
+                    <h2 id="inv-player-name" class="modal-title">Player Inventory</h2>
+                    <button class="modal-close" onclick="closeInventory()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="inv-section">
+                        <h3 class="inv-section-title">Armor</h3>
+                        <div id="inv-armor" class="inv-grid armor"></div>
+                    </div>
+                    <div class="inv-section">
+                        <h3 class="inv-section-title">Hotbar</h3>
+                        <div id="inv-hotbar" class="inv-grid hotbar"></div>
+                    </div>
+                    <div class="inv-section">
+                        <h3 class="inv-section-title">Storage</h3>
+                        <div id="inv-storage" class="inv-grid storage"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Tooltip Element -->
