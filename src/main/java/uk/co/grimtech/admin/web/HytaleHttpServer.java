@@ -116,7 +116,7 @@ public class HytaleHttpServer {
             String method = t.getRequestMethod();
             
             // Log EVERY request that hits the API handler
-            java.util.logging.Logger.getLogger("AdminDebug").info("[HTTP] Incoming: " + method + " " + path);
+            AdminDashboardPlugin.getCustomLogger().info("[HTTP] Incoming: " + method + " " + path);
 
             // Set CORS headers early
             t.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
@@ -138,7 +138,7 @@ public class HytaleHttpServer {
                 String authToken = t.getRequestHeaders().getFirst("X-Admin-Token");
                 String expectedToken = AdminDashboardPlugin.getAdminToken();
                 if (expectedToken != null && !expectedToken.equals(authToken)) {
-                    java.util.logging.Logger.getLogger("AdminDebug").warning("[HTTP] 401 Unauthorized for path: " + path);
+                    AdminDashboardPlugin.getCustomLogger().warning("[HTTP] 401 Unauthorized for path: " + path);
                     String error = "{\"error\": \"Unauthorized - Invalid Token\"}";
                     t.getResponseHeaders().set("Content-Type", "application/json");
                     t.sendResponseHeaders(401, error.length());

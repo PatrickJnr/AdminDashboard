@@ -13,19 +13,23 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.UUID;
-import java.util.logging.Logger;
-import java.util.logging.FileHandler;
-import java.util.logging.SimpleFormatter;
-import java.util.logging.Level;
-import java.util.logging.Handler;
 
 public class AdminDashboardPlugin extends JavaPlugin {
-    private static final Logger LOGGER = Logger.getLogger("AdminDebug");
+    private static CustomLogger LOGGER;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static FileHandler fileHandler;
     private static long startTime;
     private static String adminToken;
+    private static boolean loggingEnabled = true;
     private HytaleHttpServer httpServer;
+
+    // Public getter for other classes to use the configured logger
+    public static CustomLogger getCustomLogger() {
+        return LOGGER;
+    }
+    
+    public static boolean isLoggingEnabled() {
+        return loggingEnabled;
+    }
 
     public static long getStartTime() {
         return startTime;
@@ -80,45 +84,50 @@ public class AdminDashboardPlugin extends JavaPlugin {
                     if (config.has("adminToken")) {
                         adminToken = config.get("adminToken").getAsString();
                     }
+                    if (config.has("loggingEnabled")) {
+                        loggingEnabled = config.get("loggingEnabled").getAsBoolean();
+                    }
                 }
             }
 
+            // Generate token if needed
             if (adminToken == null || adminToken.isEmpty()) {
                 adminToken = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-                JsonObject config = new JsonObject();
-                config.addProperty("adminToken", adminToken);
-                try (FileWriter writer = new FileWriter(configFile)) {
-                    GSON.toJson(config, writer);
-                }
+            }
+            
+            // Save config with both settings
+            JsonObject config = new JsonObject();
+            config.addProperty("adminToken", adminToken);
+            config.addProperty("loggingEnabled", loggingEnabled);
+            try (FileWriter writer = new FileWriter(configFile)) {
+                GSON.toJson(config, writer);
+            }
+            
+            if (LOGGER != null) {
+                LOGGER.info("[AdminDashboard] Config loaded - Logging enabled: " + loggingEnabled);
             }
         } catch (Exception e) {
-            LOGGER.severe("[AdminDashboard] Failed to load/save config: " + e.getMessage());
+            if (LOGGER != null) {
+                LOGGER.severe("[AdminDashboard] Failed to load/save config: " + e.getMessage());
+            }
         }
     }
 
     private void setupLogger() {
         try {
-            File logDir = new File("logs");
+            // Use absolute path to ensure we write to the correct location
+            File logFile = new File("logs/dashboard.log").getAbsoluteFile();
+            File logDir = logFile.getParentFile();
             if (!logDir.exists()) logDir.mkdirs();
             
-            File logFile = new File(logDir, "dashboard.log");
-            fileHandler = new FileHandler(logFile.getAbsolutePath(), true);
-            fileHandler.setFormatter(new SimpleFormatter());
-            fileHandler.setLevel(Level.ALL);
-            LOGGER.setLevel(Level.ALL);
+            // Create custom logger that writes directly to file
+            LOGGER = new CustomLogger(logFile.getAbsolutePath());
             
-            // Add to the main logger
-            LOGGER.addHandler(fileHandler);
-            LOGGER.setUseParentHandlers(false); // Stop spamming server.log
-            
-            // Force an immediate write to test
-            LOGGER.info("[AdminDebug] Logger initialized and file handler attached.");
-            fileHandler.flush();
-            
-            // Still log to console that logging has moved
-            Logger.getLogger("Global").info("[AdminDebug] Dedicated logging started in: " + logFile.getAbsolutePath());
+            // Test write
+            LOGGER.info("[AdminDashboard] Custom logging initialized to: " + logFile.getAbsolutePath());
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "[AdminDashboard] Failed to initialize file logger", e);
+            System.err.println("[AdminDashboard] Failed to initialize file logger: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -127,11 +136,6 @@ public class AdminDashboardPlugin extends JavaPlugin {
         if (httpServer != null) {
             httpServer.stop();
             LOGGER.info("[AdminDashboard] HTTP Server stopped.");
-        }
-        
-        if (fileHandler != null) {
-            fileHandler.close();
-            LOGGER.removeHandler(fileHandler);
         }
     }
 }

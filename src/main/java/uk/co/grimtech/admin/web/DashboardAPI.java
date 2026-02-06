@@ -1,6 +1,7 @@
 package uk.co.grimtech.admin.web;
 
 import uk.co.grimtech.admin.AdminDashboardPlugin;
+import uk.co.grimtech.admin.CustomLogger;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -37,19 +38,22 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
-import java.util.logging.Level;
 
 public class DashboardAPI {
     private static final Gson GSON = new Gson();
-    private static final Logger LOGGER = Logger.getLogger("AdminDebug");
+    private static CustomLogger LOGGER;
+    
+    // Get logger from main plugin
+    private static CustomLogger getLogger() {
+        if (LOGGER == null) {
+            LOGGER = AdminDashboardPlugin.getCustomLogger();
+        }
+        return LOGGER;
+    }
 
     public static String handleRequest(String path, String method, String body) {
-        LOGGER.info("[API] " + method + " " + path);
-        // Explicit flush to ensure logs appear in dashboard.log
-        for (java.util.logging.Handler handler : LOGGER.getHandlers()) {
-            handler.flush();
-        }
+        getLogger().info("[API] " + method + " " + path);
+        
         if (path.equals("/api/players")) {
             return getPlayers();
         } else if (path.startsWith("/api/avatar/")) {
@@ -127,7 +131,7 @@ public class DashboardAPI {
                                 playerJson.addProperty("z", Math.round(pos.z * 100.0) / 100.0);
                             }
                         } catch (Exception e) {
-                            LOGGER.log(Level.WARNING, "Error gathering dynamic data for " + ref.getUsername(), e);
+                            getLogger().log("WARN", "Error gathering dynamic data for " + ref.getUsername(), e);
                         }
                         return playerJson;
                     }, world);
@@ -146,7 +150,7 @@ public class DashboardAPI {
             }
 
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error getting players: " + e.getMessage(), e);
+            getLogger().log("ERROR", "Error getting players: " + e.getMessage(), e);
             JsonObject error = new JsonObject();
             error.addProperty("error", e.getMessage());
             return GSON.toJson(error);
@@ -213,7 +217,7 @@ public class DashboardAPI {
             String rawId = itemId;
             itemId = URLDecoder.decode(itemId, StandardCharsets.UTF_8.name());
             if (!rawId.equals(itemId)) {
-                LOGGER.info("[DashboardAPI] Decoded itemId: " + rawId + " -> " + itemId);
+                getLogger().info("[DashboardAPI] Decoded itemId: " + rawId + " -> " + itemId);
             }
 
             // 1. Resolve Namespace
@@ -228,7 +232,7 @@ public class DashboardAPI {
             // 2. Get AssetPack (Case-Insensitive)
             AssetPack pack = findAssetPack(namespace);
             if (pack == null) {
-                LOGGER.warning("[DashboardAPI] Could not find AssetPack for namespace (tried case-insensitive): " + namespace);
+                getLogger().warning("[DashboardAPI] Could not find AssetPack for namespace (tried case-insensitive): " + namespace);
                 return getFallbackIcon(itemId);
             }
 
@@ -246,16 +250,16 @@ public class DashboardAPI {
             String iconPathStr = null;
             if (item != null) {
                 iconPathStr = item.getIcon();
-                LOGGER.info("[DashboardAPI] Resolved Item " + itemId + " icon from config: " + iconPathStr);
+                getLogger().info("[DashboardAPI] Resolved Item " + itemId + " icon from config: " + iconPathStr);
             } else {
                 // Manual resolution if Item not found in store
                 // Hytale usually puts icons in Icons/ItemsGenerated or Icons/Entities
                 iconPathStr = "Icons/ItemsGenerated/" + assetId + ".png";
-                LOGGER.info("[DashboardAPI] Item " + itemId + " not in store, using manual path prediction: " + iconPathStr);
+                getLogger().info("[DashboardAPI] Item " + itemId + " not in store, using manual path prediction: " + iconPathStr);
             }
 
             if (iconPathStr == null || iconPathStr.isEmpty()) {
-                LOGGER.warning("[DashboardAPI] Icon path is null or empty for " + itemId);
+                getLogger().warning("[DashboardAPI] Icon path is null or empty for " + itemId);
                 return getFallbackIcon(itemId);
             }
 
@@ -290,18 +294,18 @@ public class DashboardAPI {
             }
 
             if (iconPath == null) {
-                LOGGER.warning("[DashboardAPI] Icon file NOT FOUND for " + itemId + " after trying all bases. IconPathStr: " + iconPathStr);
+                getLogger().warning("[DashboardAPI] Icon file NOT FOUND for " + itemId + " after trying all bases. IconPathStr: " + iconPathStr);
                 return getFallbackIcon(itemId);
             }
 
-            LOGGER.info("[DashboardAPI] Final resolved path for " + itemId + ": " + iconPath.toAbsolutePath());
+            getLogger().info("[DashboardAPI] Final resolved path for " + itemId + ": " + iconPath.toAbsolutePath());
 
             byte[] imageBytes = Files.readAllBytes(iconPath);
-            LOGGER.info("[DashboardAPI] Successfully read " + imageBytes.length + " bytes for " + itemId);
+            getLogger().info("[DashboardAPI] Successfully read " + imageBytes.length + " bytes for " + itemId);
             return "IMAGE_DATA:" + java.util.Base64.getEncoder().encodeToString(imageBytes);
 
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "[DashboardAPI] Error extracting real icon for " + itemId, e);
+            getLogger().log("WARN", "[DashboardAPI] Error extracting real icon for " + itemId, e);
             return getFallbackIcon(itemId);
         }
     }
@@ -312,7 +316,7 @@ public class DashboardAPI {
         for (AssetPack p : AssetModule.get().getAssetPacks()) {
             packNames.append(p.getName()).append(", ");
         }
-        LOGGER.info("[DashboardAPI] Searching for namespace: " + namespace + " in available packs: [" + packNames.toString() + "]");
+        getLogger().info("[DashboardAPI] Searching for namespace: " + namespace + " in available packs: [" + packNames.toString() + "]");
 
         AssetPack pack = AssetModule.get().getAssetPack(namespace);
         if (pack != null) return pack;
@@ -392,7 +396,7 @@ public class DashboardAPI {
             // Return as base64 with IMAGE_DATA prefix
             return "IMAGE_DATA:" + java.util.Base64.getEncoder().encodeToString(imageBytes);
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error generating fallback icon for " + itemId, e);
+            getLogger().log("WARN", "Error generating fallback icon for " + itemId, e);
             return "{\"error\": \"" + e.getMessage() + "\"}";
         }
     }
@@ -419,7 +423,7 @@ public class DashboardAPI {
                 }
             }
         } catch (Exception e) {
-            LOGGER.warning("Could not calculate actual TPS: " + e.getMessage());
+            getLogger().warning("Could not calculate actual TPS: " + e.getMessage());
         }
         stats.addProperty("tps", Math.round(tps * 10.0) / 10.0);
 
@@ -511,7 +515,7 @@ public class DashboardAPI {
                 processedPacks.add(cleanName.toLowerCase());
             }
         } catch (Exception e) {
-            LOGGER.warning("Error getting plugins: " + e.getMessage());
+            getLogger().warning("Error getting plugins: " + e.getMessage());
             // Fallback for safety
             JsonObject pObj = new JsonObject();
             pObj.addProperty("name", "Admin Dashboard");
@@ -540,7 +544,7 @@ public class DashboardAPI {
                 } catch (Exception ignored) {}
             }
         } catch (Exception e) {
-            LOGGER.warning("[DashboardAPI] Error fetching mod icon for " + modName + ": " + e.getMessage());
+            getLogger().warning("[DashboardAPI] Error fetching mod icon for " + modName + ": " + e.getMessage());
         }
         return "{\"error\": \"No icon found\"}";
     }
@@ -576,3 +580,5 @@ public class DashboardAPI {
         }
     }
 }
+
+

@@ -1,15 +1,24 @@
 package uk.co.grimtech.admin.web;
 
+import uk.co.grimtech.admin.AdminDashboardPlugin;
+import uk.co.grimtech.admin.CustomLogger;
 import java.io.*;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class AvatarCache {
-    private static final Logger LOGGER = Logger.getLogger("AvatarCache");
+    private static CustomLogger LOGGER;
+    
+    // Get logger from main plugin
+    private static CustomLogger getLogger() {
+        if (LOGGER == null) {
+            LOGGER = AdminDashboardPlugin.getCustomLogger();
+        }
+        return LOGGER;
+    }
+    
     private static final String CACHE_DIR = "web/avatars/";
     private static final String BASE_URL = "https://hytaletracker.org/avatars/";
 
@@ -17,7 +26,7 @@ public class AvatarCache {
         try {
             Files.createDirectories(Paths.get(CACHE_DIR));
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Could not create cache directory", e);
+            getLogger().log("ERROR", "Could not create cache directory", e);
         }
     }
 
@@ -29,7 +38,7 @@ public class AvatarCache {
             try {
                 return Files.readAllBytes(cachePath);
             } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Failed to read cached avatar: " + filename, e);
+                getLogger().log("WARN", "Failed to read cached avatar: " + filename, e);
             }
         }
 
@@ -41,7 +50,7 @@ public class AvatarCache {
                 return data;
             }
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Failed to download and cache avatar: " + identifier, e);
+            getLogger().log("WARN", "Failed to download and cache avatar: " + identifier, e);
         }
 
         return null;
@@ -49,7 +58,7 @@ public class AvatarCache {
 
     private static byte[] downloadAvatar(String identifier) throws IOException {
         URL url = new URL(BASE_URL + identifier + ".png");
-        LOGGER.info("[Avatar] Downloading: " + url);
+        getLogger().info("[Avatar] Downloading: " + url);
         try (InputStream in = new BufferedInputStream(url.openStream());
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             byte[] buffer = new byte[1024];
@@ -61,3 +70,5 @@ public class AvatarCache {
         }
     }
 }
+
+
