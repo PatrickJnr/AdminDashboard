@@ -27,6 +27,10 @@ import com.hypixel.hytale.server.core.plugin.PluginBase;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.item.config.ItemArmor;
+import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
+import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import com.hypixel.hytale.assetstore.AssetPack;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -35,6 +39,7 @@ import java.nio.file.Path;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -144,7 +149,7 @@ public class DashboardAPI {
                                         playerJson.addProperty("maxMana", 100);
                                     }
                                     
-                                    // Defence (calculated from armor)
+                                    // Defence (calculated from Physical damage resistance modifiers)
                                     double totalDefence = 0.0;
                                     if (playerComp != null) {
                                         Inventory inv = playerComp.getInventory();
@@ -156,14 +161,28 @@ public class DashboardAPI {
                                                     if (itemStack != null && !itemStack.isEmpty()) {
                                                         Item item = itemStack.getItem();
                                                         if (item != null && item.getArmor() != null) {
-                                                            totalDefence += item.getArmor().getBaseDamageResistance();
+                                                            ItemArmor armor = item.getArmor();
+                                                            
+                                                            // Sum up Physical damage resistance
+                                                            Map<DamageCause, StaticModifier[]> damageRes = armor.getDamageResistanceValues();
+                                                            if (damageRes != null) {
+                                                                for (Map.Entry<DamageCause, StaticModifier[]> entry : damageRes.entrySet()) {
+                                                                    // Look for Physical damage type
+                                                                    if ("Physical".equals(entry.getKey().getId())) {
+                                                                        for (StaticModifier mod : entry.getValue()) {
+                                                                            totalDefence += mod.getAmount();
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                 }
                                             }
                                         }
                                     }
-                                    playerJson.addProperty("defence", Math.round(totalDefence));
+                                    // Convert to percentage (0.4 = 40%)
+                                    playerJson.addProperty("defence", Math.round(totalDefence * 100));
                                 }
                             }
 
