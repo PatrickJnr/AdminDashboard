@@ -115,11 +115,55 @@ public class DashboardAPI {
                                 
                                 EntityStatMap statMap = store.getComponent(entityRef, EntityStatMap.getComponentType());
                                 if (statMap != null) {
+                                    // Health
                                     EntityStatValue healthStat = statMap.get(DefaultEntityStatTypes.getHealth());
                                     if (healthStat != null) {
                                         playerJson.addProperty("health", healthStat.get());
                                         playerJson.addProperty("maxHealth", healthStat.getMax());
                                     }
+                                    
+                                    // Stamina
+                                    EntityStatValue staminaStat = statMap.get(DefaultEntityStatTypes.getStamina());
+                                    if (staminaStat != null) {
+                                        playerJson.addProperty("stamina", staminaStat.get());
+                                        playerJson.addProperty("maxStamina", staminaStat.getMax());
+                                    } else {
+                                        // Default values if stamina not available
+                                        playerJson.addProperty("stamina", 100);
+                                        playerJson.addProperty("maxStamina", 100);
+                                    }
+                                    
+                                    // Mana
+                                    EntityStatValue manaStat = statMap.get(DefaultEntityStatTypes.getMana());
+                                    if (manaStat != null) {
+                                        playerJson.addProperty("mana", manaStat.get());
+                                        playerJson.addProperty("maxMana", manaStat.getMax());
+                                    } else {
+                                        // Default values if mana not available
+                                        playerJson.addProperty("mana", 100);
+                                        playerJson.addProperty("maxMana", 100);
+                                    }
+                                    
+                                    // Defence (calculated from armor)
+                                    double totalDefence = 0.0;
+                                    if (playerComp != null) {
+                                        Inventory inv = playerComp.getInventory();
+                                        if (inv != null) {
+                                            ItemContainer armorContainer = inv.getArmor();
+                                            if (armorContainer != null) {
+                                                for (short i = 0; i < armorContainer.getCapacity(); i++) {
+                                                    ItemStack itemStack = armorContainer.getItemStack(i);
+                                                    if (itemStack != null && !itemStack.isEmpty()) {
+                                                        Item item = itemStack.getItem();
+                                                        if (item != null && item.getArmor() != null) {
+                                                            totalDefence += item.getArmor().getBaseDamageResistance();
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    playerJson.addProperty("defence", Math.round(totalDefence));
                                 }
                             }
 
@@ -430,8 +474,11 @@ public class DashboardAPI {
         // Memory usage
         Runtime runtime = Runtime.getRuntime();
         long usedMemory = runtime.totalMemory() - runtime.freeMemory();
+        long maxMemory = runtime.maxMemory();
+        stats.addProperty("memory", usedMemory); // Bytes for frontend to format
         stats.addProperty("memoryUsed", usedMemory / (1024 * 1024)); // MB
-        stats.addProperty("memoryMax", runtime.maxMemory() / (1024 * 1024)); // MB
+        stats.addProperty("memoryMax", maxMemory / (1024 * 1024)); // MB
+        stats.addProperty("memoryPercent", Math.round((double) usedMemory / maxMemory * 100.0));
 
         return GSON.toJson(stats);
     }

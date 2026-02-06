@@ -8,6 +8,16 @@ let retryCount = 0;
 const MAX_RETRIES = 3;
 
 // Utility Functions
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
 function showNotification(message, type = 'success') {
     const banner = document.createElement('div');
     banner.className = type === 'success' ? 'success-banner' : 'error-banner';
@@ -148,8 +158,7 @@ async function fetchStats(isInit = false) {
         
         // Update memory if available
         if (stats.memory) {
-            const memoryMB = Math.round(stats.memory / 1024 / 1024);
-            document.getElementById('server-memory').textContent = `${memoryMB} MB`;
+            document.getElementById('server-memory').textContent = formatBytes(stats.memory);
         }
         
         const tpsEl = document.getElementById('server-tps');
