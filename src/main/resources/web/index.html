@@ -657,6 +657,42 @@
             text-align: center;
         }
 
+        /* Tooltip Styles */
+        .item-tooltip {
+            position: fixed;
+            pointer-events: none;
+            background: rgba(22, 33, 51, 0.98);
+            border: 2px solid var(--hytale-gold-dark);
+            padding: 0.75rem;
+            border-radius: 4px;
+            z-index: 2000;
+            display: none;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+        }
+
+        .tooltip-title {
+            font-family: 'Lexend', sans-serif;
+            font-weight: 700;
+            color: var(--hytale-gold-light);
+            margin-bottom: 0.25rem;
+            font-size: 0.875rem;
+            text-transform: capitalize;
+        }
+
+        .tooltip-id {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            opacity: 0.8;
+        }
+
+        .tooltip-count {
+            margin-top: 0.5rem;
+            font-size: 0.8125rem;
+            color: var(--hytale-gold);
+        }
+
         .broadcast-group .search-input {
             flex: 1;
         }
@@ -937,7 +973,6 @@
 
                 // Show modal
                 modal.classList.add('active');
-                modal.style.display = 'flex'; // Force display
             } catch (e) {
                 alert('Failed to load inventory: ' + e.message);
             }
@@ -980,12 +1015,34 @@
                     icon.className = 'item-icon';
                     icon.src = `/api/item/${encodeURIComponent(item.id)}/icon`;
                     icon.alt = item.id;
-                    icon.title = item.id.split(':').pop().replace(/_/g, ' ');
                     icon.onerror = function() {
-                        // Fallback if icon fails to load
                         this.style.display = 'none';
                     };
                     slot.appendChild(icon);
+                    
+                    // Tooltip listeners
+                    slot.onmouseenter = (e) => {
+                        const tooltip = document.getElementById('item-tooltip');
+                        const title = document.getElementById('tooltip-title');
+                        const id = document.getElementById('tooltip-id');
+                        const count = document.getElementById('tooltip-count');
+                        
+                        title.textContent = item.id.split(':').pop().replace(/_/g, ' ');
+                        id.textContent = item.id;
+                        count.textContent = item.count > 1 ? `Count: ${item.count}` : '';
+                        
+                        tooltip.style.display = 'block';
+                    };
+                    
+                    slot.onmousemove = (e) => {
+                        const tooltip = document.getElementById('item-tooltip');
+                        tooltip.style.left = (e.clientX + 15) + 'px';
+                        tooltip.style.top = (e.clientY + 15) + 'px';
+                    };
+                    
+                    slot.onmouseleave = () => {
+                        document.getElementById('item-tooltip').style.display = 'none';
+                    };
                     
                     // Add item count badge
                     if (item.count && item.count > 1) {
@@ -1001,7 +1058,11 @@
         }
 
         function closeInventory() {
-            document.getElementById('inventory-modal').classList.remove('active');
+            const modal = document.getElementById('inventory-modal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+            document.getElementById('item-tooltip').style.display = 'none';
         }
 
         // Initialize modal event listeners after DOM is loaded
@@ -1213,26 +1274,14 @@
 
     <!-- Inventory Modal -->
     <div id="inventory-modal" class="modal-overlay">
-        <div class="modal-container">
-            <div class="modal-header">
-                <h2 class="modal-title" id="inv-player-name">Player Inventory</h2>
-                <button class="modal-close" onclick="closeInventory()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="inv-section">
-                    <div class="inv-section-title">Hotbar</div>
-                    <div class="inv-grid hotbar" id="inv-hotbar"></div>
-                </div>
-                <div class="inv-section">
-                    <div class="inv-section-title">Storage</div>
-                    <div class="inv-grid storage" id="inv-storage"></div>
-                </div>
-                <div class="inv-section">
-                    <div class="inv-section-title">Armor</div>
-                    <div class="inv-grid armor" id="inv-armor"></div>
-                </div>
-            </div>
-        </div>
+        <!-- ... existing content ... -->
+    </div>
+
+    <!-- Tooltip Element -->
+    <div id="item-tooltip" class="item-tooltip">
+        <div id="tooltip-title" class="tooltip-title"></div>
+        <div id="tooltip-id" class="tooltip-id"></div>
+        <div id="tooltip-count" class="tooltip-count"></div>
     </div>
 </body>
 </html>

@@ -195,26 +195,51 @@ public class DashboardAPI {
 
     private static String getItemIcon(String itemId) {
         try {
-            // Generate a simple placeholder icon as a colored square
-            // Color is based on hash of item ID for consistency
-            int hash = itemId.hashCode();
-            int r = (hash & 0xFF0000) >> 16;
-            int g = (hash & 0x00FF00) >> 8;
-            int b = (hash & 0x0000FF);
+            // Determine color based on item category
+            java.awt.Color color;
+            String idLower = itemId.toLowerCase();
+            
+            if (idLower.startsWith("weapon_")) {
+                color = new java.awt.Color(200, 50, 0); // Red/Orange for weapons
+            } else if (idLower.startsWith("tool_")) {
+                color = new java.awt.Color(160, 160, 160); // Silver/Gray for tools
+            } else if (idLower.startsWith("ore_") || idLower.startsWith("ingredient_ore")) {
+                color = new java.awt.Color(139, 69, 19); // Brown for ores
+            } else if (idLower.startsWith("armor_")) {
+                color = new java.awt.Color(30, 144, 255); // Blue for armor
+            } else if (idLower.startsWith("food_") || idLower.startsWith("ingredient_food")) {
+                color = new java.awt.Color(255, 105, 180); // Pink for food
+            } else if (idLower.startsWith("block_") || idLower.startsWith("soil_")) {
+                color = new java.awt.Color(100, 100, 100); // Dark Gray for blocks
+            } else if (idLower.startsWith("ingredient_")) {
+                color = new java.awt.Color(154, 205, 50); // Yellow/Green for ingredients
+            } else {
+                // Default to hash-based color for consistency
+                int hash = itemId.hashCode();
+                int r = (hash & 0xFF0000) >> 16;
+                int g = (hash & 0x00FF00) >> 8;
+                int b = (hash & 0x0000FF);
+                color = new java.awt.Color(r, g, b);
+            }
             
             // Create a 32x32 PNG with the color
             java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(32, 32, java.awt.image.BufferedImage.TYPE_INT_ARGB);
-            java.awt.Graphics2D g2d = img.createGraphics();
+            java.awt.Graphics2D g2 = img.createGraphics();
             
             // Fill with color
-            g2d.setColor(new java.awt.Color(r, g, b));
-            g2d.fillRect(0, 0, 32, 32);
+            g2.setColor(color);
+            g2.fillRect(4, 4, 24, 24);
             
-            // Add border
-            g2d.setColor(new java.awt.Color(50, 50, 50));
-            g2d.drawRect(0, 0, 31, 31);
+            // Add aesthetic border
+            g2.setColor(color.darker());
+            g2.setStroke(new java.awt.BasicStroke(2));
+            g2.drawRect(4, 4, 23, 23);
             
-            g2d.dispose();
+            // Add a subtle sheen/highlight
+            g2.setColor(new java.awt.Color(255, 255, 255, 60));
+            g2.fillRect(6, 6, 10, 4);
+            
+            g2.dispose();
             
             // Convert to PNG bytes
             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
