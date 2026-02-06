@@ -305,8 +305,22 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
+            z-index: 9999;
             transition: opacity 0.5s;
+        }
+
+        .login-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .login-overlay.hidden .login-card {
+            transform: scale(0.9);
+        }
+
+        /* Dashboard locked state - prevents interaction and visibility when not authenticated */
+        .dashboard-locked {
+            display: none !important;
         }
 
         .login-card {
@@ -494,7 +508,7 @@
 
         .mod-count-badge {
             background: var(--hytale-gold-dark);
-            color: var(--bg-primary);
+            color: var(--hytale-bg);
             padding: 0.25rem 0.625rem;
             border-radius: 12px;
             font-size: 0.75rem;
@@ -522,7 +536,7 @@
         }
 
         .modal-container {
-            background: var(--bg-primary);
+            background: var(--hytale-bg);
             border: 2px solid var(--hytale-border);
             border-radius: 8px;
             max-width: 800px;
@@ -599,7 +613,223 @@
 
         .inv-grid.armor {
             grid-template-columns: repeat(4, 1fr);
-            max-width: 300px;
+            max-width: 200px;
+        }
+
+        /* Pulse Animation for Online Status */
+        .pulse {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #a3cf93;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        /* Tooltip Styles */
+        .item-tooltip {
+            position: fixed;
+            background: rgba(15, 28, 48, 0.98);
+            border: 1px solid var(--hytale-gold-dark);
+            border-radius: 4px;
+            padding: 0.75rem 1rem;
+            pointer-events: none;
+            z-index: 2000;
+            max-width: 280px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+            display: none;
+        }
+
+        .item-tooltip.visible {
+            display: block;
+        }
+
+        .tooltip-title {
+            font-weight: 700;
+            color: var(--hytale-gold-light);
+            margin-bottom: 0.25rem;
+        }
+
+        .tooltip-id {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-family: monospace;
+        }
+
+        .tooltip-count {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            margin-top: 0.25rem;
+        }
+
+        /* Coordinate Label Style */
+        .coord-label {
+            color: var(--hytale-gold);
+            font-weight: 600;
+        }
+
+        /* Inventory Slot Styles */
+        .inv-slot {
+            width: 48px;
+            height: 48px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--hytale-border);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .inv-slot:hover {
+            border-color: var(--hytale-gold);
+            background: rgba(236, 188, 98, 0.1);
+        }
+
+        .inv-slot img {
+            width: 36px;
+            height: 36px;
+            image-rendering: pixelated;
+        }
+
+        .inv-slot .item-count {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+        }
+
+        .inv-slot.empty {
+            opacity: 0.5;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .broadcast-group {
+                flex-direction: column;
+            }
+
+            .search-input {
+                width: 100%;
+            }
+
+            table {
+                display: block;
+                overflow-x: auto;
+            }
+
+            .player-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .modal-container {
+                width: 95%;
+                margin: 1rem;
+            }
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(236, 188, 98, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--hytale-gold);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Button Enhancements */
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: linear-gradient(to bottom, #c95454, #a33838);
+            box-shadow: 0 0 10px rgba(183, 69, 69, 0.4);
+        }
+
+        /* Status Badge Variations */
+        .badge-warning {
+            background: rgba(244, 208, 111, 0.2);
+            color: #f4d06f;
+            border: 1px solid rgba(244, 208, 111, 0.4);
+        }
+
+        .badge-danger {
+            background: rgba(183, 69, 69, 0.2);
+            color: #efa3a3;
+            border: 1px solid rgba(183, 69, 69, 0.4);
+        }
+
+        /* Table Row Animation */
+        tbody tr {
+            transition: background 0.2s;
+        }
+
+        /* Chat Log Styles */
+        .chat-entry {
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-bottom: 0.25rem;
+            background: rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Enhanced Panel Header */
+        .panel-section {
+            margin-bottom: 2rem;
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
         }
 
         .inv-slot {
@@ -755,7 +985,7 @@
         </div>
     </div>
 
-    <div class="container">
+    <div class="container dashboard-locked" id="dashboard-container">
         <header>
             <div class="hytale-panel" style="padding: 1rem 2rem; margin-bottom: 0">
                 <div class="hytale-panel-inner" style="display: flex; align-items: center; gap: 2rem">
@@ -880,8 +1110,10 @@
             fetchStats(true).then(success => {
                 if (success) {
                     localStorage.setItem('hytale_admin_token', token);
-                    document.getElementById('login-overlay').style.opacity = '0';
-                    setTimeout(() => document.getElementById('login-overlay').style.display = 'none', 500);
+                    const overlay = document.getElementById('login-overlay');
+                    overlay.classList.add('hidden');
+                    document.getElementById('dashboard-container').classList.remove('dashboard-locked');
+                    setTimeout(() => overlay.style.display = 'none', 500);
                     startSync();
                 } else {
                     document.getElementById('login-error').style.display = 'block';
@@ -894,7 +1126,10 @@
         if (dashboardToken) {
             fetchStats(true).then(success => {
                 if (success) {
-                    document.getElementById('login-overlay').style.display = 'none';
+                    const overlay = document.getElementById('login-overlay');
+                    overlay.classList.add('hidden');
+                    document.getElementById('dashboard-container').classList.remove('dashboard-locked');
+                    setTimeout(() => overlay.style.display = 'none', 500);
                     startSync();
                 } else {
                     localStorage.removeItem('hytale_admin_token');
@@ -1067,24 +1302,24 @@
                     slot.onmouseenter = (e) => {
                         const tooltip = document.getElementById('item-tooltip');
                         const title = document.getElementById('tooltip-title');
-                        const id = document.getElementById('tooltip-id');
+                        const idEl = document.getElementById('tooltip-id');
                         const count = document.getElementById('tooltip-count');
                         
                         title.textContent = item.id.split(':').pop().replace(/_/g, ' ');
-                        id.textContent = item.id;
+                        idEl.textContent = item.id;
                         count.textContent = item.count > 1 ? `Count: ${item.count}` : '';
                         
-                        tooltip.style.display = 'block';
+                        tooltip.classList.add('visible');
+                        positionTooltip(e, tooltip);
                     };
                     
                     slot.onmousemove = (e) => {
                         const tooltip = document.getElementById('item-tooltip');
-                        tooltip.style.left = (e.clientX + 15) + 'px';
-                        tooltip.style.top = (e.clientY + 15) + 'px';
+                        positionTooltip(e, tooltip);
                     };
                     
                     slot.onmouseleave = () => {
-                        document.getElementById('item-tooltip').style.display = 'none';
+                        document.getElementById('item-tooltip').classList.remove('visible');
                     };
                     
                     // Add item count badge
@@ -1094,6 +1329,8 @@
                         count.textContent = item.count;
                         slot.appendChild(count);
                     }
+                } else {
+                    slot.classList.add('empty');
                 }
                 
                 container.appendChild(slot);
@@ -1277,9 +1514,9 @@
                 tr.querySelector('.p-vitals').textContent = `${Math.round(p.health)} / ${Math.round(p.maxHealth)} HP`;
                 tr.querySelector('.health-bar').style.width = healthPct + '%';
                 tr.querySelector('.p-coords').innerHTML = `
-                    <span style="color: var(--accent)">X:</span> ${Math.round(p.x)} 
-                    <span style="color: var(--accent)">Y:</span> ${Math.round(p.y)} 
-                    <span style="color: var(--accent)">Z:</span> ${Math.round(p.z)}
+                    <span class="coord-label">X:</span> ${Math.round(p.x)} 
+                    <span class="coord-label">Y:</span> ${Math.round(p.y)} 
+                    <span class="coord-label">Z:</span> ${Math.round(p.z)}
                 `;
                 tr.querySelector('.p-gamemode').textContent = p.gameMode;
             });
