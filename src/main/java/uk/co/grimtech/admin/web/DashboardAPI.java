@@ -65,6 +65,9 @@ public class DashboardAPI {
         } else if (path.startsWith("/api/item/") && path.endsWith("/icon")) {
             String itemId = path.substring(10, path.length() - 5); // Extract item ID
             return getItemIcon(itemId);
+        } else if (path.startsWith("/api/mod/") && path.endsWith("/icon")) {
+            String modName = path.substring(9, path.length() - 5); // Extract mod name
+            return getModIcon(modName);
         } else if (path.startsWith("/api/player/") && path.endsWith("/inv")) {
             String uuidStr = path.substring(12, path.length() - 4);
             return getPlayerInventory(uuidStr);
@@ -463,7 +466,10 @@ public class DashboardAPI {
 
     private static String getPlugins() {
         JsonArray plugins = new JsonArray();
+        java.util.Set<String> processedPacks = new java.util.HashSet<>();
+        
         try {
+            // 1. Add JAR-based java plugins
             List<PluginBase> loadedPlugins = PluginManager.get().getPlugins();
             for (PluginBase plugin : loadedPlugins) {
                 String name = plugin.getManifest().getName();
@@ -473,7 +479,36 @@ public class DashboardAPI {
                 pObj.addProperty("name", name);
                 pObj.addProperty("version", plugin.getManifest().getVersion().toString());
                 pObj.addProperty("id", plugin.getIdentifier().toString());
+                pObj.addProperty("type", "Mod");
+                pObj.addProperty("iconUrl", "/api/mod/" + encodeForUrl(name) + "/icon");
                 plugins.add(pObj);
+                
+                // Track identified packs to avoid duplicates
+                processedPacks.add(name.toLowerCase());
+                if (name.contains(":")) {
+                    processedPacks.add(name.split(":")[1].toLowerCase());
+                }
+            }
+            
+            // 2. Add Asset Packs (covers zipped mods without code)
+            for (AssetPack pack : AssetModule.get().getAssetPacks()) {
+                String name = pack.getName();
+                String cleanName = name;
+                if (name.contains(":")) {
+                    cleanName = name.split(":")[1];
+                }
+                
+                if (INTERNAL_PLUGINS.contains(cleanName) || INTERNAL_PLUGINS.contains(name)) continue;
+                if (processedPacks.contains(name.toLowerCase()) || processedPacks.contains(cleanName.toLowerCase())) continue;
+
+                JsonObject pObj = new JsonObject();
+                pObj.addProperty("name", cleanName);
+                pObj.addProperty("version", "1.0"); // Asset packs don't usually have a version in manifest
+                pObj.addProperty("id", name);
+                pObj.addProperty("type", "Asset Pack");
+                pObj.addProperty("iconUrl", "/api/mod/" + encodeForUrl(name) + "/icon");
+                plugins.add(pObj);
+                processedPacks.add(cleanName.toLowerCase());
             }
         } catch (Exception e) {
             LOGGER.warning("Error getting plugins: " + e.getMessage());
@@ -484,6 +519,38 @@ public class DashboardAPI {
             plugins.add(pObj);
         }
         return GSON.toJson(plugins);
+    }
+
+    private static String getModIcon(String modName) {
+        try {
+            modName = URLDecoder.decode(modName, StandardCharsets.UTF_8.name());
+            AssetPack pack = findAssetPack(modName);
+            if (pack == null) return "{\"error\": \"Mod not found\"}";
+
+            // Common logo filenames in Hytale mods
+            String[] possibleLogos = {"pack.png", "logo.png", "icon.png", "manifest.png"};
+            
+            for (String logo : possibleLogos) {
+                try {
+                    java.nio.file.Path logoPath = pack.getFileSystem().getPath(logo);
+                    byte[] data = java.nio.file.Files.readAllBytes(logoPath);
+                    if (data != null && data.length > 0) {
+                        return "IMAGE_DATA:" + java.util.Base64.getEncoder().encodeToString(data);
+                    }
+                } catch (Exception ignored) {}
+            }
+        } catch (Exception e) {
+            LOGGER.warning("[DashboardAPI] Error fetching mod icon for " + modName + ": " + e.getMessage());
+        }
+        return "{\"error\": \"No icon found\"}";
+    }
+
+    private static String encodeForUrl(String text) {
+        try {
+            return java.net.URLEncoder.encode(text, StandardCharsets.UTF_8.name());
+        } catch (Exception e) {
+            return text;
+        }
     }
 
     private static String getChatLog() {

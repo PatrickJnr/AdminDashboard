@@ -648,27 +648,67 @@
             bottom: 4px;
             right: 4px;
             background: var(--hytale-gold-dark);
-            color: var(--bg-primary);
+            color: var(--hytale-bg-dark);
             font-size: 0.625rem;
-            font-weight: 700;
+            font-weight: 800;
             padding: 2px 4px;
             border-radius: 3px;
             min-width: 16px;
             text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+
+        /* Mod List Enhancements */
+        .plugin-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            margin-right: 1rem;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--hytale-border);
+            object-fit: cover;
+        }
+
+        .plugin-info {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        .plugin-type {
+            font-size: 0.625rem;
+            text-transform: uppercase;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.1);
+            color: var(--text-secondary);
+            margin-left: 0.5rem;
+        }
+
+        /* Animations */
+        @keyframes modalShow {
+            from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .modal-container.animate-show {
+            animation: modalShow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
 
         /* Tooltip Styles */
         .item-tooltip {
             position: fixed;
             pointer-events: none;
-            background: rgba(22, 33, 51, 0.98);
-            border: 2px solid var(--hytale-gold-dark);
-            padding: 0.75rem;
+            background: linear-gradient(135deg, rgba(20, 32, 50, 0.95), rgba(10, 15, 25, 0.98));
+            border: 1px solid var(--hytale-gold-dark);
+            padding: 1rem;
             border-radius: 4px;
             z-index: 2000;
             display: none;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(236, 188, 98, 0.05);
             backdrop-filter: blur(8px);
+            min-width: 180px;
         }
 
         .tooltip-title {
@@ -973,6 +1013,7 @@
 
                 // Show modal
                 modal.classList.add('active');
+                modal.querySelector('.modal-container').classList.add('animate-show');
             } catch (e) {
                 alert('Failed to load inventory: ' + e.message);
             }
@@ -1062,7 +1103,17 @@
         function closeInventory() {
             const modal = document.getElementById('inventory-modal');
             if (modal) {
-                modal.classList.remove('active');
+                const container = modal.querySelector('.modal-container');
+                container.style.transition = 'all 0.2s ease';
+                container.style.opacity = '0';
+                container.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    modal.classList.remove('active');
+                    container.classList.remove('animate-show');
+                    container.style.opacity = '';
+                    container.style.transform = '';
+                    container.style.transition = '';
+                }, 200);
             }
             document.getElementById('item-tooltip').style.display = 'none';
         }
@@ -1102,8 +1153,16 @@
                     const div = document.createElement('div');
                     div.className = 'plugin-item';
                     div.innerHTML = `
-                        <span style="font-weight: 600">${mod.name}</span>
-                        <span style="font-size: 0.75rem; color: var(--hytale-gold)">v${mod.version}</span>
+                        <div class="plugin-info">
+                            <img src="${mod.iconUrl}" class="plugin-icon" onerror="this.src='https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(mod.name)}'">
+                            <div>
+                                <div style="font-weight: 600">${mod.name}</div>
+                                <div style="display: flex; align-items: center">
+                                    <span style="font-size: 0.75rem; color: var(--hytale-gold)">v${mod.version}</span>
+                                    <span class="plugin-type">${mod.type}</span>
+                                </div>
+                            </div>
+                        </div>
                     `;
                     list.appendChild(div);
                 });
