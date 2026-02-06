@@ -3,6 +3,82 @@
 let allPlayers = [];
 let dashboardToken = localStorage.getItem('hytale_admin_token');
 const avatarCache = new Map();
+let connectionStatus = 'connected';
+let retryCount = 0;
+const MAX_RETRIES = 3;
+
+// Utility Functions
+function showNotification(message, type = 'success') {
+    const banner = document.createElement('div');
+    banner.className = type === 'success' ? 'success-banner' : 'error-banner';
+    banner.textContent = message;
+    document.body.appendChild(banner);
+    
+    setTimeout(() => {
+        banner.classList.add('fade-out');
+        setTimeout(() => banner.remove(), 300);
+    }, 3000);
+}
+
+function updateConnectionStatus(status) {
+    connectionStatus = status;
+    const pill = document.querySelector('.refresh-pill');
+    if (pill) {
+        const pulse = pill.querySelector('.pulse');
+        const text = pill.childNodes[2];
+        
+        if (status === 'connected') {
+            pulse.style.background = '#a3cf93';
+            text.textContent = ' Live Connection';
+            retryCount = 0;
+        } else if (status === 'reconnecting') {
+            pulse.style.background = '#f4d03f';
+            text.textContent = ' Reconnecting...';
+        } else {
+            pulse.style.background = '#efa3a3';
+            text.textContent = ' Disconnected';
+        }
+    }
+}
+
+// Keyboard Shortcuts
+document.addEventListener('keydown', (e) => {
+    // Ctrl/Cmd + R: Refresh data
+    if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+        e.preventDefault();
+        fetchStats();
+        showNotification('Data refreshed', 'success');
+    }
+    
+    // Escape: Close modals
+    if (e.key === 'Escape') {
+        closeInventory();
+    }
+    
+    // Ctrl/Cmd + F: Focus search
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        document.getElementById('search').focus();
+    }
+});
+
+// Show keyboard hint on first load
+let hintShown = localStorage.getItem('keyboard_hint_shown');
+if (!hintShown) {
+    setTimeout(() => {
+        const hint = document.createElement('div');
+        hint.className = 'keyboard-hint visible';
+        hint.innerHTML = 'Tip: Press <kbd>Ctrl</kbd>+<kbd>R</kbd> to refresh, <kbd>Ctrl</kbd>+<kbd>F</kbd> to search';
+        document.body.appendChild(hint);
+        
+        setTimeout(() => {
+            hint.classList.remove('visible');
+            setTimeout(() => hint.remove(), 200);
+        }, 5000);
+        
+        localStorage.setItem('keyboard_hint_shown', 'true');
+    }, 2000);
+}
 
 // Login
 function login(event) {
@@ -74,9 +150,20 @@ async function fetchStats(isInit = false) {
         tpsEl.style.color = stats.tps > 18 ? '#a3cf93' : (stats.tps > 15 ? '#f4d06f' : '#b74545');
 
         updateServerTime();
+        updateConnectionStatus('connected');
         return true;
     } catch (e) {
         console.error('Failed to fetch stats', e);
+        updateConnectionStatus('reconnecting');
+        
+        // Retry logic
+        if (retryCount < MAX_RETRIES) {
+            retryCount++;
+            setTimeout(() => fetchStats(isInit), 2000 * retryCount);
+        } else {
+            updateConnectionStatus('disconnected');
+            showNotification('Connection lost. Please check your server.', 'error');
+        }
         return false;
     }
 }
@@ -103,10 +190,12 @@ async function broadcast() {
         });
         if (res.ok) {
             msgInput.value = '';
-            alert('Broadcast sent!');
+            showNotification('Broadcast sent successfully!', 'success');
+        } else {
+            throw new Error('Failed to send broadcast');
         }
     } catch (e) {
-        alert('Failed to send broadcast');
+        showNotification('Failed to send broadcast', 'error');
     }
 }
 
@@ -313,9 +402,35 @@ function renderPlayers() {
     Array.from(tbody.children).forEach(row => {
         const uuid = row.getAttribute('data-uuid');
         if (!currentUuids.has(uuid)) {
-            tbody.removeChild(row);
+            row.style.opacity = '0';
+            row.style.transform = 'translateX(-20px)';
+            setTimeout(() => tbody.removeChild(row), 150);
         }
     });
+
+    if (filtered.length === 0 && searchTerm) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="empty-state">
+                    <div class="empty-state-icon">🔍</div>
+                    <div class="empty-state-text">No players found</div>
+                    <div class="empty-state-subtext">Try a different search term</div>
+                </td>
+            </tr>
+        `;
+        return;
+    } else if (filtered.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="empty-state">
+                    <div class="empty-state-icon">👥</div>
+                    <div class="empty-state-text">No players online</div>
+                    <div class="empty-state-subtext">Waiting for players to join...</div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
 
     filtered.forEach(p => {
         let tr = tbody.querySelector(`tr[data-uuid="${p.uuid}"]`);
@@ -325,6 +440,8 @@ function renderPlayers() {
         if (!tr) {
             tr = document.createElement('tr');
             tr.setAttribute('data-uuid', p.uuid);
+            tr.style.opacity = '0';
+            tr.style.transform = 'translateX(-20px)';
             tr.innerHTML = `
                 <td>
                     <div class="player-info">
@@ -363,6 +480,13 @@ function renderPlayers() {
             
             tr.querySelector('.btn-inv').onclick = () => viewInv(p.uuid);
             tr.querySelector('.btn-kick').onclick = () => kickPlayer(p.uuid);
+            
+            // Animate in
+            setTimeout(() => {
+                tr.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                tr.style.opacity = '1';
+                tr.style.transform = 'translateX(0)';
+            }, 10);
         }
 
         tr.querySelector('.p-name').textContent = p.name;
@@ -409,11 +533,30 @@ function kickPlayer(uuid) {
                 'X-Admin-Token': dashboardToken
             },
             body: JSON.stringify({ uuid: uuid, reason: 'Kicked by Admin' })
-        }).then(() => fetchStats());
+        })
+        .then(res => {
+            if (res.ok) {
+                showNotification(`${p ? p.name : 'Player'} has been kicked`, 'success');
+                fetchStats();
+            } else {
+                throw new Error('Failed to kick player');
+            }
+        })
+        .catch(() => {
+            showNotification('Failed to kick player', 'error');
+        });
     }
 }
 
 setInterval(updateServerTime, 1000);
+
+// Debounce search input
+let searchTimeout;
+const originalSearchListener = document.getElementById('search').oninput;
+document.getElementById('search').addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => renderPlayers(), 300);
+});
 
 // Modal close on escape
 document.addEventListener('keydown', (e) => {
