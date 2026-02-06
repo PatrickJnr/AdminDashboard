@@ -30,12 +30,16 @@ import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemArmor;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
 import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
+import com.hypixel.hytale.server.core.modules.accesscontrol.AccessControlModule;
+import com.hypixel.hytale.server.core.modules.accesscontrol.ban.InfiniteBan;
+import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import com.hypixel.hytale.assetstore.AssetPack;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -88,6 +92,20 @@ public class DashboardAPI {
             return getPlugins();
         } else if (path.equals("/api/chat")) {
             return getChatLog();
+        } else if (path.equals("/api/kick") && method.equals("POST")) {
+            return kickPlayer(body);
+        } else if (path.equals("/api/ban") && method.equals("POST")) {
+            return banPlayer(body);
+        } else if (path.equals("/api/op") && method.equals("POST")) {
+            return toggleOP(body);
+        } else if (path.equals("/api/teleport") && method.equals("POST")) {
+            return teleportPlayer(body);
+        } else if (path.equals("/api/bans")) {
+            return getBannedPlayers();
+        } else if (path.equals("/api/bans/file")) {
+            return getBansFile();
+        } else if (path.equals("/api/unban") && method.equals("POST")) {
+            return unbanPlayer(body);
         }
         
         return "{\"error\": \"Invalid endpoint\"}";
@@ -638,13 +656,357 @@ public class DashboardAPI {
             PlayerRef ref = Universe.get().getPlayer(uuid);
             if (ref != null && ref.getPacketHandler() != null) {
                 ref.getPacketHandler().disconnect(reason);
+                getLogger().info("[API] Kicked player " + ref.getUsername() + " (" + uuid + ") - Reason: " + reason);
                 return "{\"status\": \"success\", \"message\": \"Player kicked\"}";
             }
             return "{\"error\": \"Player or connection not found\"}";
         } catch (Exception e) {
+            getLogger().log("ERROR", "Error kicking player", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static String banPlayer(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
+            
+            UUID uuid = UUID.fromString(json.get("uuid").getAsString());
+            String reason = json.has("reason") ? json.get("reason").getAsString() : "Banned by Admin";
+            
+            PlayerRef ref = Universe.get().getPlayer(uuid);
+            String playerName = ref != null ? ref.getUsername() : uuid.toString();
+            
+            // Use reflection to access the private banProvider field
+            try {
+                java.lang.reflect.Field field = AccessControlModule.class.getDeclaredField("banProvider");
+                field.setAccessible(true);
+                com.hypixel.hytale.server.core.modules.accesscontrol.provider.HytaleBanProvider banProvider = 
+                    (com.hypixel.hytale.server.core.modules.accesscontrol.provider.HytaleBanProvider) field.get(AccessControlModule.get());
+                
+                // Check if already banned
+                if (banProvider.hasBan(uuid)) {
+                    return "{\"error\": \"Player is already banned\"}";
+                }
+                
+                // Get the admin UUID (for now, use a system UUID)
+                UUID adminUuid = UUID.fromString("00000000-0000-0000-0000-000000000000");
+                
+                // Create an infinite ban
+                InfiniteBan ban = new InfiniteBan(uuid, adminUuid, Instant.now(), reason);
+                
+                // Add to ban list using the modify method
+                boolean added = banProvider.modify(bans -> {
+                    bans.put(uuid, ban);
+                    return true;
+                });
+                
+                if (added) {
+                    // Kick if online
+                    if (ref != null && ref.getPacketHandler() != null) {
+                        ref.getPacketHandler().disconnect("Banned: " + reason);
+                    }
+                    
+                    getLogger().info("[API] Banned player " + playerName + " (" + uuid + ") - Reason: " + reason);
+                    return "{\"status\": \"success\", \"message\": \"Player banned\"}";
+                } else {
+                    return "{\"error\": \"Failed to add ban\"}";
+                }
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                getLogger().log("ERROR", "Failed to access banProvider via reflection", e);
+                return "{\"error\": \"Failed to access ban system: " + e.getMessage() + "\"}";
+            }
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error banning player", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static String toggleOP(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
+            
+            UUID uuid = UUID.fromString(json.get("uuid").getAsString());
+            PlayerRef ref = Universe.get().getPlayer(uuid);
+            
+            if (ref == null) {
+                return "{\"error\": \"Player not found\"}";
+            }
+            
+            // Check if player is in OP group
+            boolean currentlyOP = PermissionsModule.get().getGroupsForUser(uuid).contains("OP");
+            
+            if (currentlyOP) {
+                // Remove from OP group
+                PermissionsModule.get().removeUserFromGroup(uuid, "OP");
+                getLogger().info("[API] Revoked OP from " + ref.getUsername() + " (" + uuid + ")");
+            } else {
+                // Add to OP group
+                PermissionsModule.get().addUserToGroup(uuid, "OP");
+                getLogger().info("[API] Granted OP to " + ref.getUsername() + " (" + uuid + ")");
+            }
+            
+            JsonObject response = new JsonObject();
+            response.addProperty("status", "success");
+            response.addProperty("isOp", !currentlyOP);
+            response.addProperty("message", !currentlyOP ? "OP granted" : "OP revoked");
+            return GSON.toJson(response);
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error toggling OP", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static String teleportPlayer(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("uuid") || !json.has("targetUuid")) {
+                return "{\"error\": \"Missing UUID or targetUuid\"}";
+            }
+            
+            UUID uuid = UUID.fromString(json.get("uuid").getAsString());
+            UUID targetUuid = UUID.fromString(json.get("targetUuid").getAsString());
+            
+            PlayerRef playerRef = Universe.get().getPlayer(uuid);
+            PlayerRef targetRef = Universe.get().getPlayer(targetUuid);
+            
+            if (playerRef == null || targetRef == null) {
+                return "{\"error\": \"Player or target not found\"}";
+            }
+            
+            Ref<EntityStore> playerEntityRef = playerRef.getReference();
+            Ref<EntityStore> targetEntityRef = targetRef.getReference();
+            
+            if (playerEntityRef == null || !playerEntityRef.isValid() || 
+                targetEntityRef == null || !targetEntityRef.isValid()) {
+                return "{\"error\": \"Player or target not in world\"}";
+            }
+            
+            Store<EntityStore> targetStore = targetEntityRef.getStore();
+            World targetWorld = targetStore.getExternalData().getWorld();
+            
+            // Get target position on the target's world thread
+            CompletableFuture<Vector3d> targetPosFuture = CompletableFuture.supplyAsync(() -> {
+                TransformComponent targetTransform = targetStore.getComponent(targetEntityRef, TransformComponent.getComponentType());
+                return targetTransform != null ? targetTransform.getPosition() : null;
+            }, targetWorld);
+            
+            Vector3d targetPos = targetPosFuture.get(2, TimeUnit.SECONDS);
+            if (targetPos == null) {
+                return "{\"error\": \"Could not get target position\"}";
+            }
+            
+            // Teleport player on their world thread
+            Store<EntityStore> playerStore = playerEntityRef.getStore();
+            World playerWorld = playerStore.getExternalData().getWorld();
+            
+            CompletableFuture<Boolean> teleportFuture = CompletableFuture.supplyAsync(() -> {
+                try {
+                    TransformComponent playerTransform = playerStore.getComponent(playerEntityRef, TransformComponent.getComponentType());
+                    if (playerTransform != null) {
+                        playerTransform.setPosition(targetPos);
+                        return true;
+                    }
+                    return false;
+                } catch (Exception e) {
+                    getLogger().log("ERROR", "Error during teleport", e);
+                    return false;
+                }
+            }, playerWorld);
+            
+            boolean success = teleportFuture.get(2, TimeUnit.SECONDS);
+            
+            if (success) {
+                getLogger().info("[API] Teleported " + playerRef.getUsername() + " to " + targetRef.getUsername());
+                return "{\"status\": \"success\", \"message\": \"Player teleported\"}";
+            } else {
+                return "{\"error\": \"Teleport failed\"}";
+            }
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error teleporting player", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+    
+    private static String getBannedPlayers() {
+        try {
+            JsonArray bansArray = new JsonArray();
+            
+            // First, try to read directly from the file to ensure we have the latest data
+            java.nio.file.Path bansPath = java.nio.file.Paths.get("bans.json");
+            
+            if (java.nio.file.Files.exists(bansPath)) {
+                try {
+                    String content = new String(java.nio.file.Files.readAllBytes(bansPath), java.nio.charset.StandardCharsets.UTF_8);
+                    com.google.gson.JsonArray fileArray = com.google.gson.JsonParser.parseString(content).getAsJsonArray();
+                    
+                    // Parse each ban from the file
+                    for (com.google.gson.JsonElement element : fileArray) {
+                        JsonObject banJson = element.getAsJsonObject();
+                        
+                        // Extract the data we need
+                        JsonObject displayBan = new JsonObject();
+                        displayBan.addProperty("uuid", banJson.get("target").getAsString());
+                        displayBan.addProperty("bannedBy", banJson.get("by").getAsString());
+                        displayBan.addProperty("timestamp", banJson.get("timestamp").getAsLong());
+                        if (banJson.has("reason")) {
+                            displayBan.addProperty("reason", banJson.get("reason").getAsString());
+                        }
+                        displayBan.addProperty("type", banJson.get("type").getAsString());
+                        
+                        bansArray.add(displayBan);
+                    }
+                    
+                    getLogger().info("[API] Loaded " + bansArray.size() + " bans from file");
+                    return GSON.toJson(bansArray);
+                } catch (Exception e) {
+                    getLogger().log("WARN", "Failed to read bans from file, falling back to memory", e);
+                }
+            }
+            
+            // Fallback: Use reflection to access the private banProvider field
+            java.lang.reflect.Field field = AccessControlModule.class.getDeclaredField("banProvider");
+            field.setAccessible(true);
+            com.hypixel.hytale.server.core.modules.accesscontrol.provider.HytaleBanProvider banProvider = 
+                (com.hypixel.hytale.server.core.modules.accesscontrol.provider.HytaleBanProvider) field.get(AccessControlModule.get());
+            
+            // Access the bans map using reflection with proper locking
+            java.lang.reflect.Field bansField = banProvider.getClass().getDeclaredField("bans");
+            bansField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            java.util.Map<UUID, com.hypixel.hytale.server.core.modules.accesscontrol.ban.Ban> bans = 
+                (java.util.Map<UUID, com.hypixel.hytale.server.core.modules.accesscontrol.ban.Ban>) bansField.get(banProvider);
+            
+            // Access the fileLock field
+            java.lang.reflect.Field lockField = banProvider.getClass().getSuperclass().getDeclaredField("fileLock");
+            lockField.setAccessible(true);
+            java.util.concurrent.locks.ReadWriteLock lock = 
+                (java.util.concurrent.locks.ReadWriteLock) lockField.get(banProvider);
+            
+            // Acquire read lock
+            lock.readLock().lock();
+            try {
+                for (java.util.Map.Entry<UUID, com.hypixel.hytale.server.core.modules.accesscontrol.ban.Ban> entry : bans.entrySet()) {
+                    com.hypixel.hytale.server.core.modules.accesscontrol.ban.Ban ban = entry.getValue();
+                    JsonObject banJson = new JsonObject();
+                    banJson.addProperty("uuid", entry.getKey().toString());
+                    banJson.addProperty("bannedBy", ban.getBy().toString());
+                    banJson.addProperty("timestamp", ban.getTimestamp().toEpochMilli());
+                    ban.getReason().ifPresent(reason -> banJson.addProperty("reason", reason));
+                    banJson.addProperty("type", ban.getType());
+                    bansArray.add(banJson);
+                }
+            } finally {
+                lock.readLock().unlock();
+            }
+            
+            getLogger().info("[API] Loaded " + bansArray.size() + " bans from memory");
+            return GSON.toJson(bansArray);
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error getting banned players", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+    
+    private static String getBansFile() {
+        try {
+            // Read the bans.json file directly from disk
+            java.nio.file.Path bansPath = java.nio.file.Paths.get("bans.json");
+            
+            if (!java.nio.file.Files.exists(bansPath)) {
+                JsonObject response = new JsonObject();
+                response.addProperty("fileExists", false);
+                response.addProperty("content", "[]");
+                response.addProperty("path", bansPath.toAbsolutePath().toString());
+                return GSON.toJson(response);
+            }
+            
+            String content = new String(java.nio.file.Files.readAllBytes(bansPath), java.nio.charset.StandardCharsets.UTF_8);
+            
+            JsonObject response = new JsonObject();
+            response.addProperty("fileExists", true);
+            response.addProperty("content", content);
+            response.addProperty("path", bansPath.toAbsolutePath().toString());
+            response.addProperty("lastModified", java.nio.file.Files.getLastModifiedTime(bansPath).toMillis());
+            
+            return GSON.toJson(response);
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error reading bans file", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+    
+    private static String unbanPlayer(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
+            
+            UUID uuid = UUID.fromString(json.get("uuid").getAsString());
+            
+            getLogger().info("[API] Attempting to unban player " + uuid);
+            
+            // Read the bans.json file directly
+            java.nio.file.Path bansPath = java.nio.file.Paths.get("bans.json");
+            
+            if (!java.nio.file.Files.exists(bansPath)) {
+                getLogger().warning("[API] bans.json file does not exist");
+                return "{\"error\": \"Bans file not found\"}";
+            }
+            
+            // Read and parse the file
+            String content = new String(java.nio.file.Files.readAllBytes(bansPath), java.nio.charset.StandardCharsets.UTF_8);
+            com.google.gson.JsonArray fileArray = com.google.gson.JsonParser.parseString(content).getAsJsonArray();
+            
+            // Find and remove the ban
+            boolean found = false;
+            com.google.gson.JsonArray newArray = new com.google.gson.JsonArray();
+            
+            for (com.google.gson.JsonElement element : fileArray) {
+                JsonObject banJson = element.getAsJsonObject();
+                String targetUuid = banJson.get("target").getAsString();
+                
+                if (targetUuid.equals(uuid.toString())) {
+                    found = true;
+                    getLogger().info("[API] Found ban for " + uuid + " in file, removing");
+                } else {
+                    newArray.add(element);
+                }
+            }
+            
+            if (!found) {
+                getLogger().warning("[API] No ban found in file for " + uuid);
+                return "{\"error\": \"Player is not banned\"}";
+            }
+            
+            // Write the updated array back to the file
+            String newContent = GSON.toJson(newArray);
+            java.nio.file.Files.write(bansPath, newContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            
+            getLogger().info("[API] Successfully removed ban from file for " + uuid);
+            
+            // Also try to remove from memory cache
+            try {
+                java.lang.reflect.Field field = AccessControlModule.class.getDeclaredField("banProvider");
+                field.setAccessible(true);
+                com.hypixel.hytale.server.core.modules.accesscontrol.provider.HytaleBanProvider banProvider = 
+                    (com.hypixel.hytale.server.core.modules.accesscontrol.provider.HytaleBanProvider) field.get(AccessControlModule.get());
+                
+                if (banProvider.hasBan(uuid)) {
+                    banProvider.modify(bans -> {
+                        bans.remove(uuid);
+                        getLogger().info("[API] Also removed ban from memory cache for " + uuid);
+                        return false; // Don't save again, we already saved to file
+                    });
+                }
+            } catch (Exception e) {
+                getLogger().log("WARN", "Failed to remove from memory cache, but file was updated", e);
+            }
+            
+            return "{\"status\": \"success\", \"message\": \"Player unbanned\"}";
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error unbanning player", e);
             return "{\"error\": \"" + e.getMessage() + "\"}";
         }
     }
 }
-
-

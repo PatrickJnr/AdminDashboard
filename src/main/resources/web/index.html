@@ -132,14 +132,14 @@
                     </div>
                 </div>
 
-                <!-- Console -->
+                <!-- Server Chat -->
                 <div class="hytale-panel" style="margin-top: 2rem">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
-                            <h2>Server Console</h2>
+                            <h2>Server Chat</h2>
                         </div>
                         <div id="console-log" class="console-container">
-                            <div class="console-entry">Initializing console...</div>
+                            <div class="console-entry">Initializing chat...</div>
                         </div>
                     </div>
                 </div>
@@ -156,6 +156,28 @@
                         </div>
                         <div id="mods-accordion" class="accordion-content">
                             <div id="plugin-list" class="plugin-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Banned Players -->
+                <div class="hytale-panel" style="margin-top: 2rem">
+                    <div class="hytale-panel-inner">
+                        <div class="card-header accordion-header" onclick="toggleAccordion('bans-accordion')">
+                            <div>
+                                <h2 style="display: inline;">Banned Players</h2>
+                                <span id="ban-count-badge" class="mod-count-badge">0</span>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <button class="btn btn-secondary" onclick="viewBansFile()" title="View bans.json file" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">
+                                    <span class="material-symbols-outlined" style="font-size: 1rem;">description</span>
+                                    View File
+                                </button>
+                                <span class="accordion-toggle" id="bans-accordion-toggle">▼</span>
+                            </div>
+                        </div>
+                        <div id="bans-accordion" class="accordion-content">
+                            <div id="ban-list" class="ban-list"></div>
                         </div>
                     </div>
                 </div>
@@ -190,6 +212,100 @@
                             <div id="inv-storage" class="inv-grid storage"></div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Modal -->
+    <div id="actions-modal" class="modal-overlay">
+        <div class="modal-container hytale-panel" style="max-width: 500px;">
+            <div class="hytale-panel-inner">
+                <div class="modal-header">
+                    <h2 id="actions-player-name" class="modal-title">Player Actions</h2>
+                    <button class="modal-close" onclick="closeActionsModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="actions-grid">
+                        <button class="action-card" id="action-inventory">
+                            <span class="material-symbols-outlined action-card-icon" style="color: #4da6ff;">inventory_2</span>
+                            <div class="action-card-title">View Inventory</div>
+                            <div class="action-card-desc">See player's items and equipment</div>
+                        </button>
+                        
+                        <button class="action-card" id="action-teleport">
+                            <span class="material-symbols-outlined action-card-icon" style="color: #72aa5e;">near_me</span>
+                            <div class="action-card-title">Teleport To</div>
+                            <div class="action-card-desc">Move player to another location</div>
+                        </button>
+                        
+                        <button class="action-card" id="action-op">
+                            <span class="material-symbols-outlined action-card-icon" style="color: #f4a926;">admin_panel_settings</span>
+                            <div class="action-card-title">Toggle OP</div>
+                            <div class="action-card-desc">Grant or revoke operator status</div>
+                        </button>
+                        
+                        <button class="action-card action-card-danger" id="action-ban">
+                            <span class="material-symbols-outlined action-card-icon">block</span>
+                            <div class="action-card-title">Ban Player</div>
+                            <div class="action-card-desc">Permanently ban from server</div>
+                        </button>
+                        
+                        <button class="action-card action-card-danger" id="action-kick">
+                            <span class="material-symbols-outlined action-card-icon">logout</span>
+                            <div class="action-card-title">Kick Player</div>
+                            <div class="action-card-desc">Remove from server temporarily</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bans File Modal -->
+    <div id="bans-file-modal" class="modal-overlay">
+        <div class="modal-container hytale-panel" style="max-width: 800px;">
+            <div class="hytale-panel-inner">
+                <div class="modal-header">
+                    <h2 class="modal-title">bans.json File</h2>
+                    <button class="modal-close" onclick="closeBansFileModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div style="margin-bottom: 1rem;">
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                            <strong>File Path:</strong> <span id="bans-file-path" style="font-family: monospace;"></span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                            <strong>Last Modified:</strong> <span id="bans-file-modified"></span>
+                        </div>
+                    </div>
+                    <pre id="bans-file-content" style="background: #000; padding: 1rem; border-radius: 4px; overflow-x: auto; max-height: 500px; font-family: 'Monaco', monospace; font-size: 0.8125rem; color: #a3cf93; border: 1px solid var(--hytale-border);"></pre>
+                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                        <button class="btn btn-secondary" onclick="refreshBansFile()">
+                            <span class="material-symbols-outlined">refresh</span>
+                            Refresh
+                        </button>
+                        <button class="btn btn-secondary" onclick="copyBansFile()">
+                            <span class="material-symbols-outlined">content_copy</span>
+                            Copy to Clipboard
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teleport Modal -->
+    <div id="teleport-modal" class="modal-overlay">
+        <div class="modal-container hytale-panel" style="max-width: 600px;">
+            <div class="hytale-panel-inner">
+                <div class="modal-header">
+                    <h2 id="teleport-player-name" class="modal-title">Teleport Player</h2>
+                    <button class="modal-close" onclick="closeTeleportModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Select a player to teleport to:</p>
+                    <div id="teleport-player-list" class="teleport-player-list"></div>
                 </div>
             </div>
         </div>

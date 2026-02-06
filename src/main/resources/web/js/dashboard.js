@@ -63,6 +63,9 @@ document.addEventListener('keydown', (e) => {
     // Escape: Close modals
     if (e.key === 'Escape') {
         closeInventory();
+        closeTeleportModal();
+        closeActionsModal();
+        closeBansFileModal();
     }
     
     // Ctrl/Cmd + F: Focus search
@@ -133,6 +136,7 @@ function startSync() {
     setInterval(fetchChat, 2000);
     fetchStats();
     fetchMods();
+    fetchBannedPlayers();
     fetchChat();
 }
 
@@ -372,6 +376,132 @@ async function fetchMods() {
     }
 }
 
+async function fetchBannedPlayers() {
+    if (!dashboardToken) return;
+    try {
+        const res = await fetch('/api/bans', {
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const bans = await res.json();
+        document.getElementById('ban-count-badge').textContent = bans.length;
+        const list = document.getElementById('ban-list');
+        list.innerHTML = '';
+        
+        if (bans.length === 0) {
+            list.innerHTML = `
+                <div class="empty-ban-list">
+                    <span class="material-symbols-outlined">check_circle</span>
+                    <div>No banned players</div>
+                </div>
+            `;
+            return;
+        }
+        
+        bans.forEach(ban => {
+            const div = document.createElement('div');
+            div.className = 'ban-item';
+            const date = new Date(ban.timestamp);
+            const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+            div.innerHTML = `
+                <div class="ban-info">
+                    <div class="ban-uuid">${ban.uuid}</div>
+                    <div class="ban-reason">${ban.reason || 'No reason provided'}</div>
+                    <div class="ban-date">Banned on ${dateStr}</div>
+                </div>
+                <div class="ban-actions">
+                    <button class="btn btn-secondary" onclick="unbanPlayer('${ban.uuid}')" title="Unban Player">
+                        <span class="material-symbols-outlined">check_circle</span>
+                        Unban
+                    </button>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    } catch (e) {
+        console.error('Failed to fetch banned players', e);
+    }
+}
+
+async function unbanPlayer(uuid) {
+    if (!confirm('Are you sure you want to unban this player?')) return;
+    
+    try {
+        const res = await fetch('/api/unban', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ uuid: uuid })
+        });
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            showNotification('Player unbanned successfully', 'success');
+            fetchBannedPlayers();
+        } else {
+            throw new Error(data.error || 'Failed to unban player');
+        }
+    } catch (e) {
+        showNotification(e.message || 'Failed to unban player', 'error');
+    }
+}
+
+async function viewBansFile() {
+    try {
+        const res = await fetch('/api/bans/file', {
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const data = await res.json();
+        
+        if (data.error) {
+            showNotification('Failed to load bans file: ' + data.error, 'error');
+            return;
+        }
+        
+        // Format JSON for display
+        let formattedContent;
+        try {
+            const parsed = JSON.parse(data.content);
+            formattedContent = JSON.stringify(parsed, null, 2);
+        } catch (e) {
+            formattedContent = data.content;
+        }
+        
+        document.getElementById('bans-file-path').textContent = data.path;
+        document.getElementById('bans-file-content').textContent = formattedContent;
+        
+        if (data.lastModified) {
+            const date = new Date(data.lastModified);
+            document.getElementById('bans-file-modified').textContent = date.toLocaleString();
+        } else {
+            document.getElementById('bans-file-modified').textContent = 'Unknown';
+        }
+        
+        document.getElementById('bans-file-modal').classList.add('active');
+    } catch (e) {
+        showNotification('Failed to load bans file', 'error');
+    }
+}
+
+function closeBansFileModal() {
+    document.getElementById('bans-file-modal').classList.remove('active');
+}
+
+async function refreshBansFile() {
+    await viewBansFile();
+    showNotification('File refreshed', 'success');
+}
+
+function copyBansFile() {
+    const content = document.getElementById('bans-file-content').textContent;
+    navigator.clipboard.writeText(content).then(() => {
+        showNotification('Copied to clipboard', 'success');
+    }).catch(() => {
+        showNotification('Failed to copy to clipboard', 'error');
+    });
+}
+
 async function fetchChat() {
     if (!dashboardToken) return;
     try {
@@ -504,9 +634,9 @@ function renderPlayers() {
                     </div>
                 </td>
                 <td>
-                    <div style="text-align: center">
-                        <span class="material-symbols-outlined stat-icon defence">shield</span>
-                        <div class="defence-value p-defence"></div>
+                    <div style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px">
+                        <span class="material-symbols-outlined stat-icon defence" style="font-size: 1.5rem">shield</span>
+                        <div class="defence-value p-defence" style="line-height: 1"></div>
                     </div>
                 </td>
                 <td>
@@ -514,17 +644,18 @@ function renderPlayers() {
                     <div class="p-gamemode" style="font-size: 0.6875rem; color: var(--text-secondary); margin-top: 2px"></div>
                 </td>
                 <td>
-                    <div style="display: flex; gap: 0.5rem">
-                        <button class="btn btn-secondary btn-inv">Inventory</button>
-                        <button class="btn btn-danger btn-kick">Kick</button>
+                    <div style="display: flex; gap: 0.25rem; justify-content: flex-end; flex-wrap: nowrap">
+                        <button class="btn btn-secondary btn-actions" title="Player Actions">
+                            <span class="material-symbols-outlined">more_horiz</span>
+                            Actions
+                        </button>
                     </div>
                 </td>
             `;
             tbody.appendChild(tr);
             loadSecureAvatar(tr.querySelector('.avatar'), avatarUrl);
             
-            tr.querySelector('.btn-inv').onclick = () => viewInv(p.uuid);
-            tr.querySelector('.btn-kick').onclick = () => kickPlayer(p.uuid);
+            tr.querySelector('.btn-actions').onclick = () => openActionsModal(p.uuid, p.name);
             
             // Animate in
             setTimeout(() => {
@@ -549,11 +680,12 @@ function renderPlayers() {
         tr.querySelector('.p-mana-text').textContent = manaText;
         tr.querySelector('.mana-bar').style.width = manaPct + '%';
         
-        // Update defence
-        tr.querySelector('.p-defence').textContent = defence;
+        // Update defence with percentage
+        const defenceDisplay = defence > 0 ? `${defence}%` : '0%';
+        tr.querySelector('.p-defence').textContent = defenceDisplay;
         
-        tr.querySelector('.p-coords').innerHTML = `X: ${Math.round(p.x)} Y: ${Math.round(p.y)} Z: ${Math.round(p.z)}`;
-        tr.querySelector('.p-gamemode').textContent = p.gameMode;
+        tr.querySelector('.p-coords').innerHTML = `<span style="color: var(--hytale-gold)">X:</span> ${Math.round(p.x)} <span style="color: var(--hytale-gold)">Y:</span> ${Math.round(p.y)} <span style="color: var(--hytale-gold)">Z:</span> ${Math.round(p.z)}`;
+        tr.querySelector('.p-gamemode').textContent = p.gameMode || 'Adventure';
     });
 }
 
@@ -607,6 +739,167 @@ function kickPlayer(uuid) {
     }
 }
 
+// Actions Modal
+let currentActionPlayer = { uuid: null, name: null };
+
+function openActionsModal(uuid, name) {
+    currentActionPlayer = { uuid, name };
+    document.getElementById('actions-player-name').textContent = `${name} - Actions`;
+    
+    // Set up event listeners for action buttons
+    document.getElementById('action-inventory').onclick = () => {
+        closeActionsModal();
+        viewInv(uuid);
+    };
+    
+    document.getElementById('action-teleport').onclick = () => {
+        closeActionsModal();
+        teleportToPlayer(uuid, name);
+    };
+    
+    document.getElementById('action-op').onclick = () => {
+        closeActionsModal();
+        toggleOP(uuid, name);
+    };
+    
+    document.getElementById('action-ban').onclick = () => {
+        closeActionsModal();
+        banPlayer(uuid, name);
+    };
+    
+    document.getElementById('action-kick').onclick = () => {
+        closeActionsModal();
+        kickPlayer(uuid);
+    };
+    
+    document.getElementById('actions-modal').classList.add('active');
+}
+
+function closeActionsModal() {
+    document.getElementById('actions-modal').classList.remove('active');
+}
+
+function banPlayer(uuid, name) {
+    const reason = prompt(`Ban ${name}?\n\nEnter ban reason:`, 'Banned by Admin');
+    if (reason !== null) {
+        fetch('/api/ban', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ uuid: uuid, reason: reason })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showNotification(`${name} has been banned`, 'success');
+                fetchStats();
+                fetchBannedPlayers();
+            } else {
+                throw new Error(data.error || 'Failed to ban player');
+            }
+        })
+        .catch((err) => {
+            showNotification(err.message || 'Failed to ban player', 'error');
+        });
+    }
+}
+
+function toggleOP(uuid, name) {
+    if (confirm(`Toggle OP status for ${name}?`)) {
+        fetch('/api/op', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ uuid: uuid })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showNotification(`${name} OP status: ${data.isOp ? 'Granted' : 'Revoked'}`, 'success');
+            } else {
+                throw new Error(data.error || 'Failed to toggle OP');
+            }
+        })
+        .catch((err) => {
+            showNotification(err.message || 'Failed to toggle OP status', 'error');
+        });
+    }
+}
+
+function teleportToPlayer(uuid, name) {
+    // Get list of online players for teleport target
+    const otherPlayers = allPlayers.filter(p => p.uuid !== uuid);
+    if (otherPlayers.length === 0) {
+        showNotification('No other players online to teleport to', 'error');
+        return;
+    }
+    
+    // Show teleport modal
+    const modal = document.getElementById('teleport-modal');
+    const playerList = document.getElementById('teleport-player-list');
+    document.getElementById('teleport-player-name').textContent = `Teleport ${name}`;
+    
+    // Clear previous list
+    playerList.innerHTML = '';
+    
+    // Add each player as a clickable option
+    otherPlayers.forEach(player => {
+        const item = document.createElement('div');
+        item.className = 'teleport-player-item';
+        item.innerHTML = `
+            <img src="${player.avatarUrl || '/api/avatar/' + player.name}" class="avatar" onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(player.name)}'">
+            <div class="teleport-player-info">
+                <div class="teleport-player-name">${player.name}</div>
+                <div class="teleport-player-location">
+                    <span style="color: var(--hytale-gold)">X:</span> ${Math.round(player.x)} 
+                    <span style="color: var(--hytale-gold)">Y:</span> ${Math.round(player.y)} 
+                    <span style="color: var(--hytale-gold)">Z:</span> ${Math.round(player.z)}
+                </div>
+            </div>
+            <span class="material-symbols-outlined teleport-player-icon">near_me</span>
+        `;
+        
+        item.onclick = () => {
+            closeTeleportModal();
+            executeTeleport(uuid, name, player.uuid, player.name);
+        };
+        
+        playerList.appendChild(item);
+    });
+    
+    modal.classList.add('active');
+}
+
+function closeTeleportModal() {
+    const modal = document.getElementById('teleport-modal');
+    modal.classList.remove('active');
+}
+
+function executeTeleport(uuid, name, targetUuid, targetName) {
+    fetch('/api/teleport', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'X-Admin-Token': dashboardToken
+        },
+        body: JSON.stringify({ uuid: uuid, targetUuid: targetUuid })
+    })
+    .then(res => {
+        if (res.ok) {
+            showNotification(`Teleported ${name} to ${targetName}`, 'success');
+        } else {
+            throw new Error('Failed to teleport');
+        }
+    })
+    .catch(() => {
+        showNotification('Failed to teleport player', 'error');
+    });
+}
+
 setInterval(updateServerTime, 1000);
 
 // Debounce search input
@@ -628,6 +921,24 @@ document.addEventListener('keydown', (e) => {
 document.getElementById('inventory-modal').addEventListener('click', (e) => {
     if (e.target.id === 'inventory-modal') {
         closeInventory();
+    }
+});
+
+document.getElementById('teleport-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'teleport-modal') {
+        closeTeleportModal();
+    }
+});
+
+document.getElementById('actions-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'actions-modal') {
+        closeActionsModal();
+    }
+});
+
+document.getElementById('bans-file-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'bans-file-modal') {
+        closeBansFileModal();
     }
 });
 
