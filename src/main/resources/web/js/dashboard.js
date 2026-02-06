@@ -360,12 +360,35 @@ async function fetchMods() {
         mods.forEach(mod => {
             const div = document.createElement('div');
             div.className = 'plugin-item';
+            
+            // Build author and downloads info
+            let metaInfo = '';
+            if (mod.author) {
+                metaInfo += `<div style="font-size: 0.6875rem; color: var(--text-secondary);">by ${mod.author}</div>`;
+            }
+            if (mod.downloads) {
+                const downloadStr = mod.downloads >= 1000 
+                    ? (mod.downloads / 1000).toFixed(1) + 'K' 
+                    : mod.downloads;
+                metaInfo += `<div style="font-size: 0.6875rem; color: var(--hytale-gold); margin-top: 2px;">
+                    <span class="material-symbols-outlined" style="font-size: 0.75rem; vertical-align: middle;">download</span>
+                    ${downloadStr} downloads
+                </div>`;
+            }
+            
+            // Build the HTML
             div.innerHTML = `
                 <div class="plugin-info">
                     <img src="${mod.iconUrl}" class="plugin-icon" onerror="this.src='https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(mod.name)}'">
-                    <div>
-                        <div style="font-weight: 600">${mod.name}</div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                            ${mod.name}
+                            ${mod.curseforgeUrl ? `<a href="${mod.curseforgeUrl}" target="_blank" rel="noopener" style="color: var(--hytale-gold); text-decoration: none;" title="View on CurseForge">
+                                <span class="material-symbols-outlined" style="font-size: 1rem;">open_in_new</span>
+                            </a>` : ''}
+                        </div>
                         <div style="font-size: 0.75rem; color: var(--hytale-gold)">v${mod.version}</div>
+                        ${metaInfo}
                     </div>
                 </div>
             `;

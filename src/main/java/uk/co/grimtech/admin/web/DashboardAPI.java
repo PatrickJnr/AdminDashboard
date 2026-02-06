@@ -559,6 +559,8 @@ public class DashboardAPI {
         try {
             // 1. Add JAR-based java plugins
             List<PluginBase> loadedPlugins = PluginManager.get().getPlugins();
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+            
             for (PluginBase plugin : loadedPlugins) {
                 String name = plugin.getManifest().getName();
                 if (INTERNAL_PLUGINS.contains(name)) continue;
@@ -569,6 +571,26 @@ public class DashboardAPI {
                 pObj.addProperty("id", plugin.getIdentifier().toString());
                 pObj.addProperty("type", "Mod");
                 pObj.addProperty("iconUrl", "/api/mod/" + encodeForUrl(name) + "/icon");
+                
+                // Try to fetch CurseForge metadata asynchronously
+                CompletableFuture<Void> future = CurseForgeAPI.searchMod(name).thenAccept(cfData -> {
+                    if (cfData != null) {
+                        if (cfData.has("iconUrl")) {
+                            pObj.addProperty("iconUrl", cfData.get("iconUrl").getAsString());
+                        }
+                        if (cfData.has("author")) {
+                            pObj.addProperty("author", cfData.get("author").getAsString());
+                        }
+                        if (cfData.has("downloads")) {
+                            pObj.addProperty("downloads", cfData.get("downloads").getAsLong());
+                        }
+                        if (cfData.has("url")) {
+                            pObj.addProperty("curseforgeUrl", cfData.get("url").getAsString());
+                        }
+                    }
+                });
+                futures.add(future);
+                
                 plugins.add(pObj);
                 
                 // Track identified packs to avoid duplicates
@@ -595,9 +617,38 @@ public class DashboardAPI {
                 pObj.addProperty("id", name);
                 pObj.addProperty("type", "Asset Pack");
                 pObj.addProperty("iconUrl", "/api/mod/" + encodeForUrl(name) + "/icon");
+                
+                // Try to fetch CurseForge metadata asynchronously
+                CompletableFuture<Void> future = CurseForgeAPI.searchMod(cleanName).thenAccept(cfData -> {
+                    if (cfData != null) {
+                        if (cfData.has("iconUrl")) {
+                            pObj.addProperty("iconUrl", cfData.get("iconUrl").getAsString());
+                        }
+                        if (cfData.has("author")) {
+                            pObj.addProperty("author", cfData.get("author").getAsString());
+                        }
+                        if (cfData.has("downloads")) {
+                            pObj.addProperty("downloads", cfData.get("downloads").getAsLong());
+                        }
+                        if (cfData.has("url")) {
+                            pObj.addProperty("curseforgeUrl", cfData.get("url").getAsString());
+                        }
+                    }
+                });
+                futures.add(future);
+                
                 plugins.add(pObj);
                 processedPacks.add(cleanName.toLowerCase());
             }
+            
+            // Wait for all CurseForge lookups to complete (with timeout)
+            try {
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                        .get(5, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                getLogger().warning("Some CurseForge lookups timed out: " + e.getMessage());
+            }
+            
         } catch (Exception e) {
             getLogger().warning("Error getting plugins: " + e.getMessage());
             // Fallback for safety
