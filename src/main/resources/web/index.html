@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+    <title>Hytale Admin Dashboard</title>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&family=Lexend:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
-
 </head>
 <body>
+    <!-- Login Overlay -->
     <div id="login-overlay" class="login-overlay">
         <div class="login-card hytale-panel">
             <div class="hytale-panel-inner">
@@ -19,24 +19,26 @@
                         <label>Dashboard Token</label>
                         <input type="password" id="token-input" autocomplete="new-password" placeholder="Enter your 16-char secret">
                     </div>
-                    <button type="submit" class="btn btn-secondary" style="width: 100%">Authenticate</button>
+                    <button type="submit" class="btn btn-secondary" style="width: 100%; padding: 0.5rem 1rem;">Authenticate</button>
                     <div id="login-error" class="error-message">Invalid token. Please check your config.json</div>
                 </form>
             </div>
         </div>
     </div>
 
+    <!-- Main Dashboard -->
     <div class="container dashboard-locked" id="dashboard-container">
+        <!-- Header -->
         <header>
-            <div class="hytale-panel" style="padding: 1rem 2rem; margin-bottom: 0">
-                <div class="hytale-panel-inner" style="display: flex; align-items: center; gap: 2rem">
+            <div class="hytale-panel" style="margin-bottom: 0">
+                <div class="hytale-panel-inner" style="display: flex; align-items: center; gap: 2rem; padding: 1rem 2rem">
                     <h1 style="margin-bottom: 0; line-height: 1">Hytale Admin</h1>
                     <div id="server-time">Loading server time...</div>
                 </div>
             </div>
             
-            <div class="hytale-panel" style="padding: 1rem 2rem; margin-bottom: 0">
-                <div class="hytale-panel-inner" style="display: flex; align-items: center; gap: 1rem">
+            <div class="hytale-panel" style="margin-bottom: 0">
+                <div class="hytale-panel-inner" style="display: flex; align-items: center; gap: 1rem; padding: 1rem 2rem">
                     <div class="refresh-pill">
                         <span class="pulse"></span>
                         Live Connection
@@ -46,6 +48,7 @@
             </div>
         </header>
 
+        <!-- Stats Grid -->
         <div class="stats-grid">
             <div class="stat-card hytale-panel">
                 <div class="hytale-panel-inner">
@@ -67,7 +70,9 @@
             </div>
         </div>
 
+        <!-- Main Content -->
         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem">
+            <!-- Player Table -->
             <div class="main-card hytale-panel">
                 <div class="hytale-panel-inner">
                     <div class="card-header">
@@ -89,35 +94,35 @@
                 </div>
             </div>
 
+            <!-- Side Panel -->
             <div class="side-panel">
+                <!-- Broadcast -->
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
                             <h2>Server Broadcast</h2>
                         </div>
-                        <div style="padding: 1.5rem">
-                            <p style="color: var(--text-secondary); font-size: 0.8125rem; margin-bottom: 1rem">Send a message to all players on the server.</p>
-                            <div class="broadcast-group">
-                                <input type="text" id="broadcast-msg" class="search-input" placeholder="Message content...">
-                                <button class="btn btn-secondary" onclick="broadcast()">Send</button>
-                            </div>
+                        <p style="color: var(--text-secondary); font-size: 0.8125rem; margin-bottom: 1rem">Send a message to all players on the server.</p>
+                        <div class="broadcast-group">
+                            <input type="text" id="broadcast-msg" class="search-input" placeholder="Message content...">
+                            <button class="btn btn-secondary" onclick="broadcast()">Send</button>
                         </div>
                     </div>
                 </div>
 
+                <!-- Console -->
                 <div class="hytale-panel" style="margin-top: 2rem">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
                             <h2>Server Console</h2>
                         </div>
-                        <div style="padding: 1rem">
-                            <div id="console-log" class="console-container">
-                                <div class="console-entry">Initializing console...</div>
-                            </div>
+                        <div id="console-log" class="console-container">
+                            <div class="console-entry">Initializing console...</div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Mods -->
                 <div class="hytale-panel" style="margin-top: 2rem">
                     <div class="hytale-panel-inner">
                         <div class="card-header accordion-header" onclick="toggleAccordion('mods-accordion')">
@@ -128,520 +133,13 @@
                             <span class="accordion-toggle" id="mods-accordion-toggle">▼</span>
                         </div>
                         <div id="mods-accordion" class="accordion-content">
-                            <div id="plugin-list" class="plugin-list" style="padding: 1rem"></div>
+                            <div id="plugin-list" class="plugin-list"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <script>
-        let allPlayers = [];
-        let dashboardToken = localStorage.getItem('hytale_admin_token');
-        const avatarCache = new Map();
-
-        function login(event) {
-            if (event) event.preventDefault();
-            const token = document.getElementById('token-input').value;
-            if (!token) return;
-            
-            dashboardToken = token;
-            // Verify token with a simple request
-            fetchStats(true).then(success => {
-                if (success) {
-                    localStorage.setItem('hytale_admin_token', token);
-                    const overlay = document.getElementById('login-overlay');
-                    overlay.classList.add('hidden');
-                    document.getElementById('dashboard-container').classList.remove('dashboard-locked');
-                    setTimeout(() => overlay.style.display = 'none', 500);
-                    startSync();
-                } else {
-                    document.getElementById('login-error').style.display = 'block';
-                    dashboardToken = null;
-                }
-            });
-        }
-
-        // Auto-login if token exists
-        if (dashboardToken) {
-            fetchStats(true).then(success => {
-                if (success) {
-                    const overlay = document.getElementById('login-overlay');
-                    overlay.classList.add('hidden');
-                    document.getElementById('dashboard-container').classList.remove('dashboard-locked');
-                    setTimeout(() => overlay.style.display = 'none', 500);
-                    startSync();
-                } else {
-                    localStorage.removeItem('hytale_admin_token');
-                    dashboardToken = null;
-                }
-            });
-        }
-
-        function startSync() {
-            setInterval(fetchStats, 2000);
-            setInterval(fetchChat, 2000);
-            fetchStats();
-            fetchMods();
-            fetchChat();
-        }
-
-        async function fetchStats(isInit = false) {
-            if (!dashboardToken) return false;
-
-            try {
-                // Fetch Players
-                const pRes = await fetch('/api/players', {
-                    headers: { 'X-Admin-Token': dashboardToken }
-                });
-                if (pRes.status === 401) return false;
-                
-                allPlayers = await pRes.json();
-                renderPlayers();
-                
-                // Fetch Server Stats
-                const sRes = await fetch('/api/stats', {
-                    headers: { 'X-Admin-Token': dashboardToken }
-                });
-                const stats = await sRes.json();
-                
-                document.getElementById('player-count').textContent = stats.onlinePlayers;
-                document.getElementById('server-tps').textContent = stats.tps.toFixed(1);
-                // Color coding for TPS is handled via JS for better control
-                const tpsEl = document.getElementById('server-tps');
-                tpsEl.style.color = stats.tps > 18 ? '#a3cf93' : (stats.tps > 15 ? '#f4d06f' : '#b74545');
-
-                updateServerTime();
-                return true;
-            } catch (e) {
-                console.error('Failed to fetch stats', e);
-                return false;
-            }
-        }
-
-        function updateServerTime() {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            document.getElementById('server-time').textContent = 'SERVER TIME: ' + timeStr;
-        }
-
-        async function broadcast() {
-            const msgInput = document.getElementById('broadcast-msg');
-            const message = msgInput.value.trim();
-            if (!message || !dashboardToken) return;
-
-            try {
-                const res = await fetch('/api/broadcast', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'X-Admin-Token': dashboardToken
-                    },
-                    body: JSON.stringify({ message: message })
-                });
-                if (res.ok) {
-                    msgInput.value = '';
-                    alert('Broadcast sent!');
-                }
-            } catch (e) {
-                alert('Failed to send broadcast');
-            }
-        }
-
-        function toggleAccordion(id) {
-            const content = document.getElementById(id);
-            const toggle = document.getElementById(id + '-toggle');
-            content.classList.toggle('collapsed');
-            toggle.classList.toggle('collapsed');
-        }
-
-        async function viewInv(uuid) {
-            try {
-                // Check if modal exists
-                const modal = document.getElementById('inventory-modal');
-                if (!modal) {
-                    alert('ERROR: Modal element not found in DOM!');
-                    return;
-                }
-
-                // Show loading state
-                document.getElementById('inv-loading').style.display = 'flex';
-                document.getElementById('inv-content').style.display = 'none';
-                modal.classList.add('active');
-
-                const res = await fetch(`/api/player/${uuid}/inv`, {
-                    headers: { 'X-Admin-Token': dashboardToken }
-                });
-                const data = await res.json();
-                
-                if (data.error) {
-                    alert('Failed to load inventory: ' + data.error);
-                    closeInventory();
-                    return;
-                }
-
-                // Find player name
-                const player = allPlayers.find(p => p.uuid === uuid);
-                const playerName = player ? player.name : 'Unknown';
-                
-                // Update player name and UUID
-                const nameEl = document.getElementById('inv-player-name');
-                if (nameEl) {
-                    nameEl.textContent = `${playerName}'s Inventory`;
-                }
-                
-                // Update UUID display
-                const uuidEl = document.getElementById('inv-player-uuid');
-                if (uuidEl) {
-                    uuidEl.textContent = uuid;
-                }
-                
-
-
-                // Render inventory sections
-                renderInventorySection('inv-hotbar', data.hotbar || []);
-                renderInventorySection('inv-storage', data.storage || []);
-                renderInventorySection('inv-armor', data.armor || []);
-
-                // Show content, hide loading
-                document.getElementById('inv-loading').style.display = 'none';
-                document.getElementById('inv-content').style.display = 'block';
-                modal.querySelector('.modal-container').classList.add('animate-show');
-            } catch (e) {
-                alert('Failed to load inventory: ' + e.message);
-                closeInventory();
-            }
-        }
-
-        function renderInventorySection(containerId, items) {
-            const container = document.getElementById(containerId);
-            if (!container) {
-                console.error('Container not found:', containerId);
-                return;
-            }
-            container.innerHTML = '';
-            
-            // Determine slot count based on section
-            let slotCount = 9; // default for hotbar
-            if (containerId === 'inv-storage') slotCount = 27;
-            if (containerId === 'inv-armor') slotCount = 4;
-            
-            // Create a map of slot index to item
-            const itemMap = {};
-            if (Array.isArray(items)) {
-                items.forEach(item => {
-                    if (item && item.slot !== undefined) {
-                        itemMap[item.slot] = item;
-                    }
-                });
-            }
-            
-            // Create all slots
-            for (let i = 0; i < slotCount; i++) {
-                const slot = document.createElement('div');
-                slot.className = 'inv-slot';
-                
-                const item = itemMap[i];
-                if (item && item.id) {
-                    slot.classList.add('has-item');
-                    
-                    // Add item icon
-                    const icon = document.createElement('img');
-                    icon.className = 'item-icon';
-                    icon.src = `/api/item/${encodeURIComponent(item.id)}/icon`;
-                    icon.alt = item.id;
-                    console.log(`[Inventory] Loading icon for ${item.id}: ${icon.src}`);
-                    icon.onerror = function() {
-                        console.error(`[Inventory] Failed to load icon for ${item.id}: ${this.src}`);
-                        this.style.display = 'none';
-                    };
-                    slot.appendChild(icon);
-                    
-                    // Tooltip listeners
-                    slot.onmouseenter = (e) => {
-                        const tooltip = document.getElementById('item-tooltip');
-                        const title = document.getElementById('tooltip-title');
-                        const idEl = document.getElementById('tooltip-id');
-                        const count = document.getElementById('tooltip-count');
-                        
-                        title.textContent = item.id.split(':').pop().replace(/_/g, ' ');
-                        idEl.textContent = item.id;
-                        count.textContent = item.count > 1 ? `Count: ${item.count}` : '';
-                        
-                        tooltip.classList.add('visible');
-                        positionTooltip(e, tooltip);
-                    };
-                    
-                    slot.onmousemove = (e) => {
-                        const tooltip = document.getElementById('item-tooltip');
-                        positionTooltip(e, tooltip);
-                    };
-                    
-                    slot.onmouseleave = () => {
-                        document.getElementById('item-tooltip').classList.remove('visible');
-                    };
-                    
-                    // Add item count badge
-                    if (item.count && item.count > 1) {
-                        const count = document.createElement('div');
-                        count.className = 'item-count';
-                        count.textContent = item.count;
-                        slot.appendChild(count);
-                    }
-                } else {
-                    slot.classList.add('empty');
-                }
-                
-                container.appendChild(slot);
-            }
-        }
-
-        function closeInventory() {
-            const modal = document.getElementById('inventory-modal');
-            if (modal) {
-                const container = modal.querySelector('.modal-container');
-                container.style.transition = 'all 0.2s ease';
-                container.style.opacity = '0';
-                container.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    modal.classList.remove('active');
-                    container.classList.remove('animate-show');
-                    container.style.opacity = '';
-                    container.style.transform = '';
-                    container.style.transition = '';
-                }, 200);
-            }
-            document.getElementById('item-tooltip').classList.remove('visible');
-        }
-
-        function positionTooltip(e, tooltip) {
-            const x = e.clientX + 15;
-            const y = e.clientY + 15;
-            
-            // Keep tooltip within viewport
-            const rect = tooltip.getBoundingClientRect();
-            const maxX = window.innerWidth - rect.width - 10;
-            const maxY = window.innerHeight - rect.height - 10;
-            
-            tooltip.style.left = Math.min(x, maxX) + 'px';
-            tooltip.style.top = Math.min(y, maxY) + 'px';
-        }
-
-        // Initialize modal event listeners after DOM is loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            // Close modal on escape key
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    closeInventory();
-                }
-            });
-
-            // Close modal on overlay click
-            const modal = document.getElementById('inventory-modal');
-            if (modal) {
-                modal.addEventListener('click', (e) => {
-                    if (e.target.id === 'inventory-modal') {
-                        closeInventory();
-                    }
-                });
-            }
-        });
-
-        async function fetchMods() {
-            if (!dashboardToken) return;
-            try {
-                const res = await fetch('/api/plugins', {
-                    headers: { 'X-Admin-Token': dashboardToken }
-                });
-                const mods = await res.json();
-                document.getElementById('mod-count').textContent = mods.length;
-                document.getElementById('mod-count-badge').textContent = mods.length;
-                const list = document.getElementById('plugin-list');
-                list.innerHTML = '';
-                mods.forEach(mod => {
-                    const div = document.createElement('div');
-                    div.className = 'plugin-item';
-                    div.innerHTML = `
-                        <div class="plugin-info">
-                            <img src="${mod.iconUrl}" class="plugin-icon" onerror="this.src='https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(mod.name)}'">
-                            <div>
-                                <div style="font-weight: 600">${mod.name}</div>
-                                <div style="display: flex; align-items: center">
-                                    <span style="font-size: 0.75rem; color: var(--hytale-gold)">v${mod.version}</span>
-                                    <span class="plugin-type">${mod.type}</span>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    list.appendChild(div);
-                });
-            } catch (e) {
-                console.error('Failed to fetch mods', e);
-            }
-        }
-
-        async function fetchChat() {
-            if (!dashboardToken) return;
-            try {
-                const res = await fetch('/api/chat', {
-                    headers: { 'X-Admin-Token': dashboardToken }
-                });
-                const messages = await res.json();
-                renderChat(messages);
-            } catch (e) {
-                console.error('Failed to fetch chat', e);
-            }
-        }
-
-        function renderChat(messages) {
-            const container = document.getElementById('console-log');
-            const atBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
-            
-            container.innerHTML = '';
-            messages.forEach(msg => {
-                const div = document.createElement('div');
-                div.className = 'console-entry';
-                const timeStr = new Date(msg.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                div.innerHTML = `
-                    <span class="console-time">[${timeStr}]</span>
-                    <span class="console-sender">${msg.sender}:</span>
-                    <span class="console-text">${msg.message}</span>
-                `;
-                container.appendChild(div);
-            });
-
-            if (atBottom) {
-                container.scrollTop = container.scrollHeight;
-            }
-        }
-
-        function renderPlayers() {
-            const tbody = document.getElementById('player-table-body');
-            const searchTerm = document.getElementById('search').value.toLowerCase();
-            
-            const filtered = allPlayers.filter(p => p.name.toLowerCase().includes(searchTerm));
-            const currentUuids = new Set(filtered.map(p => p.uuid));
-
-            // Remove rows for players who are no longer in the filtered list
-            Array.from(tbody.children).forEach(row => {
-                const uuid = row.getAttribute('data-uuid');
-                if (!currentUuids.has(uuid)) {
-                    tbody.removeChild(row);
-                }
-            });
-
-            filtered.forEach(p => {
-                let tr = tbody.querySelector(`tr[data-uuid="${p.uuid}"]`);
-                const healthPct = (p.health / p.maxHealth) * 100 || 0;
-                const avatarUrl = p.avatarUrl || `/api/avatar/${p.name}`;
-
-                if (!tr) {
-                    // Create new row
-                    tr = document.createElement('tr');
-                    tr.setAttribute('data-uuid', p.uuid);
-                    tr.innerHTML = `
-                        <td>
-                            <div class="player-info">
-                                <img src="" class="avatar">
-                                <div>
-                                    <div class="p-name" style="font-weight: 600; font-size: 0.9375rem"></div>
-                                    <div class="p-uuid-short" style="font-size: 0.75rem; color: var(--text-secondary); font-family: monospace"></div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="badge badge-success">
-                                <span class="pulse"></span>
-                                Online
-                            </span>
-                        </td>
-                        <td>
-                            <div class="p-vitals" style="font-size: 0.8125rem; font-weight: 600; margin-bottom: 2px"></div>
-                            <div class="health-bar-container">
-                                <div class="health-bar"></div>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="p-coords" style="font-size: 0.8125rem; font-family: 'Monaco', monospace"></div>
-                            <div class="p-gamemode" style="font-size: 0.6875rem; color: var(--text-secondary); margin-top: 2px"></div>
-                        </td>
-                        <td>
-                            <div style="display: flex; gap: 0.5rem">
-                                <button class="btn btn-secondary btn-inv">Inventory</button>
-                                <button class="btn btn-danger btn-kick">Kick</button>
-                            </div>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                    loadSecureAvatar(tr.querySelector('.avatar'), avatarUrl);
-                    
-                    // Add listeners for buttons in new row
-                    tr.querySelector('.btn-inv').onclick = () => viewInv(p.uuid);
-                    tr.querySelector('.btn-kick').onclick = () => kickPlayer(p.uuid);
-                }
-
-                // Update text fields only if they changed (or just always update, it's cheap)
-                tr.querySelector('.p-name').textContent = p.name;
-                tr.querySelector('.p-uuid-short').textContent = p.uuid.substring(0, 8) + '...';
-                tr.querySelector('.p-vitals').textContent = `${Math.round(p.health)} / ${Math.round(p.maxHealth)} HP`;
-                tr.querySelector('.health-bar').style.width = healthPct + '%';
-                tr.querySelector('.p-coords').innerHTML = `
-                    <span class="coord-label">X:</span> ${Math.round(p.x)} 
-                    <span class="coord-label">Y:</span> ${Math.round(p.y)} 
-                    <span class="coord-label">Z:</span> ${Math.round(p.z)}
-                `;
-                tr.querySelector('.p-gamemode').textContent = p.gameMode;
-            });
-        }
-
-        async function loadSecureAvatar(img, url) {
-            if (!dashboardToken) return;
-            
-            // Check cache first
-            if (avatarCache.has(url)) {
-                img.src = avatarCache.get(url);
-                return;
-            }
-
-            try {
-                const res = await fetch(url, {
-                    headers: { 'X-Admin-Token': dashboardToken }
-                });
-                if (!res.ok) throw new Error('Failed to fetch avatar');
-                const blob = await res.blob();
-                const blobUrl = URL.createObjectURL(blob);
-                
-                // Store in cache
-                avatarCache.set(url, blobUrl);
-                img.src = blobUrl;
-            } catch (e) {
-                console.error('Failed to load avatar securely:', e);
-                // Fallback icon or empty
-                img.src = 'https://api.dicebear.com/7.x/bottts/svg?seed=' + encodeURIComponent(url);
-            }
-        }
-
-        document.getElementById('search').addEventListener('input', renderPlayers);
-
-        function kickPlayer(uuid) {
-            const p = allPlayers.find(x => x.uuid === uuid);
-            if (confirm(`Are you sure you want to kick ${p ? p.name : 'this player'}?`)) {
-                fetch('/api/kick', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'X-Admin-Token': dashboardToken
-                    },
-                    body: JSON.stringify({ uuid: uuid, reason: 'Kicked by Admin' })
-                }).then(() => fetchStats());
-            }
-        }
-
-        // Clock handled by updateServerTime during stats sync for simplicity,
-        // but we can also run it independently for smoothness if needed.
-        setInterval(updateServerTime, 1000);
-    </script>
 
     <!-- Inventory Modal -->
     <div id="inventory-modal" class="modal-overlay">
@@ -652,8 +150,8 @@
                     <button class="modal-close" onclick="closeInventory()">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <div id="inv-loading" class="inv-loading">
-                        <div class="loading-spinner"></div>
+                    <div id="inv-loading" class="inv-loading" style="display: flex; flex-direction: column; align-items: center; padding: 3rem; gap: 1rem;">
+                        <div style="width: 40px; height: 40px; border: 3px solid rgba(236, 188, 98, 0.3); border-radius: 50%; border-top-color: var(--hytale-gold); animation: spin 1s ease-in-out infinite;"></div>
                         <p>Loading inventory...</p>
                     </div>
                     <div id="inv-content" style="display: none;">
@@ -675,11 +173,13 @@
         </div>
     </div>
 
-    <!-- Tooltip Element -->
+    <!-- Tooltip -->
     <div id="item-tooltip" class="item-tooltip">
         <div id="tooltip-title" class="tooltip-title"></div>
         <div id="tooltip-id" class="tooltip-id"></div>
         <div id="tooltip-count" class="tooltip-count"></div>
     </div>
+
+    <script src="js/dashboard.js"></script>
 </body>
 </html>
