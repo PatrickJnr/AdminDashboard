@@ -539,27 +539,31 @@
             background: var(--hytale-bg);
             border: 2px solid var(--hytale-border);
             border-radius: 8px;
-            max-width: 800px;
-            width: 90%;
+            max-width: 1000px;
+            width: 95%;
             max-height: 90vh;
             overflow-y: auto;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(236, 188, 98, 0.1);
         }
 
         .modal-header {
-            background: linear-gradient(135deg, rgba(21, 36, 58, 0.95), rgba(30, 50, 80, 0.95));
-            padding: 1.5rem;
-            border-bottom: 2px solid var(--hytale-border);
+            background: linear-gradient(135deg, rgba(21, 36, 58, 0.98), rgba(15, 28, 48, 0.98));
+            padding: 1.25rem 1.5rem;
+            border-bottom: 2px solid var(--hytale-gold-dark);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .modal-title {
             font-family: 'Lexend', sans-serif;
-            font-size: 1.5rem;
-            color: var(--hytale-gold);
+            font-size: 1.75rem;
+            color: var(--hytale-gold-light);
             margin: 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         .modal-close {
@@ -579,28 +583,53 @@
 
         .modal-close:hover {
             color: var(--hytale-gold);
+            transform: rotate(90deg);
         }
 
         .modal-body {
-            padding: 1.5rem;
+            padding: 2rem;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.15));
         }
 
         .inv-section {
             margin-bottom: 2rem;
         }
 
+        .inv-section:last-child {
+            margin-bottom: 0;
+        }
+
         .inv-section-title {
             font-family: 'Lexend', sans-serif;
-            font-size: 1.125rem;
-            color: var(--hytale-gold-light);
-            margin-bottom: 0.75rem;
+            font-size: 1.5rem;
+            color: var(--hytale-gold);
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--hytale-border);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.1em;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .inv-section-title::before {
+            content: '';
+            display: inline-block;
+            width: 5px;
+            height: 24px;
+            background: linear-gradient(to bottom, var(--hytale-gold-light), var(--hytale-gold-dark));
+            border-radius: 3px;
         }
 
         .inv-grid {
             display: grid;
             gap: 0.5rem;
+            padding: 1.25rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border: 1px solid var(--hytale-border);
+            box-shadow: inset 0 4px 20px rgba(0, 0, 0, 0.4);
         }
 
         .inv-grid.hotbar {
@@ -613,7 +642,7 @@
 
         .inv-grid.armor {
             grid-template-columns: repeat(4, 1fr);
-            max-width: 200px;
+            max-width: 400px;
         }
 
         /* Pulse Animation for Online Status */
@@ -638,12 +667,12 @@
             position: fixed;
             background: rgba(15, 28, 48, 0.98);
             border: 1px solid var(--hytale-gold-dark);
-            border-radius: 4px;
-            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            padding: 1rem 1.25rem;
             pointer-events: none;
             z-index: 2000;
-            max-width: 280px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+            max-width: 350px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
             display: none;
         }
 
@@ -653,20 +682,23 @@
 
         .tooltip-title {
             font-weight: 700;
+            font-size: 1.125rem;
             color: var(--hytale-gold-light);
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.5rem;
         }
 
         .tooltip-id {
-            font-size: 0.75rem;
+            font-size: 0.8125rem;
             color: var(--text-secondary);
             font-family: monospace;
+            margin-bottom: 0.25rem;
         }
 
         .tooltip-count {
-            font-size: 0.875rem;
+            font-size: 1rem;
             color: var(--text-primary);
-            margin-top: 0.25rem;
+            margin-top: 0.5rem;
+            font-weight: 600;
         }
 
         /* Coordinate Label Style */
@@ -677,42 +709,47 @@
 
         /* Inventory Slot Styles */
         .inv-slot {
-            width: 48px;
-            height: 48px;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid var(--hytale-border);
-            border-radius: 4px;
+            width: 84px;
+            height: 84px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid var(--hytale-border);
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.4);
         }
 
         .inv-slot:hover {
             border-color: var(--hytale-gold);
-            background: rgba(236, 188, 98, 0.1);
+            background: rgba(236, 188, 98, 0.15);
+            transform: scale(1.03);
+            box-shadow: 0 0 15px rgba(236, 188, 98, 0.3), inset 0 0 15px rgba(0, 0, 0, 0.4);
         }
 
         .inv-slot img {
-            width: 36px;
-            height: 36px;
+            width: 64px;
+            height: 64px;
             image-rendering: pixelated;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
         }
 
         .inv-slot .item-count {
             position: absolute;
-            bottom: 2px;
-            right: 4px;
-            font-size: 0.75rem;
+            bottom: 5px;
+            right: 8px;
+            font-size: 1rem;
             font-weight: 700;
             color: white;
-            text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
         }
 
         .inv-slot.empty {
-            opacity: 0.5;
+            opacity: 0.4;
+            background: rgba(0, 0, 0, 0.3);
         }
 
         /* Responsive Design */
@@ -775,6 +812,22 @@
 
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+
+        .inv-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            gap: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .inv-loading .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border-width: 3px;
         }
 
         /* Button Enhancements */
@@ -976,7 +1029,7 @@
                 <form onsubmit="login(event)">
                     <div class="input-group">
                         <label>Dashboard Token</label>
-                        <input type="password" id="token-input" placeholder="Enter your 16-char secret">
+                        <input type="password" id="token-input" autocomplete="new-password" placeholder="Enter your 16-char secret">
                     </div>
                     <button type="submit" class="btn btn-secondary" style="width: 100%">Authenticate</button>
                     <div id="login-error" class="error-message">Invalid token. Please check your config.json</div>
@@ -1224,6 +1277,11 @@
                     return;
                 }
 
+                // Show loading state
+                document.getElementById('inv-loading').style.display = 'flex';
+                document.getElementById('inv-content').style.display = 'none';
+                modal.classList.add('active');
+
                 const res = await fetch(`/api/player/${uuid}/inv`, {
                     headers: { 'X-Admin-Token': dashboardToken }
                 });
@@ -1231,6 +1289,7 @@
                 
                 if (data.error) {
                     alert('Failed to load inventory: ' + data.error);
+                    closeInventory();
                     return;
                 }
 
@@ -1246,11 +1305,13 @@
                 renderInventorySection('inv-storage', data.storage || []);
                 renderInventorySection('inv-armor', data.armor || []);
 
-                // Show modal
-                modal.classList.add('active');
+                // Show content, hide loading
+                document.getElementById('inv-loading').style.display = 'none';
+                document.getElementById('inv-content').style.display = 'block';
                 modal.querySelector('.modal-container').classList.add('animate-show');
             } catch (e) {
                 alert('Failed to load inventory: ' + e.message);
+                closeInventory();
             }
         }
 
@@ -1352,7 +1413,20 @@
                     container.style.transition = '';
                 }, 200);
             }
-            document.getElementById('item-tooltip').style.display = 'none';
+            document.getElementById('item-tooltip').classList.remove('visible');
+        }
+
+        function positionTooltip(e, tooltip) {
+            const x = e.clientX + 15;
+            const y = e.clientY + 15;
+            
+            // Keep tooltip within viewport
+            const rect = tooltip.getBoundingClientRect();
+            const maxX = window.innerWidth - rect.width - 10;
+            const maxY = window.innerHeight - rect.height - 10;
+            
+            tooltip.style.left = Math.min(x, maxX) + 'px';
+            tooltip.style.top = Math.min(y, maxY) + 'px';
         }
 
         // Initialize modal event listeners after DOM is loaded
@@ -1579,17 +1653,23 @@
                     <button class="modal-close" onclick="closeInventory()">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <div class="inv-section">
-                        <h3 class="inv-section-title">Armor</h3>
-                        <div id="inv-armor" class="inv-grid armor"></div>
+                    <div id="inv-loading" class="inv-loading">
+                        <div class="loading-spinner"></div>
+                        <p>Loading inventory...</p>
                     </div>
-                    <div class="inv-section">
-                        <h3 class="inv-section-title">Hotbar</h3>
-                        <div id="inv-hotbar" class="inv-grid hotbar"></div>
-                    </div>
-                    <div class="inv-section">
-                        <h3 class="inv-section-title">Storage</h3>
-                        <div id="inv-storage" class="inv-grid storage"></div>
+                    <div id="inv-content" style="display: none;">
+                        <div class="inv-section">
+                            <h3 class="inv-section-title">Armor</h3>
+                            <div id="inv-armor" class="inv-grid armor"></div>
+                        </div>
+                        <div class="inv-section">
+                            <h3 class="inv-section-title">Hotbar</h3>
+                            <div id="inv-hotbar" class="inv-grid hotbar"></div>
+                        </div>
+                        <div class="inv-section">
+                            <h3 class="inv-section-title">Storage</h3>
+                            <div id="inv-storage" class="inv-grid storage"></div>
+                        </div>
                     </div>
                 </div>
             </div>
