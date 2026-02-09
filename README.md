@@ -45,10 +45,46 @@ A powerful web-based administration panel for Hytale servers, providing real-tim
 
 ## Installation
 
+### Standard Installation
+
 1. Download the latest `AdminDashboard-X.X.jar` from releases
 2. Place the JAR file in your Hytale server's `Mods` folder
 3. Start or restart your Hytale server
 4. The dashboard will be accessible at `http://localhost:9081`
+
+### Docker Installation
+
+If you're running your Hytale server in Docker, follow these additional steps:
+
+1. **Mount the Mods folder** as a volume in your Docker container:
+   ```bash
+   docker run -v /path/to/mods:/server/Mods your-hytale-image
+   ```
+
+2. **Expose the dashboard port** (default 9081) in your Docker configuration:
+   ```bash
+   docker run -p 9081:9081 -v /path/to/mods:/server/Mods your-hytale-image
+   ```
+
+3. **Using Docker Compose**, add this to your `docker-compose.yml`:
+   ```yaml
+   services:
+     hytale-server:
+       image: your-hytale-image
+       ports:
+         - "9081:9081"  # Admin Dashboard
+         - "5520:5520"  # Game server port
+       volumes:
+         - ./mods:/server/Mods
+         - ./config:/server/config
+   ```
+
+4. **Access the dashboard** from your host machine at `http://localhost:9081`
+
+**Docker Network Notes:**
+- If accessing from outside the Docker host, use the host's IP address instead of `localhost`
+- For production deployments, consider using a reverse proxy (nginx, Traefik) for HTTPS
+- Ensure firewall rules allow traffic on port 9081 if accessing remotely
 
 ## Configuration
 
