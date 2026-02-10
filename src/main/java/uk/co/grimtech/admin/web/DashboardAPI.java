@@ -1408,19 +1408,7 @@ public class DashboardAPI {
     
     private static String teleportToWarp(String body) {
         try {
-            getLogger().info("[API] teleportToWarp received body: " + body);
-            
             JsonObject json = GSON.fromJson(body, JsonObject.class);
-            
-            getLogger().info("[API] Parsed JSON: " + json.toString());
-            getLogger().info("[API] Has uuid: " + json.has("uuid") + ", Has warp: " + json.has("warp"));
-            
-            if (json.has("uuid")) {
-                getLogger().info("[API] UUID element: " + json.get("uuid") + ", isNull: " + json.get("uuid").isJsonNull());
-            }
-            if (json.has("warp")) {
-                getLogger().info("[API] Warp element: " + json.get("warp") + ", isNull: " + json.get("warp").isJsonNull());
-            }
             
             if (!json.has("uuid") || !json.has("warp") || json.get("uuid").isJsonNull() || json.get("warp").isJsonNull()) {
                 return "{\"error\": \"Missing UUID or warp name\"}";
