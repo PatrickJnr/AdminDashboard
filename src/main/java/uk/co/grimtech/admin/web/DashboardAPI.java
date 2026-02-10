@@ -73,7 +73,9 @@ public class DashboardAPI {
     public static String handleRequest(String path, String method, String body) {
         getLogger().info("[API] " + method + " " + path);
         
-        if (path.equals("/api/players")) {
+        if (path.equals("/api/version")) {
+            return getVersion();
+        } else if (path.equals("/api/players")) {
             return getPlayers();
         } else if (path.startsWith("/api/avatar/")) {
             String identifier = path.substring("/api/avatar/".length());
@@ -149,6 +151,23 @@ public class DashboardAPI {
         }
         
         return "{\"error\": \"Invalid endpoint\"}";
+    }
+
+    private static String getVersion() {
+        JsonObject version = new JsonObject();
+        
+        // Try to get version from plugin manifest
+        AdminDashboardPlugin plugin = AdminDashboardPlugin.getInstance();
+        String versionString = "1.0.0"; // fallback
+        
+        if (plugin != null && plugin.getManifest() != null) {
+            versionString = plugin.getManifest().getVersion().toString();
+        }
+        
+        version.addProperty("version", versionString);
+        version.addProperty("name", "Admin WebDash");
+        version.addProperty("author", "Patrick Jr.");
+        return GSON.toJson(version);
     }
 
     private static String getPlayers() {
@@ -1389,8 +1408,21 @@ public class DashboardAPI {
     
     private static String teleportToWarp(String body) {
         try {
+            getLogger().info("[API] teleportToWarp received body: " + body);
+            
             JsonObject json = GSON.fromJson(body, JsonObject.class);
-            if (!json.has("uuid") || !json.has("warp")) {
+            
+            getLogger().info("[API] Parsed JSON: " + json.toString());
+            getLogger().info("[API] Has uuid: " + json.has("uuid") + ", Has warp: " + json.has("warp"));
+            
+            if (json.has("uuid")) {
+                getLogger().info("[API] UUID element: " + json.get("uuid") + ", isNull: " + json.get("uuid").isJsonNull());
+            }
+            if (json.has("warp")) {
+                getLogger().info("[API] Warp element: " + json.get("warp") + ", isNull: " + json.get("warp").isJsonNull());
+            }
+            
+            if (!json.has("uuid") || !json.has("warp") || json.get("uuid").isJsonNull() || json.get("warp").isJsonNull()) {
                 return "{\"error\": \"Missing UUID or warp name\"}";
             }
             

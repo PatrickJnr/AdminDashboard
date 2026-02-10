@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hytale Admin Dashboard</title>
+    <title>Admin WebDash</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&family=Lexend:wght@700&display=swap" rel="stylesheet">
@@ -30,266 +30,309 @@
     </div>
 
     <!-- Main Dashboard -->
-    <div class="container dashboard-locked" id="dashboard-container">
-        <!-- Header -->
-        <header>
-            <div class="hytale-panel" style="margin-bottom: 0">
-                <div class="hytale-panel-inner" style="display: flex; align-items: center; gap: 2rem; padding: 1rem 2rem">
-                    <h1 style="margin-bottom: 0; line-height: 1">Hytale Admin</h1>
-                    <div id="server-time">Loading server time...</div>
+    <div class="dashboard-wrapper dashboard-locked" id="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar-nav">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span class="material-symbols-outlined">shield</span>
                 </div>
             </div>
-            
-            <div class="hytale-panel" style="margin-bottom: 0">
-                <div class="hytale-panel-inner" style="display: flex; align-items: center; gap: 1rem; padding: 1rem 2rem">
-                    <div class="refresh-pill">
-                        <span class="pulse"></span>
-                        Live Connection
+            <div class="sidebar-items">
+                <button class="sidebar-item active" onclick="switchTab('dashboard')" data-tab="dashboard" title="Dashboard">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    <span class="sidebar-label">Dashboard</span>
+                </button>
+                <button class="sidebar-item" onclick="switchTab('players')" data-tab="players" title="Players">
+                    <span class="material-symbols-outlined">group</span>
+                    <span class="sidebar-label">Players</span>
+                </button>
+                <button class="sidebar-item" onclick="switchTab('moderation')" data-tab="moderation" title="Moderation">
+                    <span class="material-symbols-outlined">gavel</span>
+                    <span class="sidebar-label">Moderation</span>
+                </button>
+                <button class="sidebar-item" onclick="switchTab('world')" data-tab="world" title="World">
+                    <span class="material-symbols-outlined">public</span>
+                    <span class="sidebar-label">World</span>
+                </button>
+                <button class="sidebar-item" onclick="switchTab('server')" data-tab="server" title="Server">
+                    <span class="material-symbols-outlined">dns</span>
+                    <span class="sidebar-label">Server</span>
+                </button>
+            </div>
+            <div class="sidebar-footer">
+                <div class="sidebar-version" id="sidebar-version">Loading...</div>
+                <a href="https://www.curseforge.com/members/patrickjr/projects" target="_blank" rel="noopener" class="sidebar-author" title="Created by Patrick Jr.">
+                    <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/patrickjr-profile_image-99e3f58f22811d70-150x150.jpeg" alt="Patrick Jr." class="sidebar-author-img">
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <div class="container">
+                <!-- Header -->
+                <header>
+                    <div class="hytale-panel" style="margin-bottom: 0">
+                        <div class="hytale-panel-inner" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 2rem">
+                            <div style="display: flex; align-items: center; gap: 2rem;">
+                                <h1 style="margin-bottom: 0; line-height: 1">Hytale Admin</h1>
+                                <div id="server-time">Loading server time...</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div class="refresh-pill">
+                                    <span class="pulse"></span>
+                                    Live Connection
+                                </div>
+                                <button class="btn btn-secondary" onclick="fetchStats()">Refresh</button>
+                            </div>
+                        </div>
                     </div>
-                    <button class="btn btn-secondary" onclick="fetchStats()">Refresh</button>
-                </div>
-            </div>
-        </header>
+                </header>
 
         <!-- Stats Grid -->
-        <div class="stats-grid">
-            <div class="stat-card hytale-panel">
-                <div class="hytale-panel-inner">
-                    <div class="stat-label">
-                        <span class="material-symbols-outlined">group</span>
-                        Players Online
+        <div class="tab-content active" id="tab-dashboard">
+            <div class="stats-grid">
+                <div class="stat-card hytale-panel">
+                    <div class="hytale-panel-inner">
+                        <div class="stat-label">
+                            <span class="material-symbols-outlined">group</span>
+                            Players Online
+                        </div>
+                        <div id="player-count" class="stat-value">0</div>
                     </div>
-                    <div id="player-count" class="stat-value">0</div>
+                </div>
+                <div class="stat-card hytale-panel">
+                    <div class="hytale-panel-inner">
+                        <div class="stat-label">
+                            <span class="material-symbols-outlined">speed</span>
+                            Server TPS
+                        </div>
+                        <div id="server-tps" class="stat-value">30.0</div>
+                    </div>
+                </div>
+                <div class="stat-card hytale-panel">
+                    <div class="hytale-panel-inner">
+                        <div class="stat-label">
+                            <span class="material-symbols-outlined">extension</span>
+                            Active Mods
+                        </div>
+                        <div id="mod-count" class="stat-value">0</div>
+                    </div>
+                </div>
+                <div class="stat-card hytale-panel">
+                    <div class="hytale-panel-inner">
+                        <div class="stat-label">
+                            <span class="material-symbols-outlined">memory</span>
+                            Server Memory
+                        </div>
+                        <div id="server-memory" class="stat-value">0 MB</div>
+                    </div>
+                </div>
+                <div class="stat-card hytale-panel">
+                    <div class="hytale-panel-inner">
+                        <div class="stat-label">
+                            <span class="material-symbols-outlined">schedule</span>
+                            Server Uptime
+                        </div>
+                        <div id="server-uptime" class="stat-value">0h 0m</div>
+                    </div>
                 </div>
             </div>
-            <div class="stat-card hytale-panel">
+
+            <!-- Server Chat -->
+            <div class="hytale-panel">
                 <div class="hytale-panel-inner">
-                    <div class="stat-label">
-                        <span class="material-symbols-outlined">speed</span>
-                        Server TPS
+                    <div class="card-header">
+                        <h2>Server Chat</h2>
                     </div>
-                    <div id="server-tps" class="stat-value">30.0</div>
+                    <div id="console-log" class="console-container">
+                        <div class="console-entry">Initializing chat...</div>
+                    </div>
                 </div>
             </div>
-            <div class="stat-card hytale-panel">
+        </div>
+        <!-- End Dashboard Tab -->
+
+        <!-- Players Tab -->
+        <div class="tab-content" id="tab-players">
+            <!-- Player Table -->
+            <div class="hytale-panel">
                 <div class="hytale-panel-inner">
-                    <div class="stat-label">
-                        <span class="material-symbols-outlined">extension</span>
-                        Active Mods
+                    <div class="card-header">
+                        <h2>Connected Players</h2>
+                        <input type="text" id="search" class="search-input" placeholder="Search player name...">
                     </div>
-                    <div id="mod-count" class="stat-value">0</div>
-                </div>
-            </div>
-            <div class="stat-card hytale-panel">
-                <div class="hytale-panel-inner">
-                    <div class="stat-label">
-                        <span class="material-symbols-outlined">memory</span>
-                        Server Memory
-                    </div>
-                    <div id="server-memory" class="stat-value">0 MB</div>
-                </div>
-            </div>
-            <div class="stat-card hytale-panel">
-                <div class="hytale-panel-inner">
-                    <div class="stat-label">
-                        <span class="material-symbols-outlined">schedule</span>
-                        Server Uptime
-                    </div>
-                    <div id="server-uptime" class="stat-value">0h 0m</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Player</th>
+                                <th>Status</th>
+                                <th>Health</th>
+                                <th>Stamina</th>
+                                <th>Mana</th>
+                                <th>Defence</th>
+                                <th>Location</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="player-table-body"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-        <!-- Main Content Layout -->
-        <div class="main-layout">
-            <!-- Left Column - Primary Content -->
-            <div class="main-column">
-                <!-- Player Table -->
-                <div class="hytale-panel">
-                    <div class="hytale-panel-inner">
-                        <div class="card-header">
-                            <h2>Connected Players</h2>
-                            <input type="text" id="search" class="search-input" placeholder="Search player name...">
-                        </div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Player</th>
-                                    <th>Status</th>
-                                    <th>Health</th>
-                                    <th>Stamina</th>
-                                    <th>Mana</th>
-                                    <th>Defence</th>
-                                    <th>Location</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="player-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Server Controls Row -->
-                <div class="controls-row">
-                    <!-- Broadcast -->
-                    <div class="hytale-panel">
-                        <div class="hytale-panel-inner">
-                            <div class="card-header">
-                                <h2>Server Broadcast</h2>
-                            </div>
-                            <p style="color: var(--text-secondary); font-size: 0.8125rem; margin-bottom: 1rem">Send a message to all players on the server.</p>
-                            <div class="broadcast-group">
-                                <input type="text" id="broadcast-msg" class="search-input" placeholder="Message content...">
-                                <button class="btn btn-secondary" onclick="broadcast()">Send</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- World Controls -->
-                    <div class="hytale-panel">
-                        <div class="hytale-panel-inner">
-                            <div class="card-header">
-                                <h2>World Controls</h2>
-                            </div>
-                            <p style="color: var(--text-secondary); font-size: 0.8125rem; margin-bottom: 1rem">Control the time and weather in your world.</p>
-                            <div style="margin-bottom: 1rem;">
-                                <label style="font-size: 0.8125rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;">Time of Day</label>
-                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
-                                    <button class="btn btn-secondary" onclick="setTime('sunrise')">
-                                        <span class="material-symbols-outlined">wb_sunny</span>
-                                        Sunrise
-                                    </button>
-                                    <button class="btn btn-secondary" onclick="setTime('sunset')">
-                                        <span class="material-symbols-outlined">nightlight</span>
-                                        Sunset
-                                    </button>
-                                    <button class="btn btn-secondary" onclick="setTime('noon')">
-                                        <span class="material-symbols-outlined">light_mode</span>
-                                        Noon
-                                    </button>
-                                    <button class="btn btn-secondary" onclick="setTime('midnight')">
-                                        <span class="material-symbols-outlined">dark_mode</span>
-                                        Midnight
-                                    </button>
-                                </div>
-                            </div>
-                            <div>
-                                <label style="font-size: 0.8125rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;">Weather</label>
-                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
-                                    <button class="btn btn-secondary" onclick="setWeather('clear')">
-                                        <span class="material-symbols-outlined">wb_sunny</span>
-                                        Clear
-                                    </button>
-                                    <button class="btn btn-secondary" onclick="setWeather('rain')">
-                                        <span class="material-symbols-outlined">rainy</span>
-                                        Rain
-                                    </button>
-                                    <button class="btn btn-secondary" onclick="setWeather('storm')">
-                                        <span class="material-symbols-outlined">thunderstorm</span>
-                                        Storm
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Management Sections Row -->
-                <div class="management-row">
-                    <!-- Banned Players -->
-                    <div class="hytale-panel">
-                        <div class="hytale-panel-inner">
-                            <div class="card-header">
-                                <div>
-                                    <h2 style="display: inline;">Banned Players</h2>
-                                    <span id="ban-count-badge" class="mod-count-badge">0</span>
-                                </div>
-                                <button class="btn btn-secondary" onclick="viewBansFile()" title="View bans.json file" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">
-                                    <span class="material-symbols-outlined" style="font-size: 1rem;">description</span>
-                                    View File
-                                </button>
-                            </div>
-                            <div class="management-content">
-                                <div id="ban-list" class="ban-list"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Muted Players -->
-                    <div class="hytale-panel">
-                        <div class="hytale-panel-inner">
-                            <div class="card-header">
-                                <div>
-                                    <h2 style="display: inline;">Muted Players</h2>
-                                    <span id="mute-count-badge" class="mod-count-badge">0</span>
-                                </div>
-                            </div>
-                            <div class="management-content">
-                                <div id="mute-list" class="ban-list"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Warps -->
-                    <div class="hytale-panel">
-                        <div class="hytale-panel-inner">
-                            <div class="card-header">
-                                <div>
-                                    <h2 style="display: inline;">Warp Points</h2>
-                                    <span id="warp-count-badge" class="mod-count-badge">0</span>
-                                </div>
-                            </div>
-                            <div class="management-content">
-                                <div class="warp-create-section">
-                                    <div style="display: flex; gap: 0.5rem;">
-                                        <input type="text" id="warp-name-input" class="search-input" placeholder="Warp name..." style="flex: 1;">
-                                        <button class="btn btn-secondary" onclick="createWarpFromInput()">
-                                            <span class="material-symbols-outlined">add_location</span>
-                                            Create
-                                        </button>
-                                    </div>
-                                    <p style="font-size: 0.6875rem; color: var(--text-secondary); margin-top: 0.5rem;">Creates warp at selected player's location</p>
-                                </div>
-                                <div id="warp-list" class="ban-list"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Column - Sidebar -->
-            <div class="sidebar-column">
-                <!-- Server Chat -->
-                <div class="hytale-panel">
-                    <div class="hytale-panel-inner">
-                        <div class="card-header">
-                            <h2>Server Chat</h2>
-                        </div>
-                        <div id="console-log" class="console-container">
-                            <div class="console-entry">Initializing chat...</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mods -->
+        <!-- Moderation Tab -->
+        <div class="tab-content" id="tab-moderation">
+            <div class="moderation-grid">
+                <!-- Banned Players -->
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
                             <div>
-                                <h2 style="display: inline;">Custom Mods</h2>
-                                <span id="mod-count-badge" class="mod-count-badge">0</span>
+                                <h2 style="display: inline;">Banned Players</h2>
+                                <span id="ban-count-badge" class="mod-count-badge">0</span>
+                            </div>
+                            <button class="btn btn-secondary" onclick="viewBansFile()" title="View bans.json file" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">
+                                <span class="material-symbols-outlined" style="font-size: 1rem;">description</span>
+                                View File
+                            </button>
+                        </div>
+                        <div class="management-content">
+                            <div id="ban-list" class="ban-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Muted Players -->
+                <div class="hytale-panel">
+                    <div class="hytale-panel-inner">
+                        <div class="card-header">
+                            <div>
+                                <h2 style="display: inline;">Muted Players</h2>
+                                <span id="mute-count-badge" class="mod-count-badge">0</span>
                             </div>
                         </div>
                         <div class="management-content">
-                            <div id="plugin-list" class="plugin-list"></div>
+                            <div id="mute-list" class="ban-list"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- World Tab -->
+        <div class="tab-content" id="tab-world">
+            <div class="world-grid">
+                <!-- Server Broadcast -->
+                <div class="hytale-panel">
+                    <div class="hytale-panel-inner">
+                        <div class="card-header">
+                            <h2>Server Broadcast</h2>
+                        </div>
+                        <p style="color: var(--text-secondary); font-size: 0.8125rem; margin-bottom: 1rem">Send a message to all players on the server.</p>
+                        <div class="broadcast-group">
+                            <input type="text" id="broadcast-msg" class="search-input" placeholder="Message content...">
+                            <button class="btn btn-secondary" onclick="broadcast()">Send</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- World Controls -->
+                <div class="hytale-panel">
+                    <div class="hytale-panel-inner">
+                        <div class="card-header">
+                            <h2>World Controls</h2>
+                        </div>
+                        <p style="color: var(--text-secondary); font-size: 0.8125rem; margin-bottom: 1rem">Control the time and weather in your world.</p>
+                        <div style="margin-bottom: 1rem;">
+                            <label style="font-size: 0.8125rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;">Time of Day</label>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+                                <button class="btn btn-secondary" onclick="setTime('sunrise')">
+                                    <span class="material-symbols-outlined">wb_sunny</span>
+                                    Sunrise
+                                </button>
+                                <button class="btn btn-secondary" onclick="setTime('sunset')">
+                                    <span class="material-symbols-outlined">nightlight</span>
+                                    Sunset
+                                </button>
+                                <button class="btn btn-secondary" onclick="setTime('noon')">
+                                    <span class="material-symbols-outlined">light_mode</span>
+                                    Noon
+                                </button>
+                                <button class="btn btn-secondary" onclick="setTime('midnight')">
+                                    <span class="material-symbols-outlined">dark_mode</span>
+                                    Midnight
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.8125rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;">Weather</label>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
+                                <button class="btn btn-secondary" onclick="setWeather('clear')">
+                                    <span class="material-symbols-outlined">wb_sunny</span>
+                                    Clear
+                                </button>
+                                <button class="btn btn-secondary" onclick="setWeather('rain')">
+                                    <span class="material-symbols-outlined">rainy</span>
+                                    Rain
+                                </button>
+                                <button class="btn btn-secondary" onclick="setWeather('storm')">
+                                    <span class="material-symbols-outlined">thunderstorm</span>
+                                    Storm
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Warp Points -->
+                <div class="hytale-panel">
+                    <div class="hytale-panel-inner">
+                        <div class="card-header">
+                            <div>
+                                <h2 style="display: inline;">Warp Points</h2>
+                                <span id="warp-count-badge" class="mod-count-badge">0</span>
+                            </div>
+                        </div>
+                        <div class="management-content">
+                            <div class="warp-create-section">
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <input type="text" id="warp-name-input" class="search-input" placeholder="Warp name..." style="flex: 1;">
+                                    <button class="btn btn-secondary" onclick="createWarpFromInput()">
+                                        <span class="material-symbols-outlined">add_location</span>
+                                        Create
+                                    </button>
+                                </div>
+                                <p style="font-size: 0.6875rem; color: var(--text-secondary); margin-top: 0.5rem;">Creates warp at selected player's location</p>
+                            </div>
+                            <div id="warp-list" class="ban-list"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Server Tab -->
+        <div class="tab-content" id="tab-server">
+            <div class="hytale-panel">
+                <div class="hytale-panel-inner">
+                    <div class="card-header">
+                        <div>
+                            <h2 style="display: inline;">Custom Mods</h2>
+                            <span id="mod-count-badge-server" class="mod-count-badge">0</span>
+                        </div>
+                    </div>
+                    <div class="management-content" style="max-height: 600px;">
+                        <div id="plugin-list-server" class="plugin-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+            </div>
+        </div>
+    
     </div>
 
     <!-- Inventory Modal -->
@@ -448,6 +491,22 @@
         </div>
     </div>
 
+    <!-- Warp Teleport Modal -->
+    <div id="warp-teleport-modal" class="modal-overlay">
+        <div class="modal-container hytale-panel" style="max-width: 700px; width: 90%;">
+            <div class="hytale-panel-inner">
+                <div class="modal-header">
+                    <h2 id="warp-teleport-title" class="modal-title">Teleport to Warp</h2>
+                    <button class="modal-close" onclick="closeWarpTeleportModal()">&times;</button>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem; padding-bottom: 3rem;">
+                    <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.875rem;">Select a player to teleport:</p>
+                    <div id="warp-teleport-player-list" class="teleport-player-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Tooltip -->
     <div id="item-tooltip" class="item-tooltip">
         <div id="tooltip-title" class="tooltip-title"></div>
@@ -511,17 +570,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Footer -->
-    <footer class="dashboard-footer">
-        <div class="container">
-            <div class="footer-content">
-                <span class="footer-text">Created by <a href="https://www.curseforge.com/members/patrickjr/projects" target="_blank" rel="noopener" class="footer-link">Patrick Jr.</a></span>
-                <span class="footer-divider">|</span>
-                <span class="footer-text">Hytale Admin Dashboard</span>
-            </div>
-        </div>
-    </footer>
 
     <!-- Gamemode Modal -->
     <div id="gamemode-modal" class="modal-overlay">

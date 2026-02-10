@@ -17,6 +17,7 @@ import java.io.FileWriter;
 import java.util.UUID;
 
 public class AdminDashboardPlugin extends JavaPlugin {
+    private static AdminDashboardPlugin instance;
     private static CustomLogger LOGGER;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static long startTime;
@@ -24,6 +25,11 @@ public class AdminDashboardPlugin extends JavaPlugin {
     private static boolean loggingEnabled = false; // Default to false for production
     private static int port = 9081; // Default port
     private HytaleHttpServer httpServer;
+
+    // Public getter for plugin instance
+    public static AdminDashboardPlugin getInstance() {
+        return instance;
+    }
 
     // Public getter for other classes to use the configured logger
     public static CustomLogger getCustomLogger() {
@@ -44,6 +50,7 @@ public class AdminDashboardPlugin extends JavaPlugin {
 
     public AdminDashboardPlugin(@Nonnull JavaPluginInit init) {
         super(init);
+        instance = this;
     }
 
     @Override

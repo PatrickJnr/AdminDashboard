@@ -1,5 +1,28 @@
 // Hytale Admin Dashboard JavaScript
 
+// Tab Switching
+function switchTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Show selected tab
+    const selectedTab = document.getElementById('tab-' + tabName);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+    
+    // Update sidebar active state
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    const activeItem = document.querySelector(`[data-tab="${tabName}"]`);
+    if (activeItem) {
+        activeItem.classList.add('active');
+    }
+}
+
 let allPlayers = [];
 let dashboardToken = localStorage.getItem('hytale_admin_token');
 const avatarCache = new Map();
@@ -148,13 +171,19 @@ if (dashboardToken) {
     });
 }
 
-function startSync() {
-    setInterval(fetchStats, 2000);
-    setInterval(fetchChat, 2000);
-    fetchStats();
-    fetchMods();
-    fetchBannedPlayers();
-    fetchChat();
+async function fetchVersion() {
+    try {
+        const res = await fetch('/api/version');
+        if (!res.ok) {
+            throw new Error('Failed to fetch version');
+        }
+        const data = await res.json();
+        if (data.version) {
+            document.getElementById('sidebar-version').textContent = 'v' + data.version;
+        }
+    } catch (e) {
+        document.getElementById('sidebar-version').textContent = 'v1.0.0';
+    }
 }
 
 async function fetchStats(isInit = false) {
@@ -391,46 +420,54 @@ async function fetchMods() {
         // Sort mods alphabetically by name
         mods.sort((a, b) => a.name.localeCompare(b.name));
         
+        // Update counts
         document.getElementById('mod-count').textContent = mods.length;
-        document.getElementById('mod-count-badge').textContent = mods.length;
-        const list = document.getElementById('plugin-list');
-        list.innerHTML = '';
-        mods.forEach(mod => {
-            const div = document.createElement('div');
-            div.className = 'plugin-item';
-            
-            // Build author and downloads info
-            let metaInfo = '';
-            if (mod.author) {
-                metaInfo += `<div style="font-size: 0.6875rem; color: var(--text-secondary);">by ${mod.author}</div>`;
-            }
-            if (mod.downloads) {
-                const downloadStr = mod.downloads >= 1000 
-                    ? (mod.downloads / 1000).toFixed(1) + 'K' 
-                    : mod.downloads;
-                metaInfo += `<div style="font-size: 0.6875rem; color: var(--hytale-gold); margin-top: 2px;">
-                    <span class="material-symbols-outlined" style="font-size: 0.75rem; vertical-align: middle;">download</span>
-                    ${downloadStr} downloads
-                </div>`;
-            }
-            
-            // Build the HTML
-            div.innerHTML = `
-                <div class="plugin-info">
-                    <img src="${mod.iconUrl}" class="plugin-icon" onerror="this.src='https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(mod.name)}'">
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
-                            ${mod.name}
-                            ${mod.curseforgeUrl ? `<a href="${mod.curseforgeUrl}" target="_blank" rel="noopener" style="color: var(--hytale-gold); text-decoration: none;" title="View on CurseForge">
-                                <span class="material-symbols-outlined" style="font-size: 1rem;">open_in_new</span>
-                            </a>` : ''}
+        const modCountBadgeServer = document.getElementById('mod-count-badge-server');
+        if (modCountBadgeServer) {
+            modCountBadgeServer.textContent = mods.length;
+        }
+        
+        // Populate Server tab mods list
+        const listServer = document.getElementById('plugin-list-server');
+        if (listServer) {
+            listServer.innerHTML = '';
+            mods.forEach(mod => {
+                const div = document.createElement('div');
+                div.className = 'plugin-item';
+                
+                // Build author and downloads info
+                let metaInfo = '';
+                if (mod.author) {
+                    metaInfo += `<div style="font-size: 0.6875rem; color: var(--text-secondary);">by ${mod.author}</div>`;
+                }
+                if (mod.downloads) {
+                    const downloadStr = mod.downloads >= 1000 
+                        ? (mod.downloads / 1000).toFixed(1) + 'K' 
+                        : mod.downloads;
+                    metaInfo += `<div style="font-size: 0.6875rem; color: var(--hytale-gold); margin-top: 2px;">
+                        <span class="material-symbols-outlined" style="font-size: 0.75rem; vertical-align: middle;">download</span>
+                        ${downloadStr} downloads
+                    </div>`;
+                }
+                
+                // Build the HTML
+                div.innerHTML = `
+                    <div class="plugin-info">
+                        <img src="${mod.iconUrl}" class="plugin-icon" onerror="this.src='https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(mod.name)}'">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                                ${mod.name}
+                                ${mod.curseforgeUrl ? `<a href="${mod.curseforgeUrl}" target="_blank" rel="noopener" style="color: var(--hytale-gold); text-decoration: none;" title="View on CurseForge">
+                                    <span class="material-symbols-outlined" style="font-size: 1rem;">open_in_new</span>
+                                </a>` : ''}
+                            </div>
+                            ${metaInfo}
                         </div>
-                        ${metaInfo}
                     </div>
-                </div>
-            `;
-            list.appendChild(div);
-        });
+                `;
+                listServer.appendChild(div);
+            });
+        }
     } catch (e) {
         console.error('Failed to fetch mods', e);
     }
@@ -1318,28 +1355,105 @@ async function deleteWarp(name) {
 }
 
 async function teleportPlayerToWarp(warpName) {
-    if (!selectedPlayerForWarp) {
-        showNotification('Please select a player first from the player list', 'error');
+    // Open modal to select which player to teleport
+    openWarpTeleportModal(warpName);
+}
+
+let currentWarpForTeleport = null;
+
+async function openWarpTeleportModal(warpName) {
+    currentWarpForTeleport = warpName;
+    const modal = document.getElementById('warp-teleport-modal');
+    const title = document.getElementById('warp-teleport-title');
+    const playerList = document.getElementById('warp-teleport-player-list');
+    
+    title.textContent = `Teleport to "${warpName}"`;
+    playerList.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">Loading players...</div>';
+    
+    modal.classList.add('active');
+    
+    try {
+        const res = await fetch('/api/players', {
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const players = await res.json();
+        
+        playerList.innerHTML = '';
+        
+        if (players.length === 0) {
+            playerList.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No online players</div>';
+            return;
+        }
+        
+        // Create grid of player avatars
+        const grid = document.createElement('div');
+        grid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 0.75rem;';
+        
+        players.forEach(player => {
+            const div = document.createElement('div');
+            div.className = 'warp-player-icon';
+            
+            // Create avatar image
+            const avatarUrl = `/api/avatar/${encodeURIComponent(player.uuid)}`;
+            
+            div.innerHTML = `
+                <img src="${avatarUrl}" alt="${player.name}" style="width: 64px; height: 64px; border-radius: 8px; image-rendering: pixelated;">
+                <div class="warp-player-tooltip">${player.name}</div>
+            `;
+            div.onclick = () => executeWarpTeleport(player.uuid, player.name);
+            grid.appendChild(div);
+        });
+        
+        playerList.appendChild(grid);
+    } catch (e) {
+        playerList.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--danger-color);">Failed to load players</div>';
+    }
+}
+
+function closeWarpTeleportModal() {
+    document.getElementById('warp-teleport-modal').classList.remove('active');
+    currentWarpForTeleport = null;
+}
+
+async function executeWarpTeleport(uuid, playerName) {
+    if (!currentWarpForTeleport) {
+        showNotification('No warp selected', 'error');
         return;
     }
     
+    // Store the warp name before closing modal (which sets it to null)
+    const warpName = currentWarpForTeleport;
+    
+    closeWarpTeleportModal();
+    
     try {
+        const payload = { 
+            uuid: uuid, 
+            warp: warpName 
+        };
+        
         const response = await fetch('/api/warp/teleport', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-Admin-Token': dashboardToken
             },
-            body: JSON.stringify({ uuid: selectedPlayerForWarp, warp: warpName })
+            body: JSON.stringify(payload)
         });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
         const data = await response.json();
         if (data.status === 'success') {
-            showNotification(`Player teleported to "${warpName}"`, 'success');
+            showNotification(`${playerName} teleported to "${warpName}"`, 'success');
         } else {
-            showNotification(data.error || 'Failed to teleport', 'error');
+            const errorMsg = data.error && data.error !== 'null' ? data.error : 'Failed to teleport';
+            showNotification(errorMsg, 'error');
         }
     } catch (error) {
-        showNotification('Error teleporting to warp', 'error');
+        showNotification('Error teleporting to warp: ' + error.message, 'error');
     }
 }
 
@@ -1477,6 +1591,7 @@ function startSync() {
     fetchChat();
     fetchMutes();
     fetchWarps();
+    fetchVersion();
 }
 
 // Time Control

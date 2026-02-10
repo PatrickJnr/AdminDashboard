@@ -134,9 +134,11 @@ public class HytaleHttpServer {
                 return;
             }
 
-            // Token Validation (skip for public endpoints like item icons)
+            // Token Validation (skip for public endpoints like item icons, avatars, and version)
             // Note: itemId might be encoded, so check start/end carefully
-            boolean isPublicEndpoint = (path.startsWith("/api/item/") || path.startsWith("/api/mod/")) && path.endsWith("/icon");
+            boolean isPublicEndpoint = (path.startsWith("/api/item/") || path.startsWith("/api/mod/")) && path.endsWith("/icon") 
+                                        || path.equals("/api/version")
+                                        || path.startsWith("/api/avatar/");
             
             if (!isPublicEndpoint) {
                 String authToken = t.getRequestHeaders().getFirst("X-Admin-Token");

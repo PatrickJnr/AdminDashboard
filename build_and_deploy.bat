@@ -17,7 +17,7 @@ if %ERRORLEVEL% neq 0 (
 )
 
 set DEST_DIR=C:\Users\PatrickJr\AppData\Roaming\Hytale\UserData\Mods\
-set JAR_NAME=AdminWebDash-0.1.jar
+set JAR_NAME=AdminWebDash-1.0.0.jar
 
 if not exist "%DEST_DIR%" (
     echo Creating destination directory: %DEST_DIR%
