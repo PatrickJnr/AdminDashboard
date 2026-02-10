@@ -89,51 +89,173 @@
             </div>
         </div>
 
-        <!-- Main Content -->
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem">
-            <!-- Player Table -->
-            <div class="main-card hytale-panel">
-                <div class="hytale-panel-inner">
-                    <div class="card-header">
-                        <h2>Connected Players</h2>
-                        <input type="text" id="search" class="search-input" placeholder="Search player name...">
-                    </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Player</th>
-                                <th>Status</th>
-                                <th>Health</th>
-                                <th>Stamina</th>
-                                <th>Mana</th>
-                                <th>Defence</th>
-                                <th>Location</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="player-table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Side Panel -->
-            <div class="side-panel">
-                <!-- Broadcast -->
+        <!-- Main Content Layout -->
+        <div class="main-layout">
+            <!-- Left Column - Primary Content -->
+            <div class="main-column">
+                <!-- Player Table -->
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
-                            <h2>Server Broadcast</h2>
+                            <h2>Connected Players</h2>
+                            <input type="text" id="search" class="search-input" placeholder="Search player name...">
                         </div>
-                        <p style="color: var(--text-secondary); font-size: 0.8125rem; margin-bottom: 1rem">Send a message to all players on the server.</p>
-                        <div class="broadcast-group">
-                            <input type="text" id="broadcast-msg" class="search-input" placeholder="Message content...">
-                            <button class="btn btn-secondary" onclick="broadcast()">Send</button>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Player</th>
+                                    <th>Status</th>
+                                    <th>Health</th>
+                                    <th>Stamina</th>
+                                    <th>Mana</th>
+                                    <th>Defence</th>
+                                    <th>Location</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="player-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Server Controls Row -->
+                <div class="controls-row">
+                    <!-- Broadcast -->
+                    <div class="hytale-panel">
+                        <div class="hytale-panel-inner">
+                            <div class="card-header">
+                                <h2>Server Broadcast</h2>
+                            </div>
+                            <p style="color: var(--text-secondary); font-size: 0.8125rem; margin-bottom: 1rem">Send a message to all players on the server.</p>
+                            <div class="broadcast-group">
+                                <input type="text" id="broadcast-msg" class="search-input" placeholder="Message content...">
+                                <button class="btn btn-secondary" onclick="broadcast()">Send</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- World Controls (Temporarily Disabled) -->
+                    <div class="hytale-panel" style="opacity: 0.6; pointer-events: none;">
+                        <div class="hytale-panel-inner">
+                            <div class="card-header">
+                                <h2>World Controls</h2>
+                                <span style="font-size: 0.75rem; color: var(--warning); background: rgba(244, 169, 38, 0.2); padding: 0.25rem 0.5rem; border-radius: 4px;">Coming Soon</span>
+                            </div>
+                            <p style="color: var(--text-secondary); font-size: 0.75rem; margin-bottom: 1rem; font-style: italic;">These features are temporarily disabled due to API compatibility issues and will be re-enabled in a future update.</p>
+                            <div style="margin-bottom: 1rem;">
+                                <label style="font-size: 0.8125rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;">Time of Day</label>
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+                                    <button class="btn btn-secondary" disabled>
+                                        <span class="material-symbols-outlined">wb_sunny</span>
+                                        Day
+                                    </button>
+                                    <button class="btn btn-secondary" disabled>
+                                        <span class="material-symbols-outlined">nightlight</span>
+                                        Night
+                                    </button>
+                                    <button class="btn btn-secondary" disabled>
+                                        <span class="material-symbols-outlined">light_mode</span>
+                                        Noon
+                                    </button>
+                                    <button class="btn btn-secondary" disabled>
+                                        <span class="material-symbols-outlined">dark_mode</span>
+                                        Midnight
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="font-size: 0.8125rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;">Weather</label>
+                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
+                                    <button class="btn btn-secondary" disabled>
+                                        <span class="material-symbols-outlined">wb_sunny</span>
+                                        Clear
+                                    </button>
+                                    <button class="btn btn-secondary" disabled>
+                                        <span class="material-symbols-outlined">rainy</span>
+                                        Rain
+                                    </button>
+                                    <button class="btn btn-secondary" disabled>
+                                        <span class="material-symbols-outlined">thunderstorm</span>
+                                        Storm
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Management Sections Row -->
+                <div class="management-row">
+                    <!-- Banned Players -->
+                    <div class="hytale-panel">
+                        <div class="hytale-panel-inner">
+                            <div class="card-header accordion-header" onclick="toggleAccordion('bans-accordion')">
+                                <div>
+                                    <h2 style="display: inline;">Banned Players</h2>
+                                    <span id="ban-count-badge" class="mod-count-badge">0</span>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <button class="btn btn-secondary" onclick="viewBansFile()" title="View bans.json file" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">
+                                        <span class="material-symbols-outlined" style="font-size: 1rem;">description</span>
+                                        View File
+                                    </button>
+                                    <span class="accordion-toggle" id="bans-accordion-toggle">▼</span>
+                                </div>
+                            </div>
+                            <div id="bans-accordion" class="accordion-content">
+                                <div id="ban-list" class="ban-list"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Muted Players -->
+                    <div class="hytale-panel">
+                        <div class="hytale-panel-inner">
+                            <div class="card-header accordion-header" onclick="toggleAccordion('mutes-accordion')">
+                                <div>
+                                    <h2 style="display: inline;">Muted Players</h2>
+                                    <span id="mute-count-badge" class="mod-count-badge">0</span>
+                                </div>
+                                <span class="accordion-toggle" id="mutes-accordion-toggle">▼</span>
+                            </div>
+                            <div id="mutes-accordion" class="accordion-content">
+                                <div id="mute-list" class="ban-list"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Warps -->
+                    <div class="hytale-panel">
+                        <div class="hytale-panel-inner">
+                            <div class="card-header accordion-header" onclick="toggleAccordion('warps-accordion')">
+                                <div>
+                                    <h2 style="display: inline;">Warp Points</h2>
+                                    <span id="warp-count-badge" class="mod-count-badge">0</span>
+                                </div>
+                                <span class="accordion-toggle" id="warps-accordion-toggle">▼</span>
+                            </div>
+                            <div id="warps-accordion" class="accordion-content">
+                                <div style="margin-bottom: 1rem;">
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <input type="text" id="warp-name-input" class="search-input" placeholder="Warp name..." style="flex: 1;">
+                                        <button class="btn btn-secondary" onclick="createWarpFromInput()">
+                                            <span class="material-symbols-outlined">add_location</span>
+                                            Create
+                                        </button>
+                                    </div>
+                                    <p style="font-size: 0.6875rem; color: var(--text-secondary); margin-top: 0.5rem;">Creates warp at selected player's location</p>
+                                </div>
+                                <div id="warp-list" class="ban-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Sidebar -->
+            <div class="sidebar-column">
                 <!-- Server Chat -->
-                <div class="hytale-panel" style="margin-top: 2rem">
+                <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
                             <h2>Server Chat</h2>
@@ -145,7 +267,7 @@
                 </div>
 
                 <!-- Mods -->
-                <div class="hytale-panel" style="margin-top: 2rem">
+                <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header accordion-header" onclick="toggleAccordion('mods-accordion')">
                             <div>
@@ -159,27 +281,8 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Banned Players -->
-                <div class="hytale-panel" style="margin-top: 2rem">
-                    <div class="hytale-panel-inner">
-                        <div class="card-header accordion-header" onclick="toggleAccordion('bans-accordion')">
-                            <div>
-                                <h2 style="display: inline;">Banned Players</h2>
-                                <span id="ban-count-badge" class="mod-count-badge">0</span>
-                            </div>
-                            <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                <button class="btn btn-secondary" onclick="viewBansFile()" title="View bans.json file" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">
-                                    <span class="material-symbols-outlined" style="font-size: 1rem;">description</span>
-                                    View File
-                                </button>
-                                <span class="accordion-toggle" id="bans-accordion-toggle">▼</span>
-                            </div>
-                        </div>
-                        <div id="bans-accordion" class="accordion-content">
-                            <div id="ban-list" class="ban-list"></div>
-                        </div>
-                    </div>
+            </div>
+        </div>
                 </div>
             </div>
         </div>
@@ -219,7 +322,7 @@
 
     <!-- Actions Modal -->
     <div id="actions-modal" class="modal-overlay">
-        <div class="modal-container hytale-panel" style="max-width: 500px;">
+        <div class="modal-container hytale-panel" style="max-width: 700px;">
             <div class="hytale-panel-inner">
                 <div class="modal-header">
                     <h2 id="actions-player-name" class="modal-title">Player Actions</h2>
@@ -233,10 +336,40 @@
                             <div class="action-card-desc">See player's items and equipment</div>
                         </button>
                         
+                        <button class="action-card action-card-disabled" id="action-gamemode" style="opacity: 0.5; cursor: not-allowed;">
+                            <span class="material-symbols-outlined action-card-icon" style="color: #9b59b6;">sports_esports</span>
+                            <div class="action-card-title">Change Gamemode</div>
+                            <div class="action-card-desc" style="color: var(--warning);">Coming Soon</div>
+                        </button>
+                        
+                        <button class="action-card" id="action-heal">
+                            <span class="material-symbols-outlined action-card-icon" style="color: #e74c3c;">favorite</span>
+                            <div class="action-card-title">Heal Player</div>
+                            <div class="action-card-desc">Restore player to full health</div>
+                        </button>
+                        
                         <button class="action-card" id="action-teleport">
                             <span class="material-symbols-outlined action-card-icon" style="color: #72aa5e;">near_me</span>
                             <div class="action-card-title">Teleport To</div>
                             <div class="action-card-desc">Move player to another location</div>
+                        </button>
+                        
+                        <button class="action-card action-card-disabled" id="action-give" style="opacity: 0.5; cursor: not-allowed;">
+                            <span class="material-symbols-outlined action-card-icon" style="color: #f39c12;">redeem</span>
+                            <div class="action-card-title">Give Item</div>
+                            <div class="action-card-desc" style="color: var(--warning);">Coming Soon</div>
+                        </button>
+                        
+                        <button class="action-card" id="action-clearinv">
+                            <span class="material-symbols-outlined action-card-icon" style="color: #95a5a6;">delete_sweep</span>
+                            <div class="action-card-title">Clear Inventory</div>
+                            <div class="action-card-desc">Remove all items from inventory</div>
+                        </button>
+                        
+                        <button class="action-card" id="action-mute">
+                            <span class="material-symbols-outlined action-card-icon" style="color: #e67e22;">volume_off</span>
+                            <div class="action-card-title">Mute Player</div>
+                            <div class="action-card-desc">Prevent player from chatting</div>
                         </button>
                         
                         <button class="action-card" id="action-op">

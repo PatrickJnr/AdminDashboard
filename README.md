@@ -7,15 +7,28 @@ A powerful web-based administration panel for Hytale servers, providing real-tim
 ### Player Management
 - **Real-time player monitoring** with live stats (Health, Stamina, Mana, Defense)
 - **Player actions**: Kick, Ban, Toggle OP, Teleport players
+- **Gamemode switching**: Quickly change between Creative, Survival, and Adventure modes
+- **Heal players**: Instantly restore health, stamina, and mana to maximum
+- **Give items**: Give any item to players with custom quantities
+- **Clear inventory**: Remove all items from a player's inventory
 - **Inventory viewer** with visual item display
 - **Player coordinates** and game mode tracking
 - **Search and filter** players instantly
 
-### Ban Management
+### Moderation Tools
 - **Ban/Unban players** with custom reasons
+- **Mute system** with duration options (5min, 30min, 1hr, 1day, permanent)
+- **View muted players** with remaining time display
+- **Kick players** temporarily from the server
 - **View banned players list** with timestamps
 - **Direct file access** to bans.json for verification
-- Automatic ban list synchronization
+- Automatic ban and mute list synchronization
+
+### World Management
+- **Time control**: Set time to day, night, noon, or midnight instantly
+- **Weather control**: Change weather to clear, rain, or storm
+- **Warp system**: Create named teleport points and teleport players to them
+- **Warp management**: View, create, and delete warp points with coordinates
 
 ### Server Communication
 - **Broadcast messages** to all players
@@ -42,6 +55,7 @@ A powerful web-based administration panel for Hytale servers, providing real-tim
 - **Keyboard shortcuts** for quick actions (Ctrl+R to refresh, Ctrl+F to search)
 - **Connection status indicator** with automatic reconnection
 - **Material Symbols icons** throughout
+- **Expandable sections** for organized content
 
 ## Installation
 

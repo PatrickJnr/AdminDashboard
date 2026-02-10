@@ -1077,7 +1077,7 @@ tbody tr:hover td {
 .actions-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+    gap: 1.25rem;
 }
 
 .action-card {
@@ -1464,4 +1464,103 @@ tbody tr:hover {
     .footer-divider {
         display: none;
     }
+}
+
+
+/* Main Layout - Two Column Structure */
+.main-layout {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.main-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.sidebar-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Controls Row - Two columns for broadcast and world controls */
+.controls-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+/* Management Row - Three columns for bans, mutes, warps */
+.management-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+/* Console container height for sidebar */
+.sidebar-column .console-container {
+    height: 400px;
+}
+
+/* Accordion content height for sidebar */
+.sidebar-column .accordion-content {
+    max-height: 450px;
+}
+
+/* Management sections accordion height */
+.management-row .accordion-content {
+    max-height: 300px;
+}
+
+/* Responsive Layout */
+@media (max-width: 1400px) {
+    .main-layout {
+        grid-template-columns: 1fr 340px;
+    }
+    
+    .management-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 1200px) {
+    .main-layout {
+        grid-template-columns: 1fr;
+    }
+    
+    .sidebar-column {
+        order: -1; /* Move sidebar above main content on smaller screens */
+    }
+    
+    .controls-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .management-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .controls-row,
+    .management-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* Disabled Action Cards */
+.action-card-disabled {
+    pointer-events: none;
+    filter: grayscale(0.5);
+}
+
+.action-card-disabled:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--hytale-border);
 }

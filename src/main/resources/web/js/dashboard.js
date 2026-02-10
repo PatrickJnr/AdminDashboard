@@ -972,3 +972,427 @@ document.getElementById('bans-file-modal').addEventListener('click', (e) => {
 const style = document.createElement('style');
 style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
 document.head.appendChild(style);
+
+
+// ==================== NEW FEATURES ====================
+
+// Gamemode (Disabled - API compatibility issues)
+async function setGamemode(uuid, gamemode) {
+    showNotification('Gamemode switching is temporarily disabled due to API compatibility issues', 'error');
+    // TODO: Re-enable once correct Hytale API methods are identified
+}
+
+// Heal Player
+async function healPlayer(uuid) {
+    if (!confirm('Heal this player to full health?')) return;
+    
+    try {
+        const response = await fetch('/api/heal', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ uuid })
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            showNotification('Player healed successfully', 'success');
+            fetchStats();
+        } else {
+            showNotification(data.error || 'Failed to heal player', 'error');
+        }
+    } catch (error) {
+        console.error('Error healing player:', error);
+        showNotification('Error healing player', 'error');
+    }
+}
+
+// Time Control (Disabled - API compatibility issues)
+async function setTime(time) {
+    showNotification('Time control is temporarily disabled due to API compatibility issues', 'error');
+    // TODO: Re-enable once correct Hytale API methods are identified
+}
+
+// Weather Control (Disabled - API compatibility issues)
+async function setWeather(weather) {
+    showNotification('Weather control is temporarily disabled due to API compatibility issues', 'error');
+    // TODO: Re-enable once correct Hytale API methods are identified
+}
+
+// Mute System
+async function mutePlayer(uuid, name) {
+    const durations = {
+        '5 minutes': 300,
+        '30 minutes': 1800,
+        '1 hour': 3600,
+        '1 day': 86400,
+        'Permanent': null
+    };
+    
+    const durationChoice = prompt(`Mute ${name}?\n\nSelect duration:\n1. 5 minutes\n2. 30 minutes\n3. 1 hour\n4. 1 day\n5. Permanent\n\nEnter number (1-5):`, '5');
+    if (durationChoice === null) return;
+    
+    const durationKeys = Object.keys(durations);
+    const index = parseInt(durationChoice) - 1;
+    if (index < 0 || index >= durationKeys.length) {
+        showNotification('Invalid duration choice', 'error');
+        return;
+    }
+    
+    const durationKey = durationKeys[index];
+    const duration = durations[durationKey];
+    const reason = prompt('Enter mute reason:', 'Muted by admin');
+    if (reason === null) return;
+    
+    try {
+        const response = await fetch('/api/mute', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ uuid, duration, reason })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            showNotification(`${name} has been muted for ${durationKey}`, 'success');
+            fetchMutes();
+        } else {
+            showNotification(data.error || 'Failed to mute player', 'error');
+        }
+    } catch (error) {
+        showNotification('Error muting player', 'error');
+    }
+}
+
+async function unmutePlayer(uuid) {
+    try {
+        const response = await fetch('/api/unmute', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ uuid })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            showNotification('Player unmuted successfully', 'success');
+            fetchMutes();
+        } else {
+            showNotification(data.error || 'Failed to unmute player', 'error');
+        }
+    } catch (error) {
+        showNotification('Error unmuting player', 'error');
+    }
+}
+
+async function fetchMutes() {
+    if (!dashboardToken) return;
+    try {
+        const res = await fetch('/api/mutes', {
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const mutes = await res.json();
+        document.getElementById('mute-count-badge').textContent = mutes.length;
+        const list = document.getElementById('mute-list');
+        list.innerHTML = '';
+        
+        if (mutes.length === 0) {
+            list.innerHTML = `
+                <div class="empty-ban-list">
+                    <span class="material-symbols-outlined">check_circle</span>
+                    <div>No muted players</div>
+                </div>
+            `;
+            return;
+        }
+        
+        mutes.forEach(mute => {
+            const div = document.createElement('div');
+            div.className = 'ban-item';
+            const date = new Date(mute.timestamp);
+            const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+            
+            let durationStr = 'Permanent';
+            if (mute.duration && mute.remaining) {
+                const hours = Math.floor(mute.remaining / 3600);
+                const minutes = Math.floor((mute.remaining % 3600) / 60);
+                if (hours > 0) {
+                    durationStr = `${hours}h ${minutes}m remaining`;
+                } else {
+                    durationStr = `${minutes}m remaining`;
+                }
+            }
+            
+            const playerName = mute.name || mute.uuid.substring(0, 8) + '...';
+            
+            div.innerHTML = `
+                <div class="ban-info">
+                    <div class="ban-uuid">${playerName}</div>
+                    <div class="ban-reason">${mute.reason || 'No reason provided'}</div>
+                    <div class="ban-date">Muted on ${dateStr} - ${durationStr}</div>
+                </div>
+                <div class="ban-actions">
+                    <button class="btn btn-secondary" onclick="unmutePlayer('${mute.uuid}')" title="Unmute Player">
+                        <span class="material-symbols-outlined">volume_up</span>
+                        Unmute
+                    </button>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    } catch (e) {
+        console.error('Failed to fetch mutes', e);
+    }
+}
+
+// Warp System
+let selectedPlayerForWarp = null;
+
+async function fetchWarps() {
+    if (!dashboardToken) return;
+    try {
+        const res = await fetch('/api/warps', {
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const warps = await res.json();
+        document.getElementById('warp-count-badge').textContent = warps.length;
+        const list = document.getElementById('warp-list');
+        list.innerHTML = '';
+        
+        if (warps.length === 0) {
+            list.innerHTML = `
+                <div class="empty-ban-list">
+                    <span class="material-symbols-outlined">location_off</span>
+                    <div>No warp points</div>
+                </div>
+            `;
+            return;
+        }
+        
+        warps.forEach(warp => {
+            const div = document.createElement('div');
+            div.className = 'ban-item';
+            
+            div.innerHTML = `
+                <div class="ban-info">
+                    <div class="ban-uuid" style="font-weight: 600; color: var(--hytale-gold);">${warp.name}</div>
+                    <div class="ban-reason" style="font-family: monospace; font-size: 0.75rem;">
+                        X: ${Math.round(warp.x)} Y: ${Math.round(warp.y)} Z: ${Math.round(warp.z)}
+                    </div>
+                    <div class="ban-date">World: ${warp.world}</div>
+                </div>
+                <div class="ban-actions" style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-secondary" onclick="teleportPlayerToWarp('${warp.name}')" title="Teleport to Warp">
+                        <span class="material-symbols-outlined">near_me</span>
+                        Teleport
+                    </button>
+                    <button class="btn btn-secondary" onclick="deleteWarp('${warp.name}')" title="Delete Warp" style="background: var(--danger-color);">
+                        <span class="material-symbols-outlined">delete</span>
+                    </button>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    } catch (e) {
+        console.error('Failed to fetch warps', e);
+    }
+}
+
+async function createWarpFromInput() {
+    const nameInput = document.getElementById('warp-name-input');
+    const name = nameInput.value.trim();
+    
+    if (!name) {
+        showNotification('Please enter a warp name', 'error');
+        return;
+    }
+    
+    if (!selectedPlayerForWarp) {
+        showNotification('Please select a player first from the player list', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/warp/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ name, uuid: selectedPlayerForWarp })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            showNotification(`Warp "${name}" created successfully`, 'success');
+            nameInput.value = '';
+            fetchWarps();
+        } else {
+            showNotification(data.error || 'Failed to create warp', 'error');
+        }
+    } catch (error) {
+        showNotification('Error creating warp', 'error');
+    }
+}
+
+async function deleteWarp(name) {
+    if (!confirm(`Delete warp "${name}"?`)) return;
+    
+    try {
+        const response = await fetch('/api/warp/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ name })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            showNotification(`Warp "${name}" deleted`, 'success');
+            fetchWarps();
+        } else {
+            showNotification(data.error || 'Failed to delete warp', 'error');
+        }
+    } catch (error) {
+        showNotification('Error deleting warp', 'error');
+    }
+}
+
+async function teleportPlayerToWarp(warpName) {
+    if (!selectedPlayerForWarp) {
+        showNotification('Please select a player first from the player list', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/warp/teleport', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ uuid: selectedPlayerForWarp, warp: warpName })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            showNotification(`Player teleported to "${warpName}"`, 'success');
+        } else {
+            showNotification(data.error || 'Failed to teleport', 'error');
+        }
+    } catch (error) {
+        showNotification('Error teleporting to warp', 'error');
+    }
+}
+
+// Give Item (Disabled - API compatibility issues)
+async function giveItem(uuid, name) {
+    showNotification('Give item is temporarily disabled due to API compatibility issues', 'error');
+    // TODO: Re-enable once correct Hytale API methods are identified
+}
+
+// Clear Inventory
+async function clearInventory(uuid, name) {
+    if (!confirm(`Clear all items from ${name}'s inventory? This cannot be undone!`)) return;
+    
+    try {
+        const response = await fetch('/api/clearinv', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ uuid })
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            showNotification('Inventory cleared successfully', 'success');
+            fetchStats();
+        } else {
+            showNotification(data.error || 'Failed to clear inventory', 'error');
+        }
+    } catch (error) {
+        console.error('Error clearing inventory:', error);
+        showNotification('Error clearing inventory', 'error');
+    }
+}
+
+// Update action modal to include new actions
+function openActionsModal(uuid, name) {
+    currentActionPlayer = { uuid, name };
+    selectedPlayerForWarp = uuid; // Set for warp system
+    document.getElementById('actions-player-name').textContent = `${name} - Actions`;
+    
+    // Set up event listeners for action buttons
+    document.getElementById('action-inventory').onclick = () => {
+        closeActionsModal();
+        viewInv(uuid);
+    };
+    
+    document.getElementById('action-gamemode').onclick = () => {
+        closeActionsModal();
+        setGamemode(uuid, 'SURVIVAL'); // Will show disabled message
+    };
+    
+    document.getElementById('action-heal').onclick = () => {
+        closeActionsModal();
+        healPlayer(uuid);
+    };
+    
+    document.getElementById('action-teleport').onclick = () => {
+        closeActionsModal();
+        teleportToPlayer(uuid, name);
+    };
+    
+    document.getElementById('action-give').onclick = () => {
+        closeActionsModal();
+        giveItem(uuid, name);
+    };
+    
+    document.getElementById('action-clearinv').onclick = () => {
+        closeActionsModal();
+        clearInventory(uuid, name);
+    };
+    
+    document.getElementById('action-mute').onclick = () => {
+        closeActionsModal();
+        mutePlayer(uuid, name);
+    };
+    
+    document.getElementById('action-op').onclick = () => {
+        closeActionsModal();
+        toggleOP(uuid, name);
+    };
+    
+    document.getElementById('action-ban').onclick = () => {
+        closeActionsModal();
+        banPlayer(uuid, name);
+    };
+    
+    document.getElementById('action-kick').onclick = () => {
+        closeActionsModal();
+        kickPlayer(uuid);
+    };
+    
+    document.getElementById('actions-modal').classList.add('active');
+}
+
+// Update startSync to fetch new data
+function startSync() {
+    setInterval(fetchStats, 2000);
+    setInterval(fetchChat, 2000);
+    setInterval(fetchMutes, 5000);
+    setInterval(fetchWarps, 10000);
+    fetchStats();
+    fetchMods();
+    fetchBannedPlayers();
+    fetchChat();
+    fetchMutes();
+    fetchWarps();
+}

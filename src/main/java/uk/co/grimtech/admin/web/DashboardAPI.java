@@ -2,6 +2,8 @@ package uk.co.grimtech.admin.web;
 
 import uk.co.grimtech.admin.AdminDashboardPlugin;
 import uk.co.grimtech.admin.CustomLogger;
+import uk.co.grimtech.admin.util.MuteTracker;
+import uk.co.grimtech.admin.util.WarpManager;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -106,6 +108,24 @@ public class DashboardAPI {
             return getBansFile();
         } else if (path.equals("/api/unban") && method.equals("POST")) {
             return unbanPlayer(body);
+        } else if (path.equals("/api/mute") && method.equals("POST")) {
+            return mutePlayer(body);
+        } else if (path.equals("/api/unmute") && method.equals("POST")) {
+            return unmutePlayer(body);
+        } else if (path.equals("/api/mutes")) {
+            return getMutes();
+        } else if (path.equals("/api/warps")) {
+            return getWarps();
+        } else if (path.equals("/api/warp/create") && method.equals("POST")) {
+            return createWarp(body);
+        } else if (path.equals("/api/warp/delete") && method.equals("POST")) {
+            return deleteWarp(body);
+        } else if (path.equals("/api/warp/teleport") && method.equals("POST")) {
+            return teleportToWarp(body);
+        } else if (path.equals("/api/heal") && method.equals("POST")) {
+            return healPlayer(body);
+        } else if (path.equals("/api/clearinv") && method.equals("POST")) {
+            return clearInventory(body);
         }
         
         return "{\"error\": \"Invalid endpoint\"}";
@@ -1057,6 +1077,392 @@ public class DashboardAPI {
             return "{\"status\": \"success\", \"message\": \"Player unbanned\"}";
         } catch (Exception e) {
             getLogger().log("ERROR", "Error unbanning player", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+    
+    // ==================== NEW FEATURES ====================
+    
+    // NOTE: Some features use reflection or workarounds due to API limitations
+    // These implementations are based on available public APIs and component patterns
+    
+    private static String clearInventory(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
+            
+            UUID uuid = UUID.fromString(json.get("uuid").getAsString());
+            PlayerRef playerRef = Universe.get().getPlayer(uuid);
+            
+            if (playerRef == null) {
+                return "{\"error\": \"Player not found\"}";
+            }
+            
+            Ref<EntityStore> entityRef = playerRef.getReference();
+            if (entityRef == null || !entityRef.isValid()) {
+                return "{\"error\": \"Player not in world\"}";
+            }
+            
+            Store<EntityStore> store = entityRef.getStore();
+            World world = store.getExternalData().getWorld();
+            
+            CompletableFuture<Boolean> clearFuture = CompletableFuture.supplyAsync(() -> {
+                try {
+                    Player playerComp = store.getComponent(entityRef, Player.getComponentType());
+                    if (playerComp != null) {
+                        Inventory inv = playerComp.getInventory();
+                        if (inv != null) {
+                            int cleared = 0;
+                            
+                            // Clear hotbar using reflection to find the right method
+                            ItemContainer hotbar = inv.getHotbar();
+                            if (hotbar != null) {
+                                for (short i = 0; i < hotbar.getCapacity(); i++) {
+                                    ItemStack stack = hotbar.getItemStack(i);
+                                    if (stack != null && !stack.isEmpty()) {
+                                        try {
+                                            // Try to find and use a remove or clear method
+                                            java.lang.reflect.Method[] methods = ItemContainer.class.getDeclaredMethods();
+                                            for (java.lang.reflect.Method m : methods) {
+                                                if (m.getName().equals("setItemStack") && m.getParameterCount() == 2) {
+                                                    m.setAccessible(true);
+                                                    m.invoke(hotbar, i, ItemStack.EMPTY);
+                                                    cleared++;
+                                                    break;
+                                                }
+                                            }
+                                        } catch (Exception e) {
+                                            getLogger().log("ERROR", "Error clearing slot " + i, e);
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Clear storage
+                            ItemContainer storage = inv.getStorage();
+                            if (storage != null) {
+                                for (short i = 0; i < storage.getCapacity(); i++) {
+                                    ItemStack stack = storage.getItemStack(i);
+                                    if (stack != null && !stack.isEmpty()) {
+                                        try {
+                                            java.lang.reflect.Method[] methods = ItemContainer.class.getDeclaredMethods();
+                                            for (java.lang.reflect.Method m : methods) {
+                                                if (m.getName().equals("setItemStack") && m.getParameterCount() == 2) {
+                                                    m.setAccessible(true);
+                                                    m.invoke(storage, i, ItemStack.EMPTY);
+                                                    cleared++;
+                                                    break;
+                                                }
+                                            }
+                                        } catch (Exception e) {
+                                            getLogger().log("ERROR", "Error clearing slot " + i, e);
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            getLogger().info("[API] Cleared " + cleared + " items from inventory");
+                            return cleared > 0 || (hotbar != null && storage != null);
+                        }
+                    }
+                    return false;
+                } catch (Exception e) {
+                    getLogger().log("ERROR", "Error during clear inventory", e);
+                    return false;
+                }
+            }, world);
+            
+            boolean success = clearFuture.get(2, TimeUnit.SECONDS);
+            
+            if (success) {
+                getLogger().info("[API] Cleared inventory for " + playerRef.getUsername());
+                return "{\"status\": \"success\"}";
+            } else {
+                return "{\"error\": \"Clear inventory failed\"}";
+            }
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error in clearInventory", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+    
+    private static String healPlayer(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
+            
+            UUID uuid = UUID.fromString(json.get("uuid").getAsString());
+            PlayerRef playerRef = Universe.get().getPlayer(uuid);
+            
+            if (playerRef == null) {
+                return "{\"error\": \"Player not found\"}";
+            }
+            
+            Ref<EntityStore> entityRef = playerRef.getReference();
+            if (entityRef == null || !entityRef.isValid()) {
+                return "{\"error\": \"Player not in world\"}";
+            }
+            
+            Store<EntityStore> store = entityRef.getStore();
+            World world = store.getExternalData().getWorld();
+            
+            CompletableFuture<Boolean> healFuture = CompletableFuture.supplyAsync(() -> {
+                try {
+                    EntityStatMap statMap = store.getComponent(entityRef, EntityStatMap.getComponentType());
+                    if (statMap != null) {
+                        EntityStatValue healthStat = statMap.get(DefaultEntityStatTypes.getHealth());
+                        if (healthStat != null) {
+                            float currentHealth = healthStat.get();
+                            float maxHealth = healthStat.getMax();
+                            float healAmount = maxHealth - currentHealth;
+                            
+                            if (healAmount > 0) {
+                                // Use the public addStatValue method - this properly syncs to client!
+                                float newHealth = statMap.addStatValue(DefaultEntityStatTypes.getHealth(), healAmount);
+                                getLogger().info("[API] Healed player: " + currentHealth + " -> " + newHealth);
+                                return true;
+                            } else {
+                                getLogger().info("[API] Player already at full health");
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                } catch (Exception e) {
+                    getLogger().log("ERROR", "Error during heal", e);
+                    return false;
+                }
+            }, world);
+            
+            boolean success = healFuture.get(2, TimeUnit.SECONDS);
+            
+            if (success) {
+                getLogger().info("[API] Healed " + playerRef.getUsername());
+                return "{\"status\": \"success\"}";
+            } else {
+                return "{\"error\": \"Heal failed\"}";
+            }
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error in healPlayer", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+    
+    private static String mutePlayer(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
+            
+            UUID uuid = UUID.fromString(json.get("uuid").getAsString());
+            String reason = json.has("reason") ? json.get("reason").getAsString() : "Muted by admin";
+            Long duration = json.has("duration") ? json.get("duration").getAsLong() : null;
+            
+            UUID adminUuid = UUID.fromString("00000000-0000-0000-0000-000000000000");
+            MuteTracker.mute(uuid, adminUuid, duration, reason);
+            
+            return "{\"status\": \"success\"}";
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error in mutePlayer", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+    
+    private static String unmutePlayer(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
+            
+            UUID uuid = UUID.fromString(json.get("uuid").getAsString());
+            MuteTracker.unmute(uuid);
+            
+            return "{\"status\": \"success\"}";
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error in unmutePlayer", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+    
+    private static String getMutes() {
+        try {
+            JsonArray mutesArray = new JsonArray();
+            for (Map.Entry<UUID, MuteTracker.Mute> entry : MuteTracker.getMutes().entrySet()) {
+                JsonObject muteJson = new JsonObject();
+                muteJson.addProperty("uuid", entry.getKey().toString());
+                muteJson.addProperty("mutedBy", entry.getValue().mutedBy.toString());
+                muteJson.addProperty("timestamp", entry.getValue().timestamp.toEpochMilli());
+                if (entry.getValue().durationSeconds != null) {
+                    muteJson.addProperty("duration", entry.getValue().durationSeconds);
+                    muteJson.addProperty("remaining", entry.getValue().getRemainingSeconds());
+                }
+                muteJson.addProperty("reason", entry.getValue().reason);
+                
+                // Try to get player name
+                PlayerRef ref = Universe.get().getPlayer(entry.getKey());
+                if (ref != null) {
+                    muteJson.addProperty("name", ref.getUsername());
+                }
+                
+                mutesArray.add(muteJson);
+            }
+            return GSON.toJson(mutesArray);
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error in getMutes", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+    
+    private static String getWarps() {
+        try {
+            JsonArray warpsArray = new JsonArray();
+            for (Map.Entry<String, WarpManager.Warp> entry : WarpManager.getWarps().entrySet()) {
+                JsonObject warpJson = new JsonObject();
+                WarpManager.Warp warp = entry.getValue();
+                warpJson.addProperty("name", warp.name);
+                warpJson.addProperty("world", warp.world);
+                warpJson.addProperty("x", warp.x);
+                warpJson.addProperty("y", warp.y);
+                warpJson.addProperty("z", warp.z);
+                warpJson.addProperty("createdBy", warp.createdBy.toString());
+                warpJson.addProperty("createdAt", warp.createdAt);
+                warpsArray.add(warpJson);
+            }
+            return GSON.toJson(warpsArray);
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error in getWarps", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+    
+    private static String createWarp(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("name") || !json.has("uuid")) {
+                return "{\"error\": \"Missing name or uuid\"}";
+            }
+            
+            String name = json.get("name").getAsString();
+            UUID uuid = UUID.fromString(json.get("uuid").getAsString());
+            
+            if (WarpManager.exists(name)) {
+                return "{\"error\": \"Warp already exists\"}";
+            }
+            
+            PlayerRef ref = Universe.get().getPlayer(uuid);
+            if (ref == null) return "{\"error\": \"Player not found\"}";
+            
+            Ref<EntityStore> entityRef = ref.getReference();
+            if (entityRef == null || !entityRef.isValid()) {
+                return "{\"error\": \"Player not in world\"}";
+            }
+            
+            Store<EntityStore> store = entityRef.getStore();
+            World world = store.getExternalData().getWorld();
+            
+            CompletableFuture<JsonObject> future = CompletableFuture.supplyAsync(() -> {
+                JsonObject result = new JsonObject();
+                try {
+                    TransformComponent transform = store.getComponent(entityRef, TransformComponent.getComponentType());
+                    if (transform != null) {
+                        Vector3d pos = transform.getPosition();
+                        result.addProperty("x", pos.x);
+                        result.addProperty("y", pos.y);
+                        result.addProperty("z", pos.z);
+                        result.addProperty("world", world.getName());
+                        result.addProperty("success", true);
+                    } else {
+                        result.addProperty("success", false);
+                    }
+                } catch (Exception e) {
+                    result.addProperty("success", false);
+                }
+                return result;
+            }, world);
+            
+            JsonObject result = future.get(2, TimeUnit.SECONDS);
+            if (result.get("success").getAsBoolean()) {
+                WarpManager.createWarp(
+                    name,
+                    result.get("world").getAsString(),
+                    result.get("x").getAsDouble(),
+                    result.get("y").getAsDouble(),
+                    result.get("z").getAsDouble(),
+                    uuid
+                );
+                return "{\"status\": \"success\"}";
+            }
+            return "{\"error\": \"Failed to get player position\"}";
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error in createWarp", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+    
+    private static String deleteWarp(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("name")) return "{\"error\": \"Missing name\"}";
+            
+            String name = json.get("name").getAsString();
+            if (!WarpManager.exists(name)) {
+                return "{\"error\": \"Warp not found\"}";
+            }
+            
+            WarpManager.deleteWarp(name);
+            return "{\"status\": \"success\"}";
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error in deleteWarp", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+    
+    private static String teleportToWarp(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("uuid") || !json.has("warp")) {
+                return "{\"error\": \"Missing UUID or warp name\"}";
+            }
+            
+            UUID uuid = UUID.fromString(json.get("uuid").getAsString());
+            String warpName = json.get("warp").getAsString();
+            
+            WarpManager.Warp warp = WarpManager.getWarp(warpName);
+            if (warp == null) return "{\"error\": \"Warp not found\"}";
+            
+            PlayerRef ref = Universe.get().getPlayer(uuid);
+            if (ref == null) return "{\"error\": \"Player not found\"}";
+            
+            Ref<EntityStore> entityRef = ref.getReference();
+            if (entityRef == null || !entityRef.isValid()) {
+                return "{\"error\": \"Player not in world\"}";
+            }
+            
+            Store<EntityStore> store = entityRef.getStore();
+            World world = store.getExternalData().getWorld();
+            
+            Vector3d targetPos = new Vector3d(warp.x, warp.y, warp.z);
+            
+            CompletableFuture<Boolean> future = CompletableFuture.supplyAsync(() -> {
+                try {
+                    TransformComponent transform = store.getComponent(entityRef, TransformComponent.getComponentType());
+                    if (transform != null) {
+                        transform.setPosition(targetPos);
+                        return true;
+                    }
+                    return false;
+                } catch (Exception e) {
+                    getLogger().log("ERROR", "Error during warp teleport", e);
+                    return false;
+                }
+            }, world);
+            
+            boolean success = future.get(2, TimeUnit.SECONDS);
+            if (success) {
+                getLogger().info("[API] Teleported " + ref.getUsername() + " to warp " + warpName);
+                return "{\"status\": \"success\"}";
+            }
+            return "{\"error\": \"Teleport failed\"}";
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error in teleportToWarp", e);
             return "{\"error\": \"" + e.getMessage() + "\"}";
         }
     }

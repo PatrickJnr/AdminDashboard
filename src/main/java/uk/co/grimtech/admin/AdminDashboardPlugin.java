@@ -8,6 +8,8 @@ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.event.events.player.PlayerChatEvent;
 import uk.co.grimtech.admin.web.ChatLog;
 import uk.co.grimtech.admin.web.HytaleHttpServer;
+import uk.co.grimtech.admin.util.MuteTracker;
+import uk.co.grimtech.admin.util.WarpManager;
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.FileReader;
@@ -50,6 +52,11 @@ public class AdminDashboardPlugin extends JavaPlugin {
         LOGGER.info("[AdminDashboard] Starting Admin Dashboard Mod...");
         
         loadConfig();
+        
+        // Load data trackers
+        MuteTracker.load();
+        WarpManager.load();
+        LOGGER.info("[AdminDashboard] Data trackers initialized");
 
         try {
             int port = 9081;
@@ -105,7 +112,17 @@ public class AdminDashboardPlugin extends JavaPlugin {
             
             if (LOGGER != null) {
                 LOGGER.info("[AdminDashboard] Config loaded - Logging enabled: " + loggingEnabled);
+                LOGGER.info("[AdminDashboard] ========================================");
+                LOGGER.info("[AdminDashboard] Admin Token: " + adminToken);
+                LOGGER.info("[AdminDashboard] Use this token to log into the dashboard");
+                LOGGER.info("[AdminDashboard] ========================================");
             }
+            
+            // Also print to console for visibility
+            System.out.println("[AdminDashboard] ========================================");
+            System.out.println("[AdminDashboard] Admin Token: " + adminToken);
+            System.out.println("[AdminDashboard] Dashboard URL: http://localhost:9081");
+            System.out.println("[AdminDashboard] ========================================");
         } catch (Exception e) {
             if (LOGGER != null) {
                 LOGGER.severe("[AdminDashboard] Failed to load/save config: " + e.getMessage());
