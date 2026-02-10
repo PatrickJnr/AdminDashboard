@@ -3,7 +3,7 @@ package uk.co.grimtech.admin.util;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import uk.co.grimtech.admin.CustomLogger;
-import uk.co.grimtech.admin.AdminDashboardPlugin;
+import uk.co.grimtech.admin.AdminWebDashPlugin;
 
 import java.io.*;
 import java.nio.file.*;
@@ -17,7 +17,7 @@ public class MuteTracker {
     private static final Map<UUID, Mute> mutes = new ConcurrentHashMap<>();
     
     private static CustomLogger getLogger() {
-        return AdminDashboardPlugin.getCustomLogger();
+        return AdminWebDashPlugin.getCustomLogger();
     }
     
     public static class Mute {

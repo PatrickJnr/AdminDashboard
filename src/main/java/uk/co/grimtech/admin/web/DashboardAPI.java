@@ -1,6 +1,6 @@
 package uk.co.grimtech.admin.web;
 
-import uk.co.grimtech.admin.AdminDashboardPlugin;
+import uk.co.grimtech.admin.AdminWebDashPlugin;
 import uk.co.grimtech.admin.CustomLogger;
 import uk.co.grimtech.admin.util.MuteTracker;
 import uk.co.grimtech.admin.util.WarpManager;
@@ -65,7 +65,7 @@ public class DashboardAPI {
     // Get logger from main plugin
     private static CustomLogger getLogger() {
         if (LOGGER == null) {
-            LOGGER = AdminDashboardPlugin.getCustomLogger();
+            LOGGER = AdminWebDashPlugin.getCustomLogger();
         }
         return LOGGER;
     }
@@ -157,7 +157,7 @@ public class DashboardAPI {
         JsonObject version = new JsonObject();
         
         // Try to get version from plugin manifest
-        AdminDashboardPlugin plugin = AdminDashboardPlugin.getInstance();
+        AdminWebDashPlugin plugin = AdminWebDashPlugin.getInstance();
         String versionString = "1.0.0"; // fallback
         
         if (plugin != null && plugin.getManifest() != null) {
@@ -546,7 +546,7 @@ public class DashboardAPI {
         stats.addProperty("onlinePlayers", Universe.get().getPlayers().size());
         
         // Calculate Uptime
-        long uptimeMs = System.currentTimeMillis() - AdminDashboardPlugin.getStartTime();
+        long uptimeMs = System.currentTimeMillis() - AdminWebDashPlugin.getStartTime();
         stats.addProperty("uptimeMs", uptimeMs);
         
         // Calculate Actual TPS from first world

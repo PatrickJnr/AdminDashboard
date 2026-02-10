@@ -1,4 +1,4 @@
-# Admin Dashboard
+# Admin WebDash
 
 **Version 1.0.0**
 
@@ -50,16 +50,12 @@ A powerful web-based administration panel for Hytale servers, providing real-tim
 - Direct links to CurseForge pages
 - Alphabetically sorted mod list
 
-### Modern UI
-- **Hytale-themed design** matching the official website styling
-- **Responsive layout** works on desktop and mobile
-- **Smooth, polished animations** and transitions
-- **Keyboard shortcuts** for quick actions (Ctrl+R to refresh, Ctrl+F to search)
-- **Live connection status** with automatic reconnection
-- **Material Symbols icons** throughout
-- **Expandable sections** for organized content
-- **Visual item browser** with search and icons
-- **Custom modals** for all interactions
+### Web Interface
+- Hytale-themed design matching the official website
+- Responsive layout for desktop and mobile
+- Live connection status with automatic reconnection
+- Keyboard shortcuts (Ctrl+R to refresh, Ctrl+F to search)
+- Visual item browser with search functionality
 
 ## Installation
 
@@ -73,41 +69,36 @@ A powerful web-based administration panel for Hytale servers, providing real-tim
 
 ### Docker Installation
 
-If you're running your Hytale server in Docker, follow these additional steps:
+If you're running your Hytale server in Docker:
 
-1. **Mount the Mods folder** as a volume in your Docker container:
-   ```bash
-   docker run -v /path/to/mods:/server/Mods your-hytale-image
-   ```
+1. **Place the mod** in your mounted mods directory
+2. **Expose port 9081** in your docker-compose.yml:
 
-2. **Expose the dashboard port** (default 9081, or your configured port) in your Docker configuration:
-   ```bash
-   docker run -p 9081:9081 -v /path/to/mods:/server/Mods your-hytale-image
-   ```
+```yaml
+services:
+  hytale:
+    image: ghcr.io/machinastudios/hytale
+    stdin_open: true
+    tty: true
+    ports:
+      - "5520:5520/udp"
+      - "9081:9081"  # Admin WebDash
+    volumes:
+      - ./mods:/hytale/mods
+      - ./logs:/hytale/logs
+      - ./universe:/hytale/universe
+    environment:
+      - SERVER_ACCEPT_EARLY_PLUGINS=true
+      - SERVER_BIND=0.0.0.0:5520
+```
 
-3. **Using Docker Compose**, add this to your `docker-compose.yml`:
-   ```yaml
-   services:
-     hytale-server:
-       image: your-hytale-image
-       ports:
-         - "9081:9081"  # Admin Dashboard (change if you configured a different port)
-         - "5520:5520"  # Game server port
-       volumes:
-         - ./mods:/server/Mods
-         - ./config:/server/config
-   ```
+3. **Restart your container** and access the dashboard at `http://localhost:9081`
 
-4. **Access the dashboard** from your host machine at `http://localhost:9081` (or your configured port)
-
-**Docker Network Notes:**
-- If accessing from outside the Docker host, use the host's IP address instead of `localhost`
-- For production deployments, consider using a reverse proxy (nginx, Traefik) for HTTPS
-- Ensure firewall rules allow traffic on your configured port if accessing remotely
+**Note:** If you set `port: 0` in the config for a random port, Docker cannot dynamically map random ports. You must use a fixed port number (like 9081) in both the config and docker-compose.yml.
 
 ## Configuration
 
-The mod creates a configuration file at `mods/AdminDashboard/config.json`:
+The mod creates a configuration file at `mods/AdminWebDash/config.json`:
 
 ```json
 {
@@ -130,29 +121,29 @@ The mod creates a configuration file at `mods/AdminDashboard/config.json`:
 
 ## First Time Setup
 
-1. After starting the server, check the console output or `mods/AdminDashboard/config.json` for your admin token and dashboard URL
+1. After starting the server, check the console output or `mods/AdminWebDash/config.json` for your admin token and dashboard URL
 2. Open your browser and navigate to the URL shown (default: `http://localhost:9081`)
 3. Enter the admin token from the config file
 4. You're ready to manage your server!
 
-**Tip:** Bookmark the dashboard URL for quick access!
+**Tip:** Bookmark the dashboard URL for quick access.
 
 ## Security
 
-- **Token-based authentication** protects all API endpoints
-- Change the default admin token in the config file
-- Keep your admin token secure and don't share it publicly
-- The dashboard is only accessible from the server's network by default
+- Token-based authentication protects all API endpoints
+- Change the auto-generated admin token in the config file
+- Keep your admin token secure
+- Dashboard is only accessible from the server's network by default
 
 ## Logging
 
-The mod uses a custom logging system that writes to `logs/dashboard.log` instead of cluttering the main server log. Logging is disabled by default but can be enabled by setting `loggingEnabled: true` in the config.
+Custom logging writes to `logs/dashboard.log`. Disabled by default, enable with `loggingEnabled: true` in config.
 
 ## Keyboard Shortcuts
 
 - **Ctrl/Cmd + R**: Refresh dashboard data
 - **Ctrl/Cmd + F**: Focus search box
-- **Escape**: Close open modals
+- **Escape**: Close modals
 
 ## Requirements
 
@@ -162,15 +153,15 @@ The mod uses a custom logging system that writes to `logs/dashboard.log` instead
 
 ## Support
 
-For issues, feature requests, or questions:
-- Visit my CurseForge profile: https://www.curseforge.com/members/patrickjr/projects
-- Report bugs on the mod page
+Need help or have questions?
+
+**Discord Community**: https://discord.gg/CTVf2Ted - Get help, report bugs, and discuss features
 
 ## Credits
 
 Created by **Patrick Jr.**
 
-Special thanks to the Hytale modding community for their support and feedback.
+CurseForge: https://www.curseforge.com/members/patrickjr/projects
 
 ## License
 

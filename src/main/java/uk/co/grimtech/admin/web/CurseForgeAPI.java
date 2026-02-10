@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import uk.co.grimtech.admin.CustomLogger;
-import uk.co.grimtech.admin.AdminDashboardPlugin;
+import uk.co.grimtech.admin.AdminWebDashPlugin;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -44,7 +44,7 @@ public class CurseForgeAPI {
     }
     
     private static CustomLogger getLogger() {
-        return AdminDashboardPlugin.getCustomLogger();
+        return AdminWebDashPlugin.getCustomLogger();
     }
     
     /**

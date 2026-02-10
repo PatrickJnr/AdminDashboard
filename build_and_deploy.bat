@@ -1,5 +1,5 @@
 @echo off
-echo Building and deploying AdminDashboard mod...
+echo Building and deploying AdminWebDash mod...
 
 REM Create logs directory if it doesn't exist
 if not exist "logs" (

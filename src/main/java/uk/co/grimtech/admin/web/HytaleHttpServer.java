@@ -4,7 +4,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import uk.co.grimtech.admin.web.DashboardAPI;
-import uk.co.grimtech.admin.AdminDashboardPlugin;
+import uk.co.grimtech.admin.AdminWebDashPlugin;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -120,7 +120,7 @@ public class HytaleHttpServer {
             String method = t.getRequestMethod();
             
             // Log EVERY request that hits the API handler
-            AdminDashboardPlugin.getCustomLogger().info("[HTTP] Incoming: " + method + " " + path);
+            AdminWebDashPlugin.getCustomLogger().info("[HTTP] Incoming: " + method + " " + path);
 
             // Set CORS headers early
             t.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
@@ -142,9 +142,9 @@ public class HytaleHttpServer {
             
             if (!isPublicEndpoint) {
                 String authToken = t.getRequestHeaders().getFirst("X-Admin-Token");
-                String expectedToken = AdminDashboardPlugin.getAdminToken();
+                String expectedToken = AdminWebDashPlugin.getAdminToken();
                 if (expectedToken != null && !expectedToken.equals(authToken)) {
-                    AdminDashboardPlugin.getCustomLogger().warning("[HTTP] 401 Unauthorized for path: " + path);
+                    AdminWebDashPlugin.getCustomLogger().warning("[HTTP] 401 Unauthorized for path: " + path);
                     String error = "{\"error\": \"Unauthorized - Invalid Token\"}";
                     t.getResponseHeaders().set("Content-Type", "application/json");
                     t.sendResponseHeaders(401, error.length());

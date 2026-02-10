@@ -1,6 +1,6 @@
 package uk.co.grimtech.admin.web;
 
-import uk.co.grimtech.admin.AdminDashboardPlugin;
+import uk.co.grimtech.admin.AdminWebDashPlugin;
 import uk.co.grimtech.admin.CustomLogger;
 import java.io.*;
 import java.net.URL;
@@ -14,7 +14,7 @@ public class AvatarCache {
     // Get logger from main plugin
     private static CustomLogger getLogger() {
         if (LOGGER == null) {
-            LOGGER = AdminDashboardPlugin.getCustomLogger();
+            LOGGER = AdminWebDashPlugin.getCustomLogger();
         }
         return LOGGER;
     }

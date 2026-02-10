@@ -2,7 +2,7 @@
 
 ## Version 1.0.0 - February 10, 2026
 
-Welcome to the first official release of Admin Dashboard! This mod provides a powerful web-based control panel for managing your Hytale server.
+Welcome to the first official release of Admin WebDash! This mod provides a powerful web-based control panel for managing your Hytale server.
 
 ### What's in the Mod
 

@@ -16,8 +16,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.UUID;
 
-public class AdminDashboardPlugin extends JavaPlugin {
-    private static AdminDashboardPlugin instance;
+public class AdminWebDashPlugin extends JavaPlugin {
+    private static AdminWebDashPlugin instance;
     private static CustomLogger LOGGER;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static long startTime;
@@ -27,7 +27,7 @@ public class AdminDashboardPlugin extends JavaPlugin {
     private HytaleHttpServer httpServer;
 
     // Public getter for plugin instance
-    public static AdminDashboardPlugin getInstance() {
+    public static AdminWebDashPlugin getInstance() {
         return instance;
     }
 
@@ -48,7 +48,7 @@ public class AdminDashboardPlugin extends JavaPlugin {
         return adminToken;
     }
 
-    public AdminDashboardPlugin(@Nonnull JavaPluginInit init) {
+    public AdminWebDashPlugin(@Nonnull JavaPluginInit init) {
         super(init);
         instance = this;
     }
@@ -57,26 +57,26 @@ public class AdminDashboardPlugin extends JavaPlugin {
     protected void setup() {
         setupLogger();
         startTime = System.currentTimeMillis();
-        LOGGER.info("[AdminDashboard] Starting Admin Dashboard Mod...");
+        LOGGER.info("[AdminWebDash] Starting Admin Dashboard Mod...");
         
         loadConfig();
         
         // Load data trackers
         MuteTracker.load();
         WarpManager.load();
-        LOGGER.info("[AdminDashboard] Data trackers initialized");
+        LOGGER.info("[AdminWebDash] Data trackers initialized");
 
         try {
             httpServer = new HytaleHttpServer(port);
             httpServer.start();
             int actualPort = httpServer.getActualPort();
-            LOGGER.info("[AdminDashboard] HTTP Server started on port " + actualPort);
+            LOGGER.info("[AdminWebDash] HTTP Server started on port " + actualPort);
             
             // Print to console with actual port
-            System.out.println("[AdminDashboard] ========================================");
-            System.out.println("[AdminDashboard] Admin Token: " + adminToken);
-            System.out.println("[AdminDashboard] Dashboard URL: http://localhost:" + actualPort);
-            System.out.println("[AdminDashboard] ========================================");
+            System.out.println("[AdminWebDash] ========================================");
+            System.out.println("[AdminWebDash] Admin Token: " + adminToken);
+            System.out.println("[AdminWebDash] Dashboard URL: http://localhost:" + actualPort);
+            System.out.println("[AdminWebDash] ========================================");
             
             // Register Chat Listener using registerAsyncGlobal for IAsyncEvent
             getEventRegistry().registerAsyncGlobal(PlayerChatEvent.class, future -> 
@@ -100,7 +100,7 @@ public class AdminDashboardPlugin extends JavaPlugin {
                                 }
                                 event.getSender().sendMessage(com.hypixel.hytale.server.core.Message.raw(muteMsg));
                             }
-                            LOGGER.info("[AdminDashboard] Blocked chat from muted player: " + event.getSender().getUsername());
+                            LOGGER.info("[AdminWebDash] Blocked chat from muted player: " + event.getSender().getUsername());
                         } else {
                             // Only log if not muted
                             ChatLog.addMessage(event.getSender().getUsername(), event.getContent());
@@ -110,13 +110,13 @@ public class AdminDashboardPlugin extends JavaPlugin {
                 })
             );
         } catch (Exception e) {
-            LOGGER.severe("[AdminDashboard] Failed to start HTTP Server: " + e.getMessage());
+            LOGGER.severe("[AdminWebDash] Failed to start HTTP Server: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
     private void loadConfig() {
-        File dataDir = new File("mods/AdminDashboard");
+        File dataDir = new File("mods/AdminWebDash");
         if (!dataDir.exists()) dataDir.mkdirs();
 
         File configFile = new File(dataDir, "config.json");
@@ -140,7 +140,7 @@ public class AdminDashboardPlugin extends JavaPlugin {
                             port = configPort;
                             // Validate port range
                             if (port < 1024 || port > 65535) {
-                                LOGGER.warning("[AdminDashboard] Invalid port " + port + " in config, using default 9081");
+                                LOGGER.warning("[AdminWebDash] Invalid port " + port + " in config, using default 9081");
                                 port = 9081;
                             }
                         }
@@ -163,17 +163,17 @@ public class AdminDashboardPlugin extends JavaPlugin {
             }
             
             if (LOGGER != null) {
-                LOGGER.info("[AdminDashboard] Config loaded - Port: " + (port == 0 ? "random" : port) + ", Logging enabled: " + loggingEnabled);
-                LOGGER.info("[AdminDashboard] ========================================");
-                LOGGER.info("[AdminDashboard] Admin Token: " + adminToken);
-                LOGGER.info("[AdminDashboard] Use this token to log into the dashboard");
-                LOGGER.info("[AdminDashboard] ========================================");
+                LOGGER.info("[AdminWebDash] Config loaded - Port: " + (port == 0 ? "random" : port) + ", Logging enabled: " + loggingEnabled);
+                LOGGER.info("[AdminWebDash] ========================================");
+                LOGGER.info("[AdminWebDash] Admin Token: " + adminToken);
+                LOGGER.info("[AdminWebDash] Use this token to log into the dashboard");
+                LOGGER.info("[AdminWebDash] ========================================");
             }
             
             // Note: Actual port will be printed after server starts if using random port
         } catch (Exception e) {
             if (LOGGER != null) {
-                LOGGER.severe("[AdminDashboard] Failed to load/save config: " + e.getMessage());
+                LOGGER.severe("[AdminWebDash] Failed to load/save config: " + e.getMessage());
             }
         }
     }
@@ -189,9 +189,9 @@ public class AdminDashboardPlugin extends JavaPlugin {
             LOGGER = new CustomLogger(logFile.getAbsolutePath());
             
             // Test write
-            LOGGER.info("[AdminDashboard] Custom logging initialized to: " + logFile.getAbsolutePath());
+            LOGGER.info("[AdminWebDash] Custom logging initialized to: " + logFile.getAbsolutePath());
         } catch (Exception e) {
-            System.err.println("[AdminDashboard] Failed to initialize file logger: " + e.getMessage());
+            System.err.println("[AdminWebDash] Failed to initialize file logger: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -200,7 +200,7 @@ public class AdminDashboardPlugin extends JavaPlugin {
     protected void shutdown() {
         if (httpServer != null) {
             httpServer.stop();
-            LOGGER.info("[AdminDashboard] HTTP Server stopped.");
+            LOGGER.info("[AdminWebDash] HTTP Server stopped.");
         }
     }
 }

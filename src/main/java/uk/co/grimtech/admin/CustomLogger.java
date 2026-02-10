@@ -20,37 +20,37 @@ public class CustomLogger {
     }
     
     public void info(String message) {
-        if (AdminDashboardPlugin.isLoggingEnabled()) {
+        if (AdminWebDashPlugin.isLoggingEnabled()) {
             log("INFO", message);
         }
     }
     
     public void warning(String message) {
-        if (AdminDashboardPlugin.isLoggingEnabled()) {
+        if (AdminWebDashPlugin.isLoggingEnabled()) {
             log("WARN", message);
         }
     }
     
     public void severe(String message) {
-        if (AdminDashboardPlugin.isLoggingEnabled()) {
+        if (AdminWebDashPlugin.isLoggingEnabled()) {
             log("ERROR", message);
         }
     }
     
     public void log(String level, String message) {
-        if (!AdminDashboardPlugin.isLoggingEnabled()) {
+        if (!AdminWebDashPlugin.isLoggingEnabled()) {
             return;
         }
         try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(logFilePath, true)))) {
             String timestamp = LocalDateTime.now().format(formatter);
             writer.println(String.format("[%s %5s] %s", timestamp, level, message));
         } catch (IOException e) {
-            System.err.println("[AdminDashboard] Failed to write to log: " + e.getMessage());
+            System.err.println("[AdminWebDash] Failed to write to log: " + e.getMessage());
         }
     }
     
     public void log(String level, String message, Throwable throwable) {
-        if (!AdminDashboardPlugin.isLoggingEnabled()) {
+        if (!AdminWebDashPlugin.isLoggingEnabled()) {
             return;
         }
         try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(logFilePath, true)))) {
@@ -58,7 +58,7 @@ public class CustomLogger {
             writer.println(String.format("[%s %5s] %s", timestamp, level, message));
             throwable.printStackTrace(writer);
         } catch (IOException e) {
-            System.err.println("[AdminDashboard] Failed to write to log: " + e.getMessage());
+            System.err.println("[AdminWebDash] Failed to write to log: " + e.getMessage());
         }
     }
 }

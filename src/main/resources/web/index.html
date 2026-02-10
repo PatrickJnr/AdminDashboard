@@ -11,7 +11,6 @@
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <!-- Login Overlay -->
     <div id="login-overlay" class="login-overlay">
         <div class="login-card hytale-panel">
             <div class="hytale-panel-inner">
@@ -28,10 +27,7 @@
             </div>
         </div>
     </div>
-
-    <!-- Main Dashboard -->
     <div class="dashboard-wrapper dashboard-locked" id="dashboard-container">
-        <!-- Sidebar Navigation -->
         <nav class="sidebar-nav">
             <div class="sidebar-header">
                 <div class="sidebar-logo">
@@ -67,30 +63,25 @@
                 </a>
             </div>
         </nav>
-
-        <!-- Main Content Area -->
         <div class="main-content">
             <div class="container">
-                <!-- Header -->
                 <header>
                     <div class="hytale-panel" style="margin-bottom: 0">
-                        <div class="hytale-panel-inner" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 2rem">
-                            <div style="display: flex; align-items: center; gap: 2rem;">
-                                <h1 style="margin-bottom: 0; line-height: 1">Hytale Admin</h1>
-                                <div id="server-time">Loading server time...</div>
+                        <div class="hytale-panel-inner" style="display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 2rem">
+                            <div style="display: flex; align-items: center; gap: 2.5rem;">
+                                <h1 style="margin-bottom: 0; line-height: 1; font-size: 2rem; letter-spacing: 0.05em;">ADMIN WEBDASH</h1>
+                                <div id="server-time" style="font-size: 0.95rem; color: var(--text-secondary); font-weight: 600; letter-spacing: 0.02em;">Loading server time...</div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 1rem;">
                                 <div class="refresh-pill">
                                     <span class="pulse"></span>
                                     Live Connection
                                 </div>
-                                <button class="btn btn-secondary" onclick="fetchStats()">Refresh</button>
+                                <button class="btn btn-secondary" onclick="fetchStats()" style="font-weight: 600; letter-spacing: 0.02em;">REFRESH</button>
                             </div>
                         </div>
                     </div>
                 </header>
-
-        <!-- Stats Grid -->
         <div class="tab-content active" id="tab-dashboard">
             <div class="stats-grid">
                 <div class="stat-card hytale-panel">
@@ -139,8 +130,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Server Chat -->
             <div class="hytale-panel">
                 <div class="hytale-panel-inner">
                     <div class="card-header">
@@ -152,11 +141,7 @@
                 </div>
             </div>
         </div>
-        <!-- End Dashboard Tab -->
-
-        <!-- Players Tab -->
         <div class="tab-content" id="tab-players">
-            <!-- Player Table -->
             <div class="hytale-panel">
                 <div class="hytale-panel-inner">
                     <div class="card-header">
@@ -181,11 +166,8 @@
                 </div>
             </div>
         </div>
-
-        <!-- Moderation Tab -->
         <div class="tab-content" id="tab-moderation">
             <div class="moderation-grid">
-                <!-- Banned Players -->
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
@@ -203,8 +185,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Muted Players -->
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
@@ -220,11 +200,8 @@
                 </div>
             </div>
         </div>
-
-        <!-- World Tab -->
         <div class="tab-content" id="tab-world">
             <div class="world-grid">
-                <!-- Server Broadcast -->
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
@@ -237,8 +214,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- World Controls -->
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
@@ -285,8 +260,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Warp Points -->
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
@@ -312,8 +285,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Server Tab -->
         <div class="tab-content" id="tab-server">
             <div class="hytale-panel">
                 <div class="hytale-panel-inner">
@@ -329,13 +300,9 @@
                 </div>
             </div>
         </div>
-
             </div>
         </div>
-    
     </div>
-
-    <!-- Inventory Modal -->
     <div id="inventory-modal" class="modal-overlay">
         <div class="modal-container hytale-panel">
             <div class="hytale-panel-inner">
@@ -366,8 +333,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Actions Modal -->
     <div id="actions-modal" class="modal-overlay">
         <div class="modal-container hytale-panel" style="max-width: 700px;">
             <div class="hytale-panel-inner">
@@ -382,55 +347,46 @@
                             <div class="action-card-title">View Inventory</div>
                             <div class="action-card-desc">See player's items and equipment</div>
                         </button>
-                        
                         <button class="action-card" id="action-gamemode">
                             <span class="material-symbols-outlined action-card-icon" style="color: #9b59b6;">sports_esports</span>
                             <div class="action-card-title">Change Gamemode</div>
                             <div class="action-card-desc">Switch between Adventure and Creative</div>
                         </button>
-                        
                         <button class="action-card" id="action-heal">
                             <span class="material-symbols-outlined action-card-icon" style="color: #e74c3c;">favorite</span>
                             <div class="action-card-title">Heal Player</div>
                             <div class="action-card-desc">Restore player to full health</div>
                         </button>
-                        
                         <button class="action-card" id="action-teleport">
                             <span class="material-symbols-outlined action-card-icon" style="color: #72aa5e;">near_me</span>
                             <div class="action-card-title">Teleport To</div>
                             <div class="action-card-desc">Move player to another location</div>
                         </button>
-                        
                         <button class="action-card" id="action-give">
                             <span class="material-symbols-outlined action-card-icon" style="color: #f39c12;">redeem</span>
                             <div class="action-card-title">Give Item</div>
                             <div class="action-card-desc">Give items to player by item ID</div>
                         </button>
-                        
                         <button class="action-card" id="action-clearinv">
                             <span class="material-symbols-outlined action-card-icon" style="color: #95a5a6;">delete_sweep</span>
                             <div class="action-card-title">Clear Inventory</div>
                             <div class="action-card-desc">Remove all items from inventory</div>
                         </button>
-                        
                         <button class="action-card" id="action-mute">
                             <span class="material-symbols-outlined action-card-icon" style="color: #e67e22;">volume_off</span>
                             <div class="action-card-title">Mute Player</div>
                             <div class="action-card-desc">Prevent player from chatting</div>
                         </button>
-                        
                         <button class="action-card" id="action-op">
                             <span class="material-symbols-outlined action-card-icon" style="color: #f4a926;">admin_panel_settings</span>
                             <div class="action-card-title">Toggle OP</div>
                             <div class="action-card-desc">Grant or revoke operator status</div>
                         </button>
-                        
                         <button class="action-card action-card-danger" id="action-ban">
                             <span class="material-symbols-outlined action-card-icon">block</span>
                             <div class="action-card-title">Ban Player</div>
                             <div class="action-card-desc">Permanently ban from server</div>
                         </button>
-                        
                         <button class="action-card action-card-danger" id="action-kick">
                             <span class="material-symbols-outlined action-card-icon">logout</span>
                             <div class="action-card-title">Kick Player</div>
@@ -441,8 +397,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Bans File Modal -->
     <div id="bans-file-modal" class="modal-overlay">
         <div class="modal-container hytale-panel" style="max-width: 800px;">
             <div class="hytale-panel-inner">
@@ -474,8 +428,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Teleport Modal -->
     <div id="teleport-modal" class="modal-overlay">
         <div class="modal-container hytale-panel" style="max-width: 600px;">
             <div class="hytale-panel-inner">
@@ -490,8 +442,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Warp Teleport Modal -->
     <div id="warp-teleport-modal" class="modal-overlay">
         <div class="modal-container hytale-panel" style="max-width: 700px; width: 90%;">
             <div class="hytale-panel-inner">
@@ -506,15 +456,11 @@
             </div>
         </div>
     </div>
-
-    <!-- Tooltip -->
     <div id="item-tooltip" class="item-tooltip">
         <div id="tooltip-title" class="tooltip-title"></div>
         <div id="tooltip-id" class="tooltip-id"></div>
         <div id="tooltip-count" class="tooltip-count"></div>
     </div>
-
-    <!-- Confirmation Modal -->
     <div id="confirm-modal" class="modal-overlay">
         <div class="modal-container hytale-panel" style="max-width: 500px;">
             <div class="hytale-panel-inner">
@@ -532,8 +478,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Prompt Modal -->
     <div id="prompt-modal" class="modal-overlay">
         <div class="modal-container hytale-panel" style="max-width: 500px;">
             <div class="hytale-panel-inner">
@@ -552,8 +496,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Alert Modal -->
     <div id="alert-modal" class="modal-overlay">
         <div class="modal-container hytale-panel" style="max-width: 500px;">
             <div class="hytale-panel-inner">
@@ -570,8 +512,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Gamemode Modal -->
     <div id="gamemode-modal" class="modal-overlay">
         <div class="modal-container hytale-panel" style="max-width: 500px;">
             <div class="hytale-panel-inner">
@@ -597,8 +537,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Give Item Modal -->
     <div id="giveitem-modal" class="modal-overlay">
         <div class="modal-container hytale-panel" style="max-width: 900px; max-height: 90vh;">
             <div class="hytale-panel-inner">
@@ -607,7 +545,6 @@
                     <button class="modal-close" onclick="closeGiveItemModal()">&times;</button>
                 </div>
                 <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem; max-height: calc(90vh - 150px);">
-                    <!-- Search Bar and Controls -->
                     <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
                         <div style="flex: 1; min-width: 250px; position: relative;">
                             <span class="material-symbols-outlined" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none; font-size: 1.25rem;">search</span>
@@ -621,25 +558,17 @@
                                    style="width: 90px; padding: 0.875rem; background: var(--bg-secondary); border: 2px solid var(--border-color); border-radius: 8px; color: var(--text-primary); text-align: center; font-weight: 600;">
                         </div>
                     </div>
-                    
-                    <!-- Item Count Bar -->
                     <div style="display: flex; justify-content: flex-end; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
                         <div id="item-count" style="font-size: 0.8125rem; color: var(--text-secondary); font-weight: 600;">0 items</div>
                     </div>
-                    
-                    <!-- Loading State -->
                     <div id="giveitem-loading" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 4rem; gap: 1.5rem;">
                         <div class="spinner" style="width: 56px; height: 56px; border: 5px solid var(--border-color); border-top-color: var(--hytale-gold); border-radius: 50%; animation: spin 1s linear infinite;"></div>
                         <div style="color: var(--text-secondary); font-size: 1.125rem; font-weight: 600;">Loading items...</div>
                         <div style="color: var(--text-secondary); font-size: 0.875rem;">This may take a moment</div>
                     </div>
-                    
-                    <!-- Item Browser -->
                     <div id="giveitem-browser" style="display: block; flex: 1; overflow-y: auto; min-height: 450px; background: var(--bg-tertiary); border-radius: 8px; padding: 0.75rem;">
                         <div id="giveitem-items" class="item-browser-grid"></div>
                     </div>
-                    
-                    <!-- Action Buttons -->
                     <div style="display: flex; gap: 0.75rem; justify-content: flex-end; padding-top: 1rem; border-top: 2px solid var(--border-color);">
                         <button class="btn btn-secondary" onclick="closeGiveItemModal()" style="padding: 0.875rem 1.5rem;">
                             <span class="material-symbols-outlined" style="font-size: 1.125rem;">close</span>
@@ -654,7 +583,6 @@
             </div>
         </div>
     </div>
-
     <script src="js/dashboard.js"></script>
 </body>
 </html>

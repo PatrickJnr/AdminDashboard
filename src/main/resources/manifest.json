@@ -1,6 +1,6 @@
 {
   "Group": "uk.co.grimtech",
-  "Name": "AdminDashboard",
+  "Name": "AdminWebDash",
   "Version": "${version}",
   "Description": "A lightweight web-based administration dashboard for Hytale servers.",
   "Authors": [
@@ -16,5 +16,5 @@
   "OptionalDependencies": {},
   "DisabledByDefault": false,
   "IncludesAssetPack": true,
-  "Main": "uk.co.grimtech.admin.AdminDashboardPlugin"
+  "Main": "uk.co.grimtech.admin.AdminWebDashPlugin"
 }
