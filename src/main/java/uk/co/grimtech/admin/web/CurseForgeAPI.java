@@ -135,18 +135,35 @@ public class CurseForgeAPI {
                     for (int i = 0; i < data.size(); i++) {
                         JsonObject mod = data.get(i).getAsJsonObject();
                         String cfName = mod.get("name").getAsString();
+                        String cfSlug = mod.get("slug").getAsString();
                         
                         // Normalize both names for comparison (remove spaces, lowercase)
                         String normalizedCfName = cfName.replaceAll("\\s+", "").toLowerCase();
-                        String normalizedModName = originalModName.replaceAll("\\s+", "").toLowerCase();
-                        String normalizedSearchQuery = searchQuery.replaceAll("\\s+", "").toLowerCase();
+                        String normalizedCfSlug = cfSlug.replaceAll("[\\s-_]+", "").toLowerCase();
+                        String normalizedModName = originalModName.replaceAll("[\\s-_:]+", "").toLowerCase();
+                        String normalizedSearchQuery = searchQuery.replaceAll("[\\s-_]+", "").toLowerCase();
                         
-                        // Scoring: exact match > normalized match > contains > starts with
+                        // Scoring: prioritize exact matches heavily
                         int score = 0;
-                        if (cfName.equalsIgnoreCase(originalModName) || cfName.equalsIgnoreCase(searchQuery)) {
-                            score = 100; // Exact match with original or search query
-                        } else if (normalizedCfName.equals(normalizedModName) || normalizedCfName.equals(normalizedSearchQuery)) {
-                            score = 95; // Normalized match (ignoring spaces)
+                        
+                        // Highest priority: exact slug match (most reliable identifier)
+                        if (cfSlug.equalsIgnoreCase(originalModName) || normalizedCfSlug.equals(normalizedModName)) {
+                            score = 1000; // Exact slug match - this is the most reliable
+                        }
+                        // Second priority: exact name match
+                        else if (cfName.equalsIgnoreCase(originalModName) || normalizedCfName.equals(normalizedModName)) {
+                            score = 500; // Exact name match
+                        }
+                        // Third priority: exact match with search query
+                        else if (cfName.equalsIgnoreCase(searchQuery) || normalizedCfSlug.equals(normalizedSearchQuery)) {
+                            score = 400; // Match with processed search query
+                        }
+                        else if (normalizedCfName.equals(normalizedSearchQuery)) {
+                            score = 350; // Normalized name matches search query
+                        }
+                        // Lower priority: partial matches
+                        else if (normalizedCfSlug.startsWith(normalizedModName) || normalizedCfName.startsWith(normalizedModName)) {
+                            score = 70; // Name/slug starts with mod name
                         } else if (cfName.toLowerCase().contains(originalModName.toLowerCase()) || 
                                    cfName.toLowerCase().contains(searchQuery.toLowerCase())) {
                             score = 50; // Contains original or search query
@@ -157,6 +174,9 @@ public class CurseForgeAPI {
                                    searchQuery.toLowerCase().contains(cfName.toLowerCase())) {
                             score = 30; // Reverse contains
                         }
+                        
+                        getLogger().info("[CurseForge] Candidate: " + cfName + " (slug: " + cfSlug + ", score: " + score + ")" +
+                                       " | normalized slug: " + normalizedCfSlug + " vs " + normalizedModName);
                         
                         if (score > bestScore) {
                             bestScore = score;
