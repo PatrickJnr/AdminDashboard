@@ -141,6 +141,8 @@ public class DashboardAPI {
             return giveItem(body);
         } else if (path.equals("/api/items")) {
             return getAllItems();
+        } else if (path.equals("/api/curseforge/clear-cache") && method.equals("POST")) {
+            return clearCurseForgeCache();
         }
         
         return "{\"error\": \"Invalid endpoint\"}";
@@ -1791,5 +1793,15 @@ public class DashboardAPI {
         }
         
         return result.toString().trim();
+    }
+    
+    private static String clearCurseForgeCache() {
+        try {
+            CurseForgeAPI.clearCache();
+            return "{\"status\": \"success\", \"message\": \"CurseForge cache cleared\"}";
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error clearing CurseForge cache", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
     }
 }

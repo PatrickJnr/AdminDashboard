@@ -1672,16 +1672,17 @@ async function openGiveItemModal(uuid, name) {
         document.getElementById('giveitem-browser').style.display = 'block';
     }
     
-    // Show all items initially
-    filteredItems = allItems;
+    // Show all items initially (sorted alphabetically)
+    filteredItems = [...allItems];
     renderItemBrowser();
+    updateItemCount();
     
     // Set up search
     const searchInput = document.getElementById('giveitem-search');
     searchInput.oninput = () => {
         const query = searchInput.value.toLowerCase().trim();
         if (query === '') {
-            filteredItems = allItems;
+            filteredItems = [...allItems];
         } else {
             filteredItems = allItems.filter(item => {
                 const nameLower = item.name.toLowerCase();
@@ -1695,6 +1696,7 @@ async function openGiveItemModal(uuid, name) {
             });
         }
         renderItemBrowser();
+        updateItemCount();
     };
     
     // Set up give button
@@ -1713,6 +1715,18 @@ async function openGiveItemModal(uuid, name) {
     };
     
     document.getElementById('giveitem-modal').classList.add('active');
+    
+    // Focus search input
+    setTimeout(() => searchInput.focus(), 100);
+}
+
+function updateItemCount() {
+    const countEl = document.getElementById('item-count');
+    if (filteredItems.length === allItems.length) {
+        countEl.textContent = `${allItems.length} items`;
+    } else {
+        countEl.textContent = `${filteredItems.length} of ${allItems.length} items`;
+    }
 }
 
 function closeGiveItemModal() {
@@ -1753,9 +1767,10 @@ function renderItemBrowser() {
     
     if (filteredItems.length === 0) {
         container.innerHTML = `
-            <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                <span class="material-symbols-outlined" style="font-size: 3rem; opacity: 0.5;">search_off</span>
-                <div style="margin-top: 0.5rem;">No items found</div>
+            <div class="empty-item-state">
+                <span class="material-symbols-outlined" style="font-size: 4rem; opacity: 0.3; color: var(--text-secondary);">search_off</span>
+                <div style="margin-top: 1rem; font-size: 1.125rem; font-weight: 600;">No items found</div>
+                <div style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Try a different search term</div>
             </div>
         `;
         return;
@@ -1772,12 +1787,16 @@ function renderItemBrowser() {
         }
         
         itemCard.innerHTML = `
-            <img src="/api/item/${encodeURIComponent(item.id)}/icon" 
-                 alt="${item.name}" 
-                 class="item-browser-icon"
-                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23333%22/%3E%3Ctext x=%2224%22 y=%2224%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23666%22 font-size=%2212%22%3E?%3C/text%3E%3C/svg%3E'">
-            <div class="item-browser-name">${item.name}</div>
-            <div class="item-browser-id">${item.id}</div>
+            <div class="item-browser-icon-wrapper">
+                <img src="/api/item/${encodeURIComponent(item.id)}/icon" 
+                     alt="${item.name}" 
+                     class="item-browser-icon"
+                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23333%22/%3E%3Ctext x=%2224%22 y=%2224%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23666%22 font-size=%2216%22%3E?%3C/text%3E%3C/svg%3E'">
+            </div>
+            <div class="item-browser-info">
+                <div class="item-browser-name" title="${item.name}">${item.name}</div>
+                <div class="item-browser-id" title="${item.id}">${item.id}</div>
+            </div>
         `;
         
         itemCard.onclick = () => {
@@ -1787,6 +1806,9 @@ function renderItemBrowser() {
                 card.classList.remove('selected');
             });
             itemCard.classList.add('selected');
+            
+            // Scroll selected item into view if needed
+            itemCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         };
         
         container.appendChild(itemCard);
@@ -1794,8 +1816,12 @@ function renderItemBrowser() {
     
     if (filteredItems.length > 100) {
         const moreDiv = document.createElement('div');
-        moreDiv.style.cssText = 'grid-column: 1 / -1; text-align: center; padding: 1rem; color: var(--text-secondary); font-size: 0.875rem;';
-        moreDiv.textContent = `Showing first 100 of ${filteredItems.length} items. Use search to narrow results.`;
+        moreDiv.className = 'item-browser-more';
+        moreDiv.innerHTML = `
+            <span class="material-symbols-outlined">info</span>
+            <div>Showing first 100 of ${filteredItems.length} items</div>
+            <div style="font-size: 0.75rem; margin-top: 0.25rem;">Use search to narrow results</div>
+        `;
         container.appendChild(moreDiv);
     }
 }
@@ -1850,3 +1876,29 @@ if (document.getElementById('giveitem-modal')) {
         }
     });
 }
+
+
+// ==================== CURSEFORGE CACHE MANAGEMENT ====================
+async function clearCurseForgeCache() {
+    try {
+        const response = await fetch('/api/curseforge/clear-cache', {
+            method: 'POST',
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            showNotification('CurseForge cache cleared! Refresh the page to see updated mod info.', 'success');
+            // Optionally refresh mods automatically
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            showNotification('Failed to clear cache: ' + (data.error || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        showNotification('Error clearing cache: ' + error.message, 'error');
+    }
+}
+
+// Make it available globally for console access
+window.clearCurseForgeCache = clearCurseForgeCache;

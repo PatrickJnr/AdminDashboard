@@ -55,26 +55,54 @@ public class CurseForgeAPI {
         String cacheKey = modName.toLowerCase();
         CachedMod cached = modCache.get(cacheKey);
         if (cached != null && !cached.isExpired()) {
+            getLogger().info("[CurseForge] Using cached result for: " + modName);
             return CompletableFuture.completedFuture(cached.data);
         }
         
         return CompletableFuture.supplyAsync(() -> {
             try {
-                // Clean up mod name for search
+                getLogger().info("[CurseForge] Searching for mod: " + modName);
+                
+                // Try 1: Search with original name first (no transformation)
+                JsonObject result = searchCurseForge(modName, modName);
+                if (result != null) {
+                    getLogger().info("[CurseForge] Found match for " + modName + " (original): " + result.toString());
+                    modCache.put(cacheKey, new CachedMod(result));
+                    return result;
+                }
+                
+                // Try 2: Clean up mod name for search (add spaces before capitals)
                 String searchQuery = modName
                     .replace(":", " ")
                     .replace("_", " ")
                     .replaceAll("([a-z])([A-Z])", "$1 $2") // Add space before capital letters (CamelCase)
                     .trim();
                 
-                // Try the full search query first
-                JsonObject result = searchCurseForge(searchQuery, modName);
-                if (result != null) {
-                    modCache.put(cacheKey, new CachedMod(result));
-                    return result;
+                if (!searchQuery.equals(modName)) {
+                    getLogger().info("[CurseForge] Search query: " + searchQuery);
+                    result = searchCurseForge(searchQuery, modName);
+                    if (result != null) {
+                        getLogger().info("[CurseForge] Found match for " + modName + ": " + result.toString());
+                        modCache.put(cacheKey, new CachedMod(result));
+                        return result;
+                    }
                 }
                 
-                // If no match, try removing common suffixes/words and search again
+                // Try 3: Without spaces (e.g., "HyShots" instead of "Hy Shots")
+                if (searchQuery.contains(" ")) {
+                    String noSpaceQuery = searchQuery.replace(" ", "");
+                    if (!noSpaceQuery.equals(modName)) {
+                        getLogger().info("[CurseForge] Trying no-space search: " + noSpaceQuery);
+                        result = searchCurseForge(noSpaceQuery, modName);
+                        if (result != null) {
+                            getLogger().info("[CurseForge] Found match for " + modName + ": " + result.toString());
+                            modCache.put(cacheKey, new CachedMod(result));
+                            return result;
+                        }
+                    }
+                }
+                
+                // Try 4: Remove common suffixes/words and search again
                 String[] wordsToRemove = {"Tree", "Block", "Item", "Entity", "Mod"};
                 for (String word : wordsToRemove) {
                     String simplifiedQuery = searchQuery.replaceAll("\\b" + word + "\\b", "").replaceAll("\\s+", " ").trim();
@@ -88,6 +116,7 @@ public class CurseForgeAPI {
                     }
                 }
                 
+                getLogger().warning("[CurseForge] No match found for: " + modName);
                 return null;
             } catch (Exception e) {
                 getLogger().log("ERROR", "[CurseForge] Error searching for mod: " + modName, e);
@@ -160,6 +189,16 @@ public class CurseForgeAPI {
                         }
                         else if (normalizedCfName.equals(normalizedSearchQuery)) {
                             score = 350; // Normalized name matches search query
+                        }
+                        // Fourth priority: slug contains mod name (for partial matches like "hyshots" in "hyslingshots")
+                        else if (normalizedCfSlug.contains(normalizedModName) && normalizedModName.length() >= 5) {
+                            // Calculate score based on how close the match is
+                            int lengthDiff = Math.abs(normalizedCfSlug.length() - normalizedModName.length());
+                            score = 200 - (lengthDiff * 10); // Closer length = higher score
+                        }
+                        else if (normalizedCfName.contains(normalizedModName) && normalizedModName.length() >= 5) {
+                            int lengthDiff = Math.abs(normalizedCfName.length() - normalizedModName.length());
+                            score = 180 - (lengthDiff * 10);
                         }
                         // Lower priority: partial matches
                         else if (normalizedCfSlug.startsWith(normalizedModName) || normalizedCfName.startsWith(normalizedModName)) {
