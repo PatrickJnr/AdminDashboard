@@ -89,6 +89,15 @@
                     <div id="server-memory" class="stat-value">0 MB</div>
                 </div>
             </div>
+            <div class="stat-card hytale-panel">
+                <div class="hytale-panel-inner">
+                    <div class="stat-label">
+                        <span class="material-symbols-outlined">schedule</span>
+                        Server Uptime
+                    </div>
+                    <div id="server-uptime" class="stat-value">0h 0m</div>
+                </div>
+            </div>
         </div>
 
         <!-- Main Content Layout -->
@@ -190,20 +199,17 @@
                     <!-- Banned Players -->
                     <div class="hytale-panel">
                         <div class="hytale-panel-inner">
-                            <div class="card-header accordion-header" onclick="toggleAccordion('bans-accordion')">
+                            <div class="card-header">
                                 <div>
                                     <h2 style="display: inline;">Banned Players</h2>
                                     <span id="ban-count-badge" class="mod-count-badge">0</span>
                                 </div>
-                                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <button class="btn btn-secondary" onclick="viewBansFile()" title="View bans.json file" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">
-                                        <span class="material-symbols-outlined" style="font-size: 1rem;">description</span>
-                                        View File
-                                    </button>
-                                    <span class="accordion-toggle" id="bans-accordion-toggle">▼</span>
-                                </div>
+                                <button class="btn btn-secondary" onclick="viewBansFile()" title="View bans.json file" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">
+                                    <span class="material-symbols-outlined" style="font-size: 1rem;">description</span>
+                                    View File
+                                </button>
                             </div>
-                            <div id="bans-accordion" class="accordion-content">
+                            <div class="management-content">
                                 <div id="ban-list" class="ban-list"></div>
                             </div>
                         </div>
@@ -212,14 +218,13 @@
                     <!-- Muted Players -->
                     <div class="hytale-panel">
                         <div class="hytale-panel-inner">
-                            <div class="card-header accordion-header" onclick="toggleAccordion('mutes-accordion')">
+                            <div class="card-header">
                                 <div>
                                     <h2 style="display: inline;">Muted Players</h2>
                                     <span id="mute-count-badge" class="mod-count-badge">0</span>
                                 </div>
-                                <span class="accordion-toggle" id="mutes-accordion-toggle">▼</span>
                             </div>
-                            <div id="mutes-accordion" class="accordion-content">
+                            <div class="management-content">
                                 <div id="mute-list" class="ban-list"></div>
                             </div>
                         </div>
@@ -228,15 +233,14 @@
                     <!-- Warps -->
                     <div class="hytale-panel">
                         <div class="hytale-panel-inner">
-                            <div class="card-header accordion-header" onclick="toggleAccordion('warps-accordion')">
+                            <div class="card-header">
                                 <div>
                                     <h2 style="display: inline;">Warp Points</h2>
                                     <span id="warp-count-badge" class="mod-count-badge">0</span>
                                 </div>
-                                <span class="accordion-toggle" id="warps-accordion-toggle">▼</span>
                             </div>
-                            <div id="warps-accordion" class="accordion-content">
-                                <div style="margin-bottom: 1rem;">
+                            <div class="management-content">
+                                <div class="warp-create-section">
                                     <div style="display: flex; gap: 0.5rem;">
                                         <input type="text" id="warp-name-input" class="search-input" placeholder="Warp name..." style="flex: 1;">
                                         <button class="btn btn-secondary" onclick="createWarpFromInput()">
@@ -270,14 +274,13 @@
                 <!-- Mods -->
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
-                        <div class="card-header accordion-header" onclick="toggleAccordion('mods-accordion')">
+                        <div class="card-header">
                             <div>
                                 <h2 style="display: inline;">Custom Mods</h2>
                                 <span id="mod-count-badge" class="mod-count-badge">0</span>
                             </div>
-                            <span class="accordion-toggle" id="mods-accordion-toggle">▼</span>
                         </div>
-                        <div id="mods-accordion" class="accordion-content">
+                        <div class="management-content">
                             <div id="plugin-list" class="plugin-list"></div>
                         </div>
                     </div>

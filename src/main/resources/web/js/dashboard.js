@@ -18,6 +18,23 @@ function formatBytes(bytes) {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
+function formatUptime(ms) {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) {
+        return `${days}d ${hours % 24}h`;
+    } else if (hours > 0) {
+        return `${hours}h ${minutes % 60}m`;
+    } else if (minutes > 0) {
+        return `${minutes}m ${seconds % 60}s`;
+    } else {
+        return `${seconds}s`;
+    }
+}
+
 function showNotification(message, type = 'success') {
     const banner = document.createElement('div');
     banner.className = type === 'success' ? 'success-banner' : 'error-banner';
@@ -165,6 +182,11 @@ async function fetchStats(isInit = false) {
             document.getElementById('server-memory').textContent = formatBytes(stats.memory);
         }
         
+        // Update uptime if available
+        if (stats.uptimeMs) {
+            document.getElementById('server-uptime').textContent = formatUptime(stats.uptimeMs);
+        }
+        
         const tpsEl = document.getElementById('server-tps');
         tpsEl.style.color = stats.tps > 18 ? '#a3cf93' : (stats.tps > 15 ? '#f4d06f' : '#b74545');
 
@@ -220,9 +242,21 @@ async function broadcast() {
 
 function toggleAccordion(id) {
     const content = document.getElementById(id);
-    const toggle = document.getElementById(id + '-toggle');
-    content.classList.toggle('collapsed');
-    toggle.classList.toggle('collapsed');
+    const arrow = document.getElementById(id + '-toggle');
+    
+    if (!content || !arrow) return;
+    
+    const isCollapsed = content.classList.contains('collapsed');
+    
+    if (isCollapsed) {
+        // Expand
+        content.classList.remove('collapsed');
+        arrow.classList.remove('collapsed');
+    } else {
+        // Collapse
+        content.classList.add('collapsed');
+        arrow.classList.add('collapsed');
+    }
 }
 
 async function viewInv(uuid) {
