@@ -575,7 +575,11 @@ function renderPlayers() {
         if (!currentUuids.has(uuid)) {
             row.style.opacity = '0';
             row.style.transform = 'translateX(-20px)';
-            setTimeout(() => tbody.removeChild(row), 150);
+            setTimeout(() => {
+                if (row.parentNode === tbody) {
+                    tbody.removeChild(row);
+                }
+            }, 150);
         }
     });
 
@@ -978,8 +982,24 @@ document.head.appendChild(style);
 
 // Gamemode (Disabled - API compatibility issues)
 async function setGamemode(uuid, gamemode) {
-    showNotification('Gamemode switching is temporarily disabled due to API compatibility issues', 'error');
-    // TODO: Re-enable once correct Hytale API methods are identified
+    try {
+        const response = await fetch('/api/gamemode', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ uuid, gamemode })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            showNotification(`Gamemode changed to ${gamemode}`, 'success');
+        } else {
+            showNotification(data.error || 'Failed to change gamemode', 'error');
+        }
+    } catch (error) {
+        showNotification('Error changing gamemode: ' + error.message, 'error');
+    }
 }
 
 // Heal Player
@@ -1291,8 +1311,36 @@ async function teleportPlayerToWarp(warpName) {
 
 // Give Item (Disabled - API compatibility issues)
 async function giveItem(uuid, name) {
-    showNotification('Give item is temporarily disabled due to API compatibility issues', 'error');
-    // TODO: Re-enable once correct Hytale API methods are identified
+    const itemId = await customPrompt('Enter item ID (e.g., hytale:stone):', '', 'Give Item');
+    if (!itemId) return;
+    
+    const quantityStr = await customPrompt('Enter quantity (1-999):', '1', 'Give Item');
+    if (!quantityStr) return;
+    
+    const quantity = parseInt(quantityStr);
+    if (isNaN(quantity) || quantity < 1 || quantity > 999) {
+        showNotification('Invalid quantity. Must be between 1 and 999', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/give', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ uuid, itemId, quantity })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            showNotification(`Gave ${quantity}x ${itemId} to ${name}`, 'success');
+        } else {
+            showNotification(data.error || 'Failed to give item', 'error');
+        }
+    } catch (error) {
+        showNotification('Error giving item: ' + error.message, 'error');
+    }
 }
 
 // Clear Inventory
@@ -1335,9 +1383,12 @@ function openActionsModal(uuid, name) {
         viewInv(uuid);
     };
     
-    document.getElementById('action-gamemode').onclick = () => {
+    document.getElementById('action-gamemode').onclick = async () => {
         closeActionsModal();
-        setGamemode(uuid, 'SURVIVAL'); // Will show disabled message
+        const gamemode = await customPrompt('Enter gamemode (adventure or creative):', 'adventure', 'Change Gamemode');
+        if (gamemode) {
+            setGamemode(uuid, gamemode.toLowerCase());
+        }
     };
     
     document.getElementById('action-heal').onclick = () => {

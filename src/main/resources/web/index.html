@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hytale Admin Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&family=Lexend:wght@700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
@@ -16,6 +17,7 @@
             <div class="hytale-panel-inner">
                 <h1 data-text="Admin Access">Admin Access</h1>
                 <form onsubmit="login(event)">
+                    <input type="text" name="username" autocomplete="username" style="display: none;" aria-hidden="true">
                     <div class="input-group">
                         <label>Dashboard Token</label>
                         <input type="password" id="token-input" autocomplete="new-password" placeholder="Enter your 16-char secret">
@@ -335,10 +337,10 @@
                             <div class="action-card-desc">See player's items and equipment</div>
                         </button>
                         
-                        <button class="action-card action-card-disabled" id="action-gamemode" style="opacity: 0.5; cursor: not-allowed;">
+                        <button class="action-card" id="action-gamemode">
                             <span class="material-symbols-outlined action-card-icon" style="color: #9b59b6;">sports_esports</span>
                             <div class="action-card-title">Change Gamemode</div>
-                            <div class="action-card-desc" style="color: var(--warning);">Coming Soon</div>
+                            <div class="action-card-desc">Switch between Adventure and Creative</div>
                         </button>
                         
                         <button class="action-card" id="action-heal">
@@ -353,10 +355,10 @@
                             <div class="action-card-desc">Move player to another location</div>
                         </button>
                         
-                        <button class="action-card action-card-disabled" id="action-give" style="opacity: 0.5; cursor: not-allowed;">
+                        <button class="action-card" id="action-give">
                             <span class="material-symbols-outlined action-card-icon" style="color: #f39c12;">redeem</span>
                             <div class="action-card-title">Give Item</div>
-                            <div class="action-card-desc" style="color: var(--warning);">Coming Soon</div>
+                            <div class="action-card-desc">Give items to player by item ID</div>
                         </button>
                         
                         <button class="action-card" id="action-clearinv">

@@ -14,6 +14,8 @@ import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
+import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
@@ -133,6 +135,10 @@ public class DashboardAPI {
             return setTime(body);
         } else if (path.equals("/api/weather") && method.equals("POST")) {
             return setWeather(body);
+        } else if (path.equals("/api/gamemode") && method.equals("POST")) {
+            return setGamemode(body);
+        } else if (path.equals("/api/give") && method.equals("POST")) {
+            return giveItem(body);
         }
         
         return "{\"error\": \"Invalid endpoint\"}";
@@ -1119,57 +1125,9 @@ public class DashboardAPI {
                     if (playerComp != null) {
                         Inventory inv = playerComp.getInventory();
                         if (inv != null) {
-                            int cleared = 0;
-                            
-                            // Clear hotbar using reflection to find the right method
-                            ItemContainer hotbar = inv.getHotbar();
-                            if (hotbar != null) {
-                                for (short i = 0; i < hotbar.getCapacity(); i++) {
-                                    ItemStack stack = hotbar.getItemStack(i);
-                                    if (stack != null && !stack.isEmpty()) {
-                                        try {
-                                            // Try to find and use a remove or clear method
-                                            java.lang.reflect.Method[] methods = ItemContainer.class.getDeclaredMethods();
-                                            for (java.lang.reflect.Method m : methods) {
-                                                if (m.getName().equals("setItemStack") && m.getParameterCount() == 2) {
-                                                    m.setAccessible(true);
-                                                    m.invoke(hotbar, i, ItemStack.EMPTY);
-                                                    cleared++;
-                                                    break;
-                                                }
-                                            }
-                                        } catch (Exception e) {
-                                            getLogger().log("ERROR", "Error clearing slot " + i, e);
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            // Clear storage
-                            ItemContainer storage = inv.getStorage();
-                            if (storage != null) {
-                                for (short i = 0; i < storage.getCapacity(); i++) {
-                                    ItemStack stack = storage.getItemStack(i);
-                                    if (stack != null && !stack.isEmpty()) {
-                                        try {
-                                            java.lang.reflect.Method[] methods = ItemContainer.class.getDeclaredMethods();
-                                            for (java.lang.reflect.Method m : methods) {
-                                                if (m.getName().equals("setItemStack") && m.getParameterCount() == 2) {
-                                                    m.setAccessible(true);
-                                                    m.invoke(storage, i, ItemStack.EMPTY);
-                                                    cleared++;
-                                                    break;
-                                                }
-                                            }
-                                        } catch (Exception e) {
-                                            getLogger().log("ERROR", "Error clearing slot " + i, e);
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            getLogger().info("[API] Cleared " + cleared + " items from inventory");
-                            return cleared > 0 || (hotbar != null && storage != null);
+                            inv.clear();
+                            getLogger().info("[API] Cleared inventory using Inventory.clear()");
+                            return true;
                         }
                     }
                     return false;
@@ -1603,6 +1561,131 @@ public class DashboardAPI {
             return "{\"error\": \"Failed to set weather\"}";
         } catch (Exception e) {
             getLogger().log("ERROR", "Error in setWeather", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static String setGamemode(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
+            if (!json.has("gamemode")) return "{\"error\": \"Missing gamemode\"}";
+            
+            UUID uuid = UUID.fromString(json.get("uuid").getAsString());
+            String gamemodeStr = json.get("gamemode").getAsString();
+            
+            // Parse gamemode
+            GameMode gameMode;
+            switch (gamemodeStr.toLowerCase()) {
+                case "adventure":
+                    gameMode = GameMode.Adventure;
+                    break;
+                case "creative":
+                    gameMode = GameMode.Creative;
+                    break;
+                default:
+                    return "{\"error\": \"Invalid gamemode. Use 'adventure' or 'creative'\"}";
+            }
+            
+            PlayerRef playerRef = Universe.get().getPlayer(uuid);
+            if (playerRef == null) {
+                return "{\"error\": \"Player not found\"}";
+            }
+            
+            Ref<EntityStore> entityRef = playerRef.getReference();
+            if (entityRef == null || !entityRef.isValid()) {
+                return "{\"error\": \"Player not in world\"}";
+            }
+            
+            Store<EntityStore> store = entityRef.getStore();
+            World world = store.getExternalData().getWorld();
+            
+            CompletableFuture<Boolean> future = CompletableFuture.supplyAsync(() -> {
+                try {
+                    Player.setGameMode(entityRef, gameMode, store);
+                    getLogger().info("[API] Set gamemode to " + gameMode + " for " + playerRef.getUsername());
+                    return true;
+                } catch (Exception e) {
+                    getLogger().log("ERROR", "Error setting gamemode", e);
+                    return false;
+                }
+            }, world);
+            
+            boolean success = future.get(2, TimeUnit.SECONDS);
+            if (success) {
+                return "{\"status\": \"success\", \"message\": \"Gamemode set to " + gamemodeStr + "\"}";
+            }
+            return "{\"error\": \"Failed to set gamemode\"}";
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error in setGamemode", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+    
+    private static String giveItem(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
+            if (!json.has("itemId")) return "{\"error\": \"Missing itemId\"}";
+            
+            UUID uuid = UUID.fromString(json.get("uuid").getAsString());
+            String itemId = json.get("itemId").getAsString();
+            int quantity = json.has("quantity") ? json.get("quantity").getAsInt() : 1;
+            
+            // Validate quantity
+            if (quantity < 1 || quantity > 999) {
+                return "{\"error\": \"Quantity must be between 1 and 999\"}";
+            }
+            
+            // Get the item from the asset map
+            Item item = Item.getAssetMap().getAsset(itemId);
+            if (item == null) {
+                return "{\"error\": \"Invalid item ID: " + itemId + "\"}";
+            }
+            
+            PlayerRef playerRef = Universe.get().getPlayer(uuid);
+            if (playerRef == null) {
+                return "{\"error\": \"Player not found\"}";
+            }
+            
+            Ref<EntityStore> entityRef = playerRef.getReference();
+            if (entityRef == null || !entityRef.isValid()) {
+                return "{\"error\": \"Player not in world\"}";
+            }
+            
+            Store<EntityStore> store = entityRef.getStore();
+            World world = store.getExternalData().getWorld();
+            
+            CompletableFuture<Boolean> future = CompletableFuture.supplyAsync(() -> {
+                try {
+                    Player playerComp = store.getComponent(entityRef, Player.getComponentType());
+                    if (playerComp != null) {
+                        ItemStack stack = new ItemStack(itemId, quantity, null);
+                        ItemStackTransaction transaction = playerComp.getInventory().getCombinedHotbarFirst().addItemStack(stack);
+                        ItemStack remainder = transaction.getRemainder();
+                        
+                        if (remainder == null || remainder.isEmpty()) {
+                            getLogger().info("[API] Gave " + quantity + "x " + itemId + " to " + playerRef.getUsername());
+                            return true;
+                        } else {
+                            getLogger().info("[API] Partially gave items to " + playerRef.getUsername() + " - inventory full");
+                            return false;
+                        }
+                    }
+                    return false;
+                } catch (Exception e) {
+                    getLogger().log("ERROR", "Error giving item", e);
+                    return false;
+                }
+            }, world);
+            
+            boolean success = future.get(2, TimeUnit.SECONDS);
+            if (success) {
+                return "{\"status\": \"success\", \"message\": \"Gave " + quantity + "x " + itemId + "\"}";
+            }
+            return "{\"error\": \"Failed to give item - inventory may be full\"}";
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error in giveItem", e);
             return "{\"error\": \"" + e.getMessage() + "\"}";
         }
     }
