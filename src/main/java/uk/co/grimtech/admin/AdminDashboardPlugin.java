@@ -68,7 +68,29 @@ public class AdminDashboardPlugin extends JavaPlugin {
             getEventRegistry().registerAsyncGlobal(PlayerChatEvent.class, future -> 
                 future.thenApply(event -> {
                     if (!event.isCancelled()) {
-                        ChatLog.addMessage(event.getSender().getUsername(), event.getContent());
+                        // Check if player is muted
+                        UUID playerUuid = event.getSender().getUuid();
+                        if (MuteTracker.isMuted(playerUuid)) {
+                            event.setCancelled(true);
+                            MuteTracker.Mute mute = MuteTracker.getMute(playerUuid);
+                            if (mute != null) {
+                                String muteMsg;
+                                if (mute.durationSeconds == null) {
+                                    muteMsg = "You are permanently muted. Reason: " + mute.reason;
+                                } else {
+                                    long remaining = mute.getRemainingSeconds();
+                                    long minutes = remaining / 60;
+                                    long seconds = remaining % 60;
+                                    muteMsg = String.format("You are muted for %dm %ds. Reason: %s", 
+                                        minutes, seconds, mute.reason);
+                                }
+                                event.getSender().sendMessage(com.hypixel.hytale.server.core.Message.raw(muteMsg));
+                            }
+                            LOGGER.info("[AdminDashboard] Blocked chat from muted player: " + event.getSender().getUsername());
+                        } else {
+                            // Only log if not muted
+                            ChatLog.addMessage(event.getSender().getUsername(), event.getContent());
+                        }
                     }
                     return event;
                 })

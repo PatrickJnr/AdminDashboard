@@ -20,6 +20,9 @@ import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
+import com.hypixel.hytale.builtin.weather.resources.WeatherResource;
+import com.hypixel.hytale.server.core.universe.world.WorldConfig;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -126,6 +129,10 @@ public class DashboardAPI {
             return healPlayer(body);
         } else if (path.equals("/api/clearinv") && method.equals("POST")) {
             return clearInventory(body);
+        } else if (path.equals("/api/time") && method.equals("POST")) {
+            return setTime(body);
+        } else if (path.equals("/api/weather") && method.equals("POST")) {
+            return setWeather(body);
         }
         
         return "{\"error\": \"Invalid endpoint\"}";
@@ -1463,6 +1470,139 @@ public class DashboardAPI {
             return "{\"error\": \"Teleport failed\"}";
         } catch (Exception e) {
             getLogger().log("ERROR", "Error in teleportToWarp", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+    
+    private static String setTime(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("time")) return "{\"error\": \"Missing time\"}";
+            
+            String timeStr = json.get("time").getAsString();
+            double dayTime;
+            
+            // Convert time string to dayTime value (0.0 to 1.0)
+            switch (timeStr.toLowerCase()) {
+                case "midnight":
+                    dayTime = 0.0;
+                    break;
+                case "sunrise":
+                    dayTime = 0.25;
+                    break;
+                case "noon":
+                    dayTime = 0.5;
+                    break;
+                case "sunset":
+                    dayTime = 0.75;
+                    break;
+                default:
+                    return "{\"error\": \"Invalid time. Use: midnight, sunrise, noon, or sunset\"}";
+            }
+            
+            // Get the first world (or you could make this configurable)
+            java.util.Collection<World> worlds = Universe.get().getWorlds().values();
+            if (worlds.isEmpty()) {
+                return "{\"error\": \"No worlds available\"}";
+            }
+            
+            World world = worlds.iterator().next();
+            Store<EntityStore> store = world.getEntityStore().getStore();
+            
+            // Execute on the world's thread
+            CompletableFuture<Boolean> future = CompletableFuture.supplyAsync(() -> {
+                try {
+                    WorldTimeResource timeResource = store.getResource(WorldTimeResource.getResourceType());
+                    if (timeResource != null) {
+                        timeResource.setDayTime(dayTime, world, store);
+                        getLogger().info("[API] Set time to " + timeStr + " (dayTime=" + dayTime + ")");
+                        return true;
+                    }
+                    return false;
+                } catch (Exception e) {
+                    getLogger().log("ERROR", "Error setting time", e);
+                    return false;
+                }
+            }, world);
+            
+            boolean success = future.get(2, TimeUnit.SECONDS);
+            if (success) {
+                return "{\"status\": \"success\", \"message\": \"Time set to " + timeStr + "\"}";
+            }
+            return "{\"error\": \"Failed to set time\"}";
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error in setTime", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+    
+    private static String setWeather(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("weather")) return "{\"error\": \"Missing weather\"}";
+            
+            String weatherStr = json.get("weather").getAsString();
+            String weatherId;
+            
+            // Map common weather names to Hytale weather IDs
+            switch (weatherStr.toLowerCase()) {
+                case "clear":
+                    weatherId = null; // null = clear/default weather
+                    break;
+                case "rain":
+                    weatherId = "hytale:rain";
+                    break;
+                case "storm":
+                    weatherId = "hytale:storm";
+                    break;
+                case "snow":
+                    weatherId = "hytale:snow";
+                    break;
+                default:
+                    // Allow custom weather IDs
+                    weatherId = weatherStr;
+                    break;
+            }
+            
+            // Get the first world (or you could make this configurable)
+            java.util.Collection<World> worlds = Universe.get().getWorlds().values();
+            if (worlds.isEmpty()) {
+                return "{\"error\": \"No worlds available\"}";
+            }
+            
+            World world = worlds.iterator().next();
+            Store<EntityStore> store = world.getEntityStore().getStore();
+            
+            // Execute on the world's thread
+            final String finalWeatherId = weatherId;
+            CompletableFuture<Boolean> future = CompletableFuture.supplyAsync(() -> {
+                try {
+                    WeatherResource weatherResource = store.getResource(WeatherResource.getResourceType());
+                    if (weatherResource != null) {
+                        weatherResource.setForcedWeather(finalWeatherId);
+                        
+                        // Also update the world config
+                        WorldConfig config = world.getWorldConfig();
+                        config.setForcedWeather(finalWeatherId);
+                        config.markChanged();
+                        
+                        getLogger().info("[API] Set weather to " + weatherStr + " (weatherId=" + finalWeatherId + ")");
+                        return true;
+                    }
+                    return false;
+                } catch (Exception e) {
+                    getLogger().log("ERROR", "Error setting weather", e);
+                    return false;
+                }
+            }, world);
+            
+            boolean success = future.get(2, TimeUnit.SECONDS);
+            if (success) {
+                return "{\"status\": \"success\", \"message\": \"Weather set to " + weatherStr + "\"}";
+            }
+            return "{\"error\": \"Failed to set weather\"}";
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error in setWeather", e);
             return "{\"error\": \"" + e.getMessage() + "\"}";
         }
     }

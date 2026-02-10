@@ -1,6 +1,70 @@
 # Changelog
 
-## [Unreleased] - 2026-02-09
+## [Unreleased] - 2026-02-10
+
+### ✨ Added - Time & Weather Control
+
+#### World Management - Now Fully Functional!
+- **Time Control** - Set server time instantly using Hytale's WorldTimeResource API
+  - Presets: Sunrise, Sunset, Noon, Midnight
+  - Uses proper `setDayTime()` method for client synchronization
+  - Affects all worlds simultaneously
+- **Weather Control** - Change weather conditions using WeatherResource API
+  - Options: Clear, Rain, Storm, Snow
+  - Uses `setForcedWeather()` method with WorldConfig persistence
+  - Supports custom weather IDs for modded weather types
+
+### 🔧 Fixed - Mute System
+
+#### Chat Blocking
+- **Mute enforcement now works!** - Muted players can no longer send chat messages
+- Added chat event listener that checks `MuteTracker.isMuted()` before allowing messages
+- Muted players receive feedback showing:
+  - Remaining time for temporary mutes (e.g., "You are muted for 4m 32s")
+  - Permanent mute status
+  - Mute reason
+- Chat messages from muted players are blocked and logged
+
+### 🎨 UI Improvements - Custom Modal System
+
+#### Professional Modals Replace Browser Popups
+- **Custom Confirmation Modal** - Replaces browser `confirm()` dialogs
+  - Styled to match dashboard theme
+  - Danger variant for destructive actions (red button)
+  - Keyboard support (Enter to confirm, Escape to cancel)
+  - Click outside to cancel
+- **Custom Prompt Modal** - Replaces browser `prompt()` dialogs
+  - Multi-line message support
+  - Pre-filled default values
+  - Input validation
+  - Keyboard shortcuts (Enter to submit, Escape to cancel)
+- **Custom Alert Modal** - Replaces browser `alert()` dialogs
+  - Consistent styling with dashboard
+  - Better readability
+
+#### Affected Actions
+All popups now use custom modals:
+- Kick player confirmation
+- Ban player (with reason input)
+- Toggle OP confirmation
+- Heal player confirmation
+- Mute player (duration and reason inputs)
+- Clear inventory confirmation
+- Delete warp confirmation
+- Unban player confirmation
+- Inventory load errors
+
+### 🔧 Technical Improvements
+- Integrated with decompiled Hytale server APIs for proper implementation
+- World controls now fully functional (previously disabled due to API compatibility)
+- Added proper Store access via `world.getEntityStore().getStore()`
+- Backend endpoints: `/api/time` and `/api/weather`
+- Chat event handler with mute checking in `AdminDashboardPlugin.java`
+- Promise-based modal system for async/await support
+
+---
+
+## [Previous] - 2026-02-09
 
 ### 🎉 Major Feature Update - AdminUI Integration
 

@@ -229,7 +229,7 @@ async function viewInv(uuid) {
     try {
         const modal = document.getElementById('inventory-modal');
         if (!modal) {
-            alert('ERROR: Modal element not found!');
+            await customAlert('ERROR: Modal element not found!', 'Error');
             return;
         }
 
@@ -243,7 +243,7 @@ async function viewInv(uuid) {
         const data = await res.json();
         
         if (data.error) {
-            alert('Failed to load inventory: ' + data.error);
+            await customAlert('Failed to load inventory: ' + data.error, 'Error');
             closeInventory();
             return;
         }
@@ -260,7 +260,7 @@ async function viewInv(uuid) {
         document.getElementById('inv-loading').style.display = 'none';
         document.getElementById('inv-content').style.display = 'block';
     } catch (e) {
-        alert('Failed to load inventory: ' + e.message);
+        await customAlert('Failed to load inventory: ' + e.message, 'Error');
         closeInventory();
     }
 }
@@ -449,7 +449,7 @@ async function fetchBannedPlayers() {
 }
 
 async function unbanPlayer(uuid) {
-    if (!confirm('Are you sure you want to unban this player?')) return;
+    if (!await customConfirm('Are you sure you want to unban this player?', 'Confirm Unban')) return;
     
     try {
         const res = await fetch('/api/unban', {
@@ -740,9 +740,9 @@ async function loadSecureAvatar(img, url) {
 
 document.getElementById('search').addEventListener('input', renderPlayers);
 
-function kickPlayer(uuid) {
+async function kickPlayer(uuid) {
     const p = allPlayers.find(x => x.uuid === uuid);
-    if (confirm(`Are you sure you want to kick ${p ? p.name : 'this player'}?`)) {
+    if (await customConfirm(`Are you sure you want to kick ${p ? p.name : 'this player'}?`, 'Confirm Kick', true)) {
         fetch('/api/kick', {
             method: 'POST',
             headers: { 
@@ -805,9 +805,9 @@ function closeActionsModal() {
     document.getElementById('actions-modal').classList.remove('active');
 }
 
-function banPlayer(uuid, name) {
-    const reason = prompt(`Ban ${name}?\n\nEnter ban reason:`, 'Banned by Admin');
-    if (reason !== null) {
+async function banPlayer(uuid, name) {
+    const reason = await customPrompt(`Ban ${name}?\n\nEnter ban reason:`, 'Banned by Admin', 'Ban Player');
+    if (reason !== null && reason !== '') {
         fetch('/api/ban', {
             method: 'POST',
             headers: { 
@@ -832,8 +832,8 @@ function banPlayer(uuid, name) {
     }
 }
 
-function toggleOP(uuid, name) {
-    if (confirm(`Toggle OP status for ${name}?`)) {
+async function toggleOP(uuid, name) {
+    if (await customConfirm(`Toggle OP status for ${name}?`, 'Confirm OP Toggle')) {
         fetch('/api/op', {
             method: 'POST',
             headers: { 
@@ -984,7 +984,7 @@ async function setGamemode(uuid, gamemode) {
 
 // Heal Player
 async function healPlayer(uuid) {
-    if (!confirm('Heal this player to full health?')) return;
+    if (!await customConfirm('Heal this player to full health?', 'Confirm Heal')) return;
     
     try {
         const response = await fetch('/api/heal', {
@@ -1032,8 +1032,8 @@ async function mutePlayer(uuid, name) {
         'Permanent': null
     };
     
-    const durationChoice = prompt(`Mute ${name}?\n\nSelect duration:\n1. 5 minutes\n2. 30 minutes\n3. 1 hour\n4. 1 day\n5. Permanent\n\nEnter number (1-5):`, '5');
-    if (durationChoice === null) return;
+    const durationChoice = await customPrompt(`Mute ${name}?\n\nSelect duration:\n1. 5 minutes\n2. 30 minutes\n3. 1 hour\n4. 1 day\n5. Permanent\n\nEnter number (1-5):`, '5', 'Mute Player');
+    if (durationChoice === null || durationChoice === '') return;
     
     const durationKeys = Object.keys(durations);
     const index = parseInt(durationChoice) - 1;
@@ -1044,8 +1044,8 @@ async function mutePlayer(uuid, name) {
     
     const durationKey = durationKeys[index];
     const duration = durations[durationKey];
-    const reason = prompt('Enter mute reason:', 'Muted by admin');
-    if (reason === null) return;
+    const reason = await customPrompt('Enter mute reason:', 'Muted by admin', 'Mute Reason');
+    if (reason === null || reason === '') return;
     
     try {
         const response = await fetch('/api/mute', {
@@ -1240,7 +1240,7 @@ async function createWarpFromInput() {
 }
 
 async function deleteWarp(name) {
-    if (!confirm(`Delete warp "${name}"?`)) return;
+    if (!await customConfirm(`Delete warp "${name}"?`, 'Confirm Delete', true)) return;
     
     try {
         const response = await fetch('/api/warp/delete', {
@@ -1297,7 +1297,7 @@ async function giveItem(uuid, name) {
 
 // Clear Inventory
 async function clearInventory(uuid, name) {
-    if (!confirm(`Clear all items from ${name}'s inventory? This cannot be undone!`)) return;
+    if (!await customConfirm(`Clear all items from ${name}'s inventory? This cannot be undone!`, 'Confirm Clear Inventory', true)) return;
     
     try {
         const response = await fetch('/api/clearinv', {
@@ -1396,3 +1396,170 @@ function startSync() {
     fetchMutes();
     fetchWarps();
 }
+
+// Time Control
+async function setTime(time) {
+    try {
+        const response = await fetch('/api/time', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ time })
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            showNotification(`Time set to ${time}`, 'success');
+        } else {
+            showNotification(data.error || 'Failed to set time', 'error');
+        }
+    } catch (error) {
+        console.error('Error setting time:', error);
+        showNotification('Error setting time', 'error');
+    }
+}
+
+// Weather Control
+async function setWeather(weather) {
+    try {
+        const response = await fetch('/api/weather', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ weather })
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            showNotification(`Weather set to ${weather}`, 'success');
+        } else {
+            showNotification(data.error || 'Failed to set weather', 'error');
+        }
+    } catch (error) {
+        console.error('Error setting weather:', error);
+        showNotification('Error setting weather', 'error');
+    }
+}
+
+// ==================== CUSTOM MODAL SYSTEM ====================
+// Replace browser confirm(), prompt(), and alert() with custom modals
+
+let confirmResolve = null;
+let promptResolve = null;
+
+// Custom confirm dialog
+function customConfirm(message, title = 'Confirm Action', isDanger = false) {
+    return new Promise((resolve) => {
+        confirmResolve = resolve;
+        document.getElementById('confirm-title').textContent = title;
+        document.getElementById('confirm-message').textContent = message;
+        
+        const confirmBtn = document.getElementById('confirm-btn');
+        if (isDanger) {
+            confirmBtn.className = 'btn btn-danger';
+        } else {
+            confirmBtn.className = 'btn btn-primary';
+        }
+        
+        document.getElementById('confirm-modal').classList.add('active');
+        
+        // Focus on confirm button
+        setTimeout(() => confirmBtn.focus(), 100);
+    });
+}
+
+function closeConfirmModal(result) {
+    document.getElementById('confirm-modal').classList.remove('active');
+    if (confirmResolve) {
+        confirmResolve(result);
+        confirmResolve = null;
+    }
+}
+
+// Custom prompt dialog
+function customPrompt(message, defaultValue = '', title = 'Input Required') {
+    return new Promise((resolve) => {
+        promptResolve = resolve;
+        document.getElementById('prompt-title').textContent = title;
+        document.getElementById('prompt-message').textContent = message;
+        document.getElementById('prompt-input').value = defaultValue;
+        document.getElementById('prompt-modal').classList.add('active');
+        
+        // Focus on input
+        setTimeout(() => {
+            const input = document.getElementById('prompt-input');
+            input.focus();
+            input.select();
+        }, 100);
+        
+        // Handle Enter key
+        const input = document.getElementById('prompt-input');
+        input.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                closePromptModal(input.value);
+            } else if (e.key === 'Escape') {
+                closePromptModal(null);
+            }
+        };
+    });
+}
+
+function closePromptModal(result) {
+    document.getElementById('prompt-modal').classList.remove('active');
+    if (promptResolve) {
+        promptResolve(result);
+        promptResolve = null;
+    }
+}
+
+// Custom alert dialog
+function customAlert(message, title = 'Notice') {
+    return new Promise((resolve) => {
+        document.getElementById('alert-title').textContent = title;
+        document.getElementById('alert-message').textContent = message;
+        document.getElementById('alert-modal').classList.add('active');
+        
+        // Store resolve for when modal closes
+        window.alertResolve = resolve;
+    });
+}
+
+function closeAlertModal() {
+    document.getElementById('alert-modal').classList.remove('active');
+    if (window.alertResolve) {
+        window.alertResolve();
+        window.alertResolve = null;
+    }
+}
+
+// Close modals on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        if (document.getElementById('confirm-modal').classList.contains('active')) {
+            closeConfirmModal(false);
+        }
+        if (document.getElementById('prompt-modal').classList.contains('active')) {
+            closePromptModal(null);
+        }
+        if (document.getElementById('alert-modal').classList.contains('active')) {
+            closeAlertModal();
+        }
+    }
+});
+
+// Close modals on overlay click
+document.getElementById('confirm-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'confirm-modal') closeConfirmModal(false);
+});
+document.getElementById('prompt-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'prompt-modal') closePromptModal(null);
+});
+document.getElementById('alert-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'alert-modal') closeAlertModal();
+});

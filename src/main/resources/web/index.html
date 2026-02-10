@@ -134,30 +134,29 @@
                         </div>
                     </div>
 
-                    <!-- World Controls (Temporarily Disabled) -->
-                    <div class="hytale-panel" style="opacity: 0.6; pointer-events: none;">
+                    <!-- World Controls -->
+                    <div class="hytale-panel">
                         <div class="hytale-panel-inner">
                             <div class="card-header">
                                 <h2>World Controls</h2>
-                                <span style="font-size: 0.75rem; color: var(--warning); background: rgba(244, 169, 38, 0.2); padding: 0.25rem 0.5rem; border-radius: 4px;">Coming Soon</span>
                             </div>
-                            <p style="color: var(--text-secondary); font-size: 0.75rem; margin-bottom: 1rem; font-style: italic;">These features are temporarily disabled due to API compatibility issues and will be re-enabled in a future update.</p>
+                            <p style="color: var(--text-secondary); font-size: 0.8125rem; margin-bottom: 1rem">Control the time and weather in your world.</p>
                             <div style="margin-bottom: 1rem;">
                                 <label style="font-size: 0.8125rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;">Time of Day</label>
                                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
-                                    <button class="btn btn-secondary" disabled>
+                                    <button class="btn btn-secondary" onclick="setTime('sunrise')">
                                         <span class="material-symbols-outlined">wb_sunny</span>
-                                        Day
+                                        Sunrise
                                     </button>
-                                    <button class="btn btn-secondary" disabled>
+                                    <button class="btn btn-secondary" onclick="setTime('sunset')">
                                         <span class="material-symbols-outlined">nightlight</span>
-                                        Night
+                                        Sunset
                                     </button>
-                                    <button class="btn btn-secondary" disabled>
+                                    <button class="btn btn-secondary" onclick="setTime('noon')">
                                         <span class="material-symbols-outlined">light_mode</span>
                                         Noon
                                     </button>
-                                    <button class="btn btn-secondary" disabled>
+                                    <button class="btn btn-secondary" onclick="setTime('midnight')">
                                         <span class="material-symbols-outlined">dark_mode</span>
                                         Midnight
                                     </button>
@@ -166,15 +165,15 @@
                             <div>
                                 <label style="font-size: 0.8125rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;">Weather</label>
                                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
-                                    <button class="btn btn-secondary" disabled>
+                                    <button class="btn btn-secondary" onclick="setWeather('clear')">
                                         <span class="material-symbols-outlined">wb_sunny</span>
                                         Clear
                                     </button>
-                                    <button class="btn btn-secondary" disabled>
+                                    <button class="btn btn-secondary" onclick="setWeather('rain')">
                                         <span class="material-symbols-outlined">rainy</span>
                                         Rain
                                     </button>
-                                    <button class="btn btn-secondary" disabled>
+                                    <button class="btn btn-secondary" onclick="setWeather('storm')">
                                         <span class="material-symbols-outlined">thunderstorm</span>
                                         Storm
                                     </button>
@@ -449,6 +448,63 @@
         <div id="tooltip-title" class="tooltip-title"></div>
         <div id="tooltip-id" class="tooltip-id"></div>
         <div id="tooltip-count" class="tooltip-count"></div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="modal-container hytale-panel" style="max-width: 500px;">
+            <div class="hytale-panel-inner">
+                <div class="modal-header">
+                    <h2 id="confirm-title" class="modal-title">Confirm Action</h2>
+                    <button class="modal-close" onclick="closeConfirmModal(false)">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirm-message" style="color: var(--text-primary); margin-bottom: 1.5rem; line-height: 1.6;"></p>
+                    <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                        <button class="btn btn-secondary" onclick="closeConfirmModal(false)">Cancel</button>
+                        <button id="confirm-btn" class="btn btn-primary" onclick="closeConfirmModal(true)">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prompt Modal -->
+    <div id="prompt-modal" class="modal-overlay">
+        <div class="modal-container hytale-panel" style="max-width: 500px;">
+            <div class="hytale-panel-inner">
+                <div class="modal-header">
+                    <h2 id="prompt-title" class="modal-title">Input Required</h2>
+                    <button class="modal-close" onclick="closePromptModal(null)">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="prompt-message" style="color: var(--text-primary); margin-bottom: 1rem; line-height: 1.6; white-space: pre-line;"></p>
+                    <input type="text" id="prompt-input" class="search-input" style="width: 100%; margin-bottom: 1.5rem;" placeholder="Enter value...">
+                    <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                        <button class="btn btn-secondary" onclick="closePromptModal(null)">Cancel</button>
+                        <button class="btn btn-primary" onclick="closePromptModal(document.getElementById('prompt-input').value)">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div id="alert-modal" class="modal-overlay">
+        <div class="modal-container hytale-panel" style="max-width: 500px;">
+            <div class="hytale-panel-inner">
+                <div class="modal-header">
+                    <h2 id="alert-title" class="modal-title">Notice</h2>
+                    <button class="modal-close" onclick="closeAlertModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="alert-message" style="color: var(--text-primary); margin-bottom: 1.5rem; line-height: 1.6;"></p>
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button class="btn btn-primary" onclick="closeAlertModal()">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Footer -->
