@@ -2,6 +2,35 @@
 
 ## [Unreleased] - 2026-02-10
 
+### ✨ Added - Major UX Improvements
+
+#### Gamemode Modal - Button-Based Selection
+- **Replaced text input with visual buttons** - No more typing required!
+  - Two large, clear buttons: Creative and Adventure
+  - Visual icons and descriptions for each mode
+  - Current gamemode highlighted with gold border
+  - One-click gamemode changes
+  - Eliminates user error from typos
+
+#### Give Item System - Searchable Browser
+- **Visual item browser replaces manual ID typing**
+  - Live search with instant filtering
+  - Item icons using Hytale assets
+  - Human-readable names (e.g., "Cobblestone" instead of "Rock_Stone_Cobble")
+  - Grid layout with visual selection
+  - Quantity selector (1-999)
+  - Shows first 100 items, search to narrow results
+- **New API endpoint**: `/api/items` - Returns all available items from asset store
+- **No technical knowledge required** - Users don't need to know internal asset names
+
+### 🔧 Fixed - CurseForge Mod Matching
+
+#### Improved Slug Matching Algorithm
+- **Fixed incorrect mod matching** - HyShots now correctly links to its own CurseForge page
+- Prioritized exact slug matches with score of 1000 (vs 500 for name matches)
+- Prevents partial matches from overriding exact slug matches
+- Added better logging for debugging match scores
+
 ### ✨ Added - Time & Weather Control
 
 #### World Management - Now Fully Functional!

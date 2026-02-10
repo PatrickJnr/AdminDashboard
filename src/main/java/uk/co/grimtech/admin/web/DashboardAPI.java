@@ -139,6 +139,8 @@ public class DashboardAPI {
             return setGamemode(body);
         } else if (path.equals("/api/give") && method.equals("POST")) {
             return giveItem(body);
+        } else if (path.equals("/api/items")) {
+            return getAllItems();
         }
         
         return "{\"error\": \"Invalid endpoint\"}";
@@ -1688,5 +1690,106 @@ public class DashboardAPI {
             getLogger().log("ERROR", "Error in giveItem", e);
             return "{\"error\": \"" + e.getMessage() + "\"}";
         }
+    }
+    
+    private static String getAllItems() {
+        try {
+            getLogger().info("[DashboardAPI] Fetching all items from asset store");
+            
+            JsonObject response = new JsonObject();
+            JsonArray itemsArray = new JsonArray();
+            
+            // Get all items from the Item asset map (same way as giveItem does)
+            var assetMap = Item.getAssetMap();
+            
+            getLogger().info("[DashboardAPI] Asset map type: " + assetMap.getClass().getName());
+            
+            // Iterate through all items using forEach
+            assetMap.getAssetMap().forEach((itemId, item) -> {
+                try {
+                    if (item != null) {
+                        JsonObject itemObj = new JsonObject();
+                        itemObj.addProperty("id", itemId);
+                        
+                        // Get human-readable name with better conversion
+                        String displayName = itemId;
+                        if (itemId.contains(":")) {
+                            displayName = itemId.split(":", 2)[1];
+                        }
+                        
+                        // Convert underscores to spaces
+                        displayName = displayName.replace("_", " ");
+                        
+                        // Apply common name mappings for better searchability
+                        displayName = applyCommonNameMappings(displayName);
+                        
+                        // Capitalize words
+                        displayName = capitalizeWords(displayName);
+                        
+                        itemObj.addProperty("name", displayName);
+                        
+                        // Also store searchable keywords (lowercase, no spaces)
+                        String searchKeywords = displayName.toLowerCase().replace(" ", "");
+                        itemObj.addProperty("keywords", searchKeywords);
+                        
+                        itemsArray.add(itemObj);
+                    }
+                } catch (Exception e) {
+                    getLogger().log("WARN", "[DashboardAPI] Error processing item: " + itemId, e);
+                }
+            });
+            
+            response.add("items", itemsArray);
+            getLogger().info("[DashboardAPI] Returning " + itemsArray.size() + " items");
+            
+            if (itemsArray.size() > 0) {
+                getLogger().info("[DashboardAPI] Sample items: " + itemsArray.get(0).toString() + 
+                    (itemsArray.size() > 1 ? ", " + itemsArray.get(1).toString() : ""));
+            }
+            
+            return GSON.toJson(response);
+        } catch (Exception e) {
+            getLogger().log("ERROR", "[DashboardAPI] Error in getAllItems", e);
+            return "{\"error\": \"Failed to fetch items: " + e.getMessage() + "\"}";
+        }
+    }
+    
+    private static String applyCommonNameMappings(String name) {
+        // Apply common name transformations for better searchability
+        // This helps users find items using common terms
+        
+        // Rock_Stone_X -> Cobblestone variants
+        if (name.toLowerCase().contains("rock stone")) {
+            name = name.replace("Rock Stone", "Cobblestone");
+            name = name.replace("rock stone", "cobblestone");
+        }
+        
+        // Add more mappings as needed
+        // Wood_Plank_X -> Wood Plank variants
+        // Metal_X -> Metal variants
+        // etc.
+        
+        return name;
+    }
+    
+    private static String capitalizeWords(String str) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+        
+        String[] words = str.split(" ");
+        StringBuilder result = new StringBuilder();
+        
+        for (String word : words) {
+            if (word.length() > 0) {
+                result.append(Character.toUpperCase(word.charAt(0)));
+                if (word.length() > 1) {
+                    result.append(word.substring(1).toLowerCase());
+                }
+                result.append(" ");
+            }
+        }
+        
+        return result.toString().trim();
     }
 }

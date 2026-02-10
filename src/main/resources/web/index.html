@@ -520,6 +520,80 @@
         </div>
     </footer>
 
+    <!-- Gamemode Modal -->
+    <div id="gamemode-modal" class="modal-overlay">
+        <div class="modal-container hytale-panel" style="max-width: 500px;">
+            <div class="hytale-panel-inner">
+                <div class="modal-header">
+                    <h2 id="gamemode-player-name" class="modal-title">Change Gamemode</h2>
+                    <button class="modal-close" onclick="closeGamemodeModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="gamemode-current" style="text-align: center; margin-bottom: 1.5rem; font-size: 0.875rem; color: var(--text-secondary);"></div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <button id="gamemode-creative-btn" class="gamemode-btn">
+                            <span class="material-symbols-outlined" style="font-size: 3rem; margin-bottom: 0.5rem;">construction</span>
+                            <div style="font-size: 1.125rem; font-weight: 600;">Creative</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Unlimited resources</div>
+                        </button>
+                        <button id="gamemode-adventure-btn" class="gamemode-btn">
+                            <span class="material-symbols-outlined" style="font-size: 3rem; margin-bottom: 0.5rem;">explore</span>
+                            <div style="font-size: 1.125rem; font-weight: 600;">Adventure</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Survival gameplay</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Give Item Modal -->
+    <div id="giveitem-modal" class="modal-overlay">
+        <div class="modal-container hytale-panel" style="max-width: 800px; max-height: 90vh;">
+            <div class="hytale-panel-inner">
+                <div class="modal-header">
+                    <h2 id="giveitem-player-name" class="modal-title">Give Item</h2>
+                    <button class="modal-close" onclick="closeGiveItemModal()">&times;</button>
+                </div>
+                <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem; max-height: calc(90vh - 150px);">
+                    <!-- Search Bar -->
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <div style="flex: 1; position: relative;">
+                            <span class="material-symbols-outlined" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;">search</span>
+                            <input type="text" id="giveitem-search" placeholder="Search items (e.g., cobblestone, stone, wood...)" 
+                                   style="width: 100%; padding: 0.75rem 0.75rem 0.75rem 2.5rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-size: 0.9375rem;">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label for="giveitem-quantity" style="font-size: 0.875rem; color: var(--text-secondary); white-space: nowrap;">Quantity:</label>
+                            <input type="number" id="giveitem-quantity" min="1" max="999" value="1" 
+                                   style="width: 80px; padding: 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); text-align: center;">
+                        </div>
+                    </div>
+                    
+                    <!-- Loading State -->
+                    <div id="giveitem-loading" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; gap: 1rem;">
+                        <div class="spinner" style="width: 48px; height: 48px; border: 4px solid var(--border-color); border-top-color: var(--hytale-gold); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <div style="color: var(--text-secondary);">Loading items...</div>
+                    </div>
+                    
+                    <!-- Item Browser -->
+                    <div id="giveitem-browser" style="display: block; flex: 1; overflow-y: auto; min-height: 400px;">
+                        <div id="giveitem-items" class="item-browser-grid"></div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                        <button class="btn btn-secondary" onclick="closeGiveItemModal()">Cancel</button>
+                        <button id="giveitem-confirm-btn" class="btn btn-primary">
+                            <span class="material-symbols-outlined" style="font-size: 1.125rem;">redeem</span>
+                            Give Item
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="js/dashboard.js"></script>
 </body>
 </html>

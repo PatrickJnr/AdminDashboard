@@ -1383,12 +1383,9 @@ function openActionsModal(uuid, name) {
         viewInv(uuid);
     };
     
-    document.getElementById('action-gamemode').onclick = async () => {
+    document.getElementById('action-gamemode').onclick = () => {
         closeActionsModal();
-        const gamemode = await customPrompt('Enter gamemode (adventure or creative):', 'adventure', 'Change Gamemode');
-        if (gamemode) {
-            setGamemode(uuid, gamemode.toLowerCase());
-        }
+        openGamemodeModal(uuid, name);
     };
     
     document.getElementById('action-heal').onclick = () => {
@@ -1403,7 +1400,7 @@ function openActionsModal(uuid, name) {
     
     document.getElementById('action-give').onclick = () => {
         closeActionsModal();
-        giveItem(uuid, name);
+        openGiveItemModal(uuid, name);
     };
     
     document.getElementById('action-clearinv').onclick = () => {
@@ -1614,3 +1611,242 @@ document.getElementById('prompt-modal').addEventListener('click', (e) => {
 document.getElementById('alert-modal').addEventListener('click', (e) => {
     if (e.target.id === 'alert-modal') closeAlertModal();
 });
+
+
+// ==================== IMPROVED GAMEMODE MODAL ====================
+function openGamemodeModal(uuid, name) {
+    const player = allPlayers.find(p => p.uuid === uuid);
+    const currentGamemode = player ? player.gameMode : 'Adventure';
+    
+    document.getElementById('gamemode-player-name').textContent = `${name} - Change Gamemode`;
+    document.getElementById('gamemode-current').textContent = `Current: ${currentGamemode}`;
+    
+    // Highlight current gamemode
+    const creativeBtn = document.getElementById('gamemode-creative-btn');
+    const adventureBtn = document.getElementById('gamemode-adventure-btn');
+    
+    creativeBtn.classList.remove('active-gamemode');
+    adventureBtn.classList.remove('active-gamemode');
+    
+    if (currentGamemode.toLowerCase() === 'creative') {
+        creativeBtn.classList.add('active-gamemode');
+    } else {
+        adventureBtn.classList.add('active-gamemode');
+    }
+    
+    // Set up click handlers
+    creativeBtn.onclick = () => {
+        closeGamemodeModal();
+        setGamemode(uuid, 'creative');
+    };
+    
+    adventureBtn.onclick = () => {
+        closeGamemodeModal();
+        setGamemode(uuid, 'adventure');
+    };
+    
+    document.getElementById('gamemode-modal').classList.add('active');
+}
+
+function closeGamemodeModal() {
+    document.getElementById('gamemode-modal').classList.remove('active');
+}
+
+// ==================== IMPROVED GIVE ITEM MODAL ====================
+let allItems = [];
+let filteredItems = [];
+let selectedItemForGive = null;
+
+async function openGiveItemModal(uuid, name) {
+    document.getElementById('giveitem-player-name').textContent = `Give Item to ${name}`;
+    document.getElementById('giveitem-search').value = '';
+    document.getElementById('giveitem-quantity').value = '1';
+    selectedItemForGive = null;
+    
+    // Load items if not already loaded
+    if (allItems.length === 0) {
+        document.getElementById('giveitem-loading').style.display = 'flex';
+        document.getElementById('giveitem-browser').style.display = 'none';
+        await loadAllItems();
+        document.getElementById('giveitem-loading').style.display = 'none';
+        document.getElementById('giveitem-browser').style.display = 'block';
+    }
+    
+    // Show all items initially
+    filteredItems = allItems;
+    renderItemBrowser();
+    
+    // Set up search
+    const searchInput = document.getElementById('giveitem-search');
+    searchInput.oninput = () => {
+        const query = searchInput.value.toLowerCase().trim();
+        if (query === '') {
+            filteredItems = allItems;
+        } else {
+            filteredItems = allItems.filter(item => {
+                const nameLower = item.name.toLowerCase();
+                const idLower = item.id.toLowerCase();
+                const keywords = item.keywords || nameLower.replace(/\s+/g, '');
+                
+                // Match against name, ID, or keywords (without spaces)
+                return nameLower.includes(query) || 
+                       idLower.includes(query) || 
+                       keywords.includes(query.replace(/\s+/g, ''));
+            });
+        }
+        renderItemBrowser();
+    };
+    
+    // Set up give button
+    document.getElementById('giveitem-confirm-btn').onclick = () => {
+        if (!selectedItemForGive) {
+            showNotification('Please select an item first', 'error');
+            return;
+        }
+        const quantity = parseInt(document.getElementById('giveitem-quantity').value);
+        if (isNaN(quantity) || quantity < 1 || quantity > 999) {
+            showNotification('Invalid quantity. Must be between 1 and 999', 'error');
+            return;
+        }
+        closeGiveItemModal();
+        executeGiveItem(uuid, name, selectedItemForGive, quantity);
+    };
+    
+    document.getElementById('giveitem-modal').classList.add('active');
+}
+
+function closeGiveItemModal() {
+    document.getElementById('giveitem-modal').classList.remove('active');
+}
+
+async function loadAllItems() {
+    try {
+        console.log('[GiveItem] Fetching items from /api/items');
+        const response = await fetch('/api/items', {
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        
+        console.log('[GiveItem] Response status:', response.status);
+        const data = await response.json();
+        console.log('[GiveItem] Response data:', data);
+        
+        if (data.error) {
+            showNotification('Failed to load items: ' + data.error, 'error');
+            allItems = [];
+            return;
+        }
+        
+        allItems = data.items || [];
+        console.log('[GiveItem] Loaded', allItems.length, 'items');
+        console.log('[GiveItem] First 5 items:', allItems.slice(0, 5));
+        allItems.sort((a, b) => a.name.localeCompare(b.name));
+    } catch (error) {
+        console.error('[GiveItem] Error loading items:', error);
+        showNotification('Failed to load items', 'error');
+        allItems = [];
+    }
+}
+
+function renderItemBrowser() {
+    const container = document.getElementById('giveitem-items');
+    container.innerHTML = '';
+    
+    if (filteredItems.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                <span class="material-symbols-outlined" style="font-size: 3rem; opacity: 0.5;">search_off</span>
+                <div style="margin-top: 0.5rem;">No items found</div>
+            </div>
+        `;
+        return;
+    }
+    
+    // Limit to first 100 items for performance
+    const itemsToShow = filteredItems.slice(0, 100);
+    
+    itemsToShow.forEach(item => {
+        const itemCard = document.createElement('div');
+        itemCard.className = 'item-browser-card';
+        if (selectedItemForGive === item.id) {
+            itemCard.classList.add('selected');
+        }
+        
+        itemCard.innerHTML = `
+            <img src="/api/item/${encodeURIComponent(item.id)}/icon" 
+                 alt="${item.name}" 
+                 class="item-browser-icon"
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23333%22/%3E%3Ctext x=%2224%22 y=%2224%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23666%22 font-size=%2212%22%3E?%3C/text%3E%3C/svg%3E'">
+            <div class="item-browser-name">${item.name}</div>
+            <div class="item-browser-id">${item.id}</div>
+        `;
+        
+        itemCard.onclick = () => {
+            selectedItemForGive = item.id;
+            // Update selection visually
+            container.querySelectorAll('.item-browser-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            itemCard.classList.add('selected');
+        };
+        
+        container.appendChild(itemCard);
+    });
+    
+    if (filteredItems.length > 100) {
+        const moreDiv = document.createElement('div');
+        moreDiv.style.cssText = 'grid-column: 1 / -1; text-align: center; padding: 1rem; color: var(--text-secondary); font-size: 0.875rem;';
+        moreDiv.textContent = `Showing first 100 of ${filteredItems.length} items. Use search to narrow results.`;
+        container.appendChild(moreDiv);
+    }
+}
+
+async function executeGiveItem(uuid, name, itemId, quantity) {
+    try {
+        const response = await fetch('/api/give', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ uuid, itemId, quantity })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            const itemName = allItems.find(i => i.id === itemId)?.name || itemId;
+            showNotification(`Gave ${quantity}x ${itemName} to ${name}`, 'success');
+        } else {
+            showNotification(data.error || 'Failed to give item', 'error');
+        }
+    } catch (error) {
+        showNotification('Error giving item: ' + error.message, 'error');
+    }
+}
+
+// Close modals on Escape and overlay click
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        if (document.getElementById('gamemode-modal').classList.contains('active')) {
+            closeGamemodeModal();
+        }
+        if (document.getElementById('giveitem-modal').classList.contains('active')) {
+            closeGiveItemModal();
+        }
+    }
+});
+
+// Add overlay click handlers for new modals
+if (document.getElementById('gamemode-modal')) {
+    document.getElementById('gamemode-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'gamemode-modal') {
+            closeGamemodeModal();
+        }
+    });
+}
+
+if (document.getElementById('giveitem-modal')) {
+    document.getElementById('giveitem-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'giveitem-modal') {
+            closeGiveItemModal();
+        }
+    });
+}

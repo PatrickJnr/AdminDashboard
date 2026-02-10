@@ -1564,3 +1564,102 @@ tbody tr:hover {
     box-shadow: none;
     border-color: var(--hytale-border);
 }
+
+
+/* ==================== GAMEMODE MODAL STYLES ==================== */
+.gamemode-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.gamemode-btn:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--hytale-gold);
+    transform: translateY(-2px);
+}
+
+.gamemode-btn.active-gamemode {
+    background: rgba(244, 160, 38, 0.1);
+    border-color: var(--hytale-gold);
+    box-shadow: 0 0 20px rgba(244, 160, 38, 0.2);
+}
+
+.gamemode-btn .material-symbols-outlined {
+    color: var(--hytale-gold);
+}
+
+/* ==================== GIVE ITEM MODAL STYLES ==================== */
+.item-browser-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+    padding: 0.5rem;
+}
+
+.item-browser-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.item-browser-card:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--hytale-gold);
+    transform: translateY(-2px);
+}
+
+.item-browser-card.selected {
+    background: rgba(244, 160, 38, 0.1);
+    border-color: var(--hytale-gold);
+    box-shadow: 0 0 15px rgba(244, 160, 38, 0.3);
+}
+
+.item-browser-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 0.5rem;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+.item-browser-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-align: center;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    word-break: break-word;
+}
+
+.item-browser-id {
+    font-size: 0.6875rem;
+    color: var(--text-secondary);
+    text-align: center;
+    font-family: monospace;
+    word-break: break-all;
+}
+
+/* Spinner animation */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.spinner {
+    animation: spin 1s linear infinite;
+}
