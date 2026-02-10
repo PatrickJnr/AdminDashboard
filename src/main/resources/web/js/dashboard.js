@@ -1387,7 +1387,7 @@ async function openWarpTeleportModal(warpName) {
         
         // Create grid of player avatars
         const grid = document.createElement('div');
-        grid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 0.75rem;';
+        grid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 0.75rem; margin-bottom: 2.5rem;';
         
         players.forEach(player => {
             const div = document.createElement('div');
