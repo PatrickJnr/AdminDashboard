@@ -21,7 +21,8 @@ public class AdminDashboardPlugin extends JavaPlugin {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static long startTime;
     private static String adminToken;
-    private static boolean loggingEnabled = true;
+    private static boolean loggingEnabled = false; // Default to false for production
+    private static int port = 9081; // Default port
     private HytaleHttpServer httpServer;
 
     // Public getter for other classes to use the configured logger
@@ -59,10 +60,16 @@ public class AdminDashboardPlugin extends JavaPlugin {
         LOGGER.info("[AdminDashboard] Data trackers initialized");
 
         try {
-            int port = 9081;
             httpServer = new HytaleHttpServer(port);
             httpServer.start();
-            LOGGER.info("[AdminDashboard] HTTP Server started on port " + port);
+            int actualPort = httpServer.getActualPort();
+            LOGGER.info("[AdminDashboard] HTTP Server started on port " + actualPort);
+            
+            // Print to console with actual port
+            System.out.println("[AdminDashboard] ========================================");
+            System.out.println("[AdminDashboard] Admin Token: " + adminToken);
+            System.out.println("[AdminDashboard] Dashboard URL: http://localhost:" + actualPort);
+            System.out.println("[AdminDashboard] ========================================");
             
             // Register Chat Listener using registerAsyncGlobal for IAsyncEvent
             getEventRegistry().registerAsyncGlobal(PlayerChatEvent.class, future -> 
@@ -116,6 +123,21 @@ public class AdminDashboardPlugin extends JavaPlugin {
                     if (config.has("loggingEnabled")) {
                         loggingEnabled = config.get("loggingEnabled").getAsBoolean();
                     }
+                    if (config.has("port")) {
+                        // Check if port is set to 0 (random port)
+                        int configPort = config.get("port").getAsInt();
+                        if (configPort == 0) {
+                            // Use random available port
+                            port = 0;
+                        } else {
+                            port = configPort;
+                            // Validate port range
+                            if (port < 1024 || port > 65535) {
+                                LOGGER.warning("[AdminDashboard] Invalid port " + port + " in config, using default 9081");
+                                port = 9081;
+                            }
+                        }
+                    }
                 }
             }
 
@@ -124,8 +146,9 @@ public class AdminDashboardPlugin extends JavaPlugin {
                 adminToken = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
             }
             
-            // Save config with both settings
+            // Save config with all settings
             JsonObject config = new JsonObject();
+            config.addProperty("port", port);
             config.addProperty("adminToken", adminToken);
             config.addProperty("loggingEnabled", loggingEnabled);
             try (FileWriter writer = new FileWriter(configFile)) {
@@ -133,18 +156,14 @@ public class AdminDashboardPlugin extends JavaPlugin {
             }
             
             if (LOGGER != null) {
-                LOGGER.info("[AdminDashboard] Config loaded - Logging enabled: " + loggingEnabled);
+                LOGGER.info("[AdminDashboard] Config loaded - Port: " + (port == 0 ? "random" : port) + ", Logging enabled: " + loggingEnabled);
                 LOGGER.info("[AdminDashboard] ========================================");
                 LOGGER.info("[AdminDashboard] Admin Token: " + adminToken);
                 LOGGER.info("[AdminDashboard] Use this token to log into the dashboard");
                 LOGGER.info("[AdminDashboard] ========================================");
             }
             
-            // Also print to console for visibility
-            System.out.println("[AdminDashboard] ========================================");
-            System.out.println("[AdminDashboard] Admin Token: " + adminToken);
-            System.out.println("[AdminDashboard] Dashboard URL: http://localhost:9081");
-            System.out.println("[AdminDashboard] ========================================");
+            // Note: Actual port will be printed after server starts if using random port
         } catch (Exception e) {
             if (LOGGER != null) {
                 LOGGER.severe("[AdminDashboard] Failed to load/save config: " + e.getMessage());

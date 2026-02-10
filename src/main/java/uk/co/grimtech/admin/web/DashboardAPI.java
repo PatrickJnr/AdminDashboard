@@ -17,6 +17,8 @@ import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
+import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
@@ -28,6 +30,7 @@ import com.hypixel.hytale.server.core.universe.world.WorldConfig;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.PluginBase;
@@ -1395,41 +1398,41 @@ public class DashboardAPI {
             String warpName = json.get("warp").getAsString();
             
             WarpManager.Warp warp = WarpManager.getWarp(warpName);
-            if (warp == null) return "{\"error\": \"Warp not found\"}";
+            if (warp == null) {
+                return "{\"error\": \"Warp not found\"}";
+            }
             
-            PlayerRef ref = Universe.get().getPlayer(uuid);
-            if (ref == null) return "{\"error\": \"Player not found\"}";
+            PlayerRef playerRef = Universe.get().getPlayer(uuid);
+            if (playerRef == null) {
+                return "{\"error\": \"Player not found\"}";
+            }
             
-            Ref<EntityStore> entityRef = ref.getReference();
-            if (entityRef == null || !entityRef.isValid()) {
+            Ref<EntityStore> playerEntityRef = playerRef.getReference();
+            if (playerEntityRef == null || !playerEntityRef.isValid()) {
                 return "{\"error\": \"Player not in world\"}";
             }
             
-            Store<EntityStore> store = entityRef.getStore();
-            World world = store.getExternalData().getWorld();
+            Store<EntityStore> playerStore = playerEntityRef.getStore();
+            World playerWorld = playerStore.getExternalData().getWorld();
             
-            Vector3d targetPos = new Vector3d(warp.x, warp.y, warp.z);
+            Vector3d destination = new Vector3d(warp.x, warp.y, warp.z);
             
-            CompletableFuture<Boolean> future = CompletableFuture.supplyAsync(() -> {
-                try {
-                    TransformComponent transform = store.getComponent(entityRef, TransformComponent.getComponentType());
-                    if (transform != null) {
-                        transform.setPosition(targetPos);
-                        return true;
-                    }
-                    return false;
-                } catch (Exception e) {
-                    getLogger().log("ERROR", "Error during warp teleport", e);
-                    return false;
-                }
-            }, world);
+            // Execute on the world thread to get rotation and add teleport component
+            playerWorld.execute(() -> {
+                // Get current rotation to preserve it (must be done on world thread)
+                TransformComponent transform = playerStore.getComponent(playerEntityRef, TransformComponent.getComponentType());
+                Vector3f currentRotation = transform != null ? transform.getRotation() : Vector3f.ZERO;
+                
+                // Create Teleport component and add it to the entity
+                Teleport teleport = new Teleport(destination, currentRotation);
+                playerStore.addComponent(playerEntityRef, Teleport.getComponentType(), teleport);
+                
+                // Send message to player
+                playerRef.sendMessage(Message.raw("Teleported to warp: " + warpName));
+            });
             
-            boolean success = future.get(2, TimeUnit.SECONDS);
-            if (success) {
-                getLogger().info("[API] Teleported " + ref.getUsername() + " to warp " + warpName);
-                return "{\"status\": \"success\"}";
-            }
-            return "{\"error\": \"Teleport failed\"}";
+            getLogger().info("[API] Teleported " + playerRef.getUsername() + " to warp '" + warpName + "' at (" + warp.x + ", " + warp.y + ", " + warp.z + ")");
+            return "{\"status\": \"success\"}";
         } catch (Exception e) {
             getLogger().log("ERROR", "Error in teleportToWarp", e);
             return "{\"error\": \"" + e.getMessage() + "\"}";

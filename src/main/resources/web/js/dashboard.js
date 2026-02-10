@@ -26,8 +26,8 @@ function showNotification(message, type = 'success') {
     
     setTimeout(() => {
         banner.classList.add('fade-out');
-        setTimeout(() => banner.remove(), 300);
-    }, 3000);
+        setTimeout(() => banner.remove(), 400);
+    }, 2500);
 }
 
 function updateConnectionStatus(status) {
@@ -1735,14 +1735,11 @@ function closeGiveItemModal() {
 
 async function loadAllItems() {
     try {
-        console.log('[GiveItem] Fetching items from /api/items');
         const response = await fetch('/api/items', {
             headers: { 'X-Admin-Token': dashboardToken }
         });
         
-        console.log('[GiveItem] Response status:', response.status);
         const data = await response.json();
-        console.log('[GiveItem] Response data:', data);
         
         if (data.error) {
             showNotification('Failed to load items: ' + data.error, 'error');
@@ -1751,11 +1748,8 @@ async function loadAllItems() {
         }
         
         allItems = data.items || [];
-        console.log('[GiveItem] Loaded', allItems.length, 'items');
-        console.log('[GiveItem] First 5 items:', allItems.slice(0, 5));
         allItems.sort((a, b) => a.name.localeCompare(b.name));
     } catch (error) {
-        console.error('[GiveItem] Error loading items:', error);
         showNotification('Failed to load items', 'error');
         allItems = [];
     }

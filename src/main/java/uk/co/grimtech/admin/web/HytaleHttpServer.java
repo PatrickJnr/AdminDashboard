@@ -33,6 +33,10 @@ public class HytaleHttpServer {
         server.setExecutor(null); // creates a default executor
         server.start();
     }
+    
+    public int getActualPort() {
+        return server != null ? server.getAddress().getPort() : port;
+    }
 
     public void stop() {
         if (server != null) {

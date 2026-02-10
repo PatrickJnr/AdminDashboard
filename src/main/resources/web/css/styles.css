@@ -59,11 +59,11 @@ body {
     margin-bottom: 2rem;
     border-width: 1px;
     background: linear-gradient(to bottom, #1a2d4a, #0f1c30);
-    transition: box-shadow 0.25s ease;
+    transition: box-shadow 0.2s ease;
 }
 
 .hytale-panel:hover {
-    box-shadow: 0 6px 40px rgba(0, 0, 0, 0.6), inset 0 0 0 2px #4e5765, 0 0 20px rgba(236, 188, 98, 0.1);
+    box-shadow: 0 6px 40px rgba(0, 0, 0, 0.6), inset 0 0 0 2px #4e5765, 0 0 15px rgba(236, 188, 98, 0.08);
 }
 
 /* Corner decorations */
@@ -168,11 +168,11 @@ header {
 
 .stat-card {
     text-align: center;
-    transition: transform 0.25s ease;
+    transition: transform 0.2s ease;
 }
 
 .stat-card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 .stat-card .hytale-panel-inner {
@@ -275,7 +275,7 @@ tbody tr:hover td {
 }
 
 .avatar:hover {
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 /* Badges */
@@ -331,8 +331,8 @@ tbody tr:hover td {
     height: 100%;
     background: linear-gradient(to bottom, #ff4d8f, #d93d75);
     border-radius: 1px;
-    transition: width 0.5s ease;
-    box-shadow: 0 0 8px rgba(255, 77, 143, 0.5);
+    transition: width 0.4s ease;
+    box-shadow: 0 0 6px rgba(255, 77, 143, 0.4);
 }
 
 /* Stat Bars */
@@ -351,16 +351,16 @@ tbody tr:hover td {
     height: 100%;
     background: linear-gradient(to bottom, #f4a03f, #d88a2e);
     border-radius: 1px;
-    transition: width 0.5s ease;
-    box-shadow: 0 0 6px rgba(244, 160, 63, 0.5);
+    transition: width 0.4s ease;
+    box-shadow: 0 0 5px rgba(244, 160, 63, 0.4);
 }
 
 .mana-bar {
     height: 100%;
     background: linear-gradient(to bottom, #4da6ff, #3a8fd9);
     border-radius: 1px;
-    transition: width 0.5s ease;
-    box-shadow: 0 0 6px rgba(77, 166, 255, 0.5);
+    transition: width 0.4s ease;
+    box-shadow: 0 0 5px rgba(77, 166, 255, 0.4);
 }
 
 .defence-value {
@@ -417,8 +417,8 @@ tbody tr:hover td {
 }
 
 .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(236, 188, 98, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 12px rgba(236, 188, 98, 0.25);
 }
 
 .btn:active {
@@ -621,13 +621,13 @@ tbody tr:hover td {
     height: 8px;
     background: #a3cf93;
     border-radius: 50%;
-    animation: pulse 2s infinite;
-    box-shadow: 0 0 8px rgba(163, 207, 147, 0.5);
+    animation: pulse 2.5s ease-in-out infinite;
+    box-shadow: 0 0 6px rgba(163, 207, 147, 0.4);
 }
 
 @keyframes pulse {
     0% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(0.9); }
+    50% { opacity: 0.7; transform: scale(0.95); }
     100% { opacity: 1; transform: scale(1); }
 }
 
@@ -690,7 +690,7 @@ tbody tr:hover td {
 .accordion-toggle {
     font-size: 1.25rem;
     color: var(--hytale-gold);
-    transition: transform 0.3s ease;
+    transition: transform 0.25s ease;
     font-weight: bold;
 }
 
@@ -701,7 +701,7 @@ tbody tr:hover td {
 .accordion-content {
     max-height: 500px;
     overflow-y: auto;
-    transition: max-height 0.3s ease, opacity 0.3s ease;
+    transition: max-height 0.25s ease, opacity 0.25s ease;
     opacity: 1;
 }
 
@@ -735,12 +735,13 @@ tbody tr:hover td {
     border-radius: 4px;
     margin-bottom: 0.5rem;
     border-left: 3px solid var(--hytale-gold-dark);
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
 }
 
 .plugin-item:hover {
     background: rgba(0, 0, 0, 0.3);
     border-left-color: var(--hytale-gold);
+    transform: translateX(1px);
 }
 
 .plugin-info {
@@ -773,12 +774,13 @@ tbody tr:hover td {
     border-radius: 4px;
     margin-bottom: 0.5rem;
     border-left: 3px solid #b74545;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
 }
 
 .ban-item:hover {
     background: rgba(183, 69, 69, 0.15);
     border-left-color: #efa3a3;
+    transform: translateX(1px);
 }
 
 .ban-info {
@@ -887,7 +889,7 @@ tbody tr:hover td {
 .modal-close:hover {
     color: var(--hytale-gold);
     background: rgba(236, 188, 98, 0.1);
-    transform: rotate(90deg);
+    transform: rotate(45deg);
 }
 
 .modal-body {
@@ -949,8 +951,8 @@ tbody tr:hover td {
 
 .inv-slot:hover {
     border-color: var(--hytale-gold);
-    background: rgba(236, 188, 98, 0.15);
-    transform: scale(1.03);
+    background: rgba(236, 188, 98, 0.12);
+    transform: scale(1.02);
 }
 
 .inv-slot img {
@@ -988,11 +990,11 @@ tbody tr:hover td {
 
 .item-tooltip.visible {
     display: block;
-    animation: tooltipFadeIn 0.15s ease;
+    animation: tooltipFadeIn 0.2s ease;
 }
 
 @keyframes tooltipFadeIn {
-    from { opacity: 0; transform: translateY(5px); }
+    from { opacity: 0; transform: translateY(3px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
@@ -1041,9 +1043,9 @@ tbody tr:hover td {
 }
 
 .teleport-player-item:hover {
-    background: rgba(236, 188, 98, 0.1);
+    background: rgba(236, 188, 98, 0.08);
     border-color: var(--hytale-gold);
-    transform: translateX(4px);
+    transform: translateX(2px);
 }
 
 .teleport-player-item .avatar {
@@ -1095,10 +1097,10 @@ tbody tr:hover td {
 }
 
 .action-card:hover {
-    background: rgba(236, 188, 98, 0.1);
+    background: rgba(236, 188, 98, 0.08);
     border-color: var(--hytale-gold);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(236, 188, 98, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(236, 188, 98, 0.15);
 }
 
 .action-card-danger {
@@ -1106,9 +1108,9 @@ tbody tr:hover td {
 }
 
 .action-card-danger:hover {
-    background: rgba(183, 69, 69, 0.1);
+    background: rgba(183, 69, 69, 0.08);
     border-color: #b74545;
-    box-shadow: 0 4px 12px rgba(183, 69, 69, 0.3);
+    box-shadow: 0 3px 10px rgba(183, 69, 69, 0.2);
 }
 
 .action-card-icon {
@@ -1188,8 +1190,8 @@ tbody tr:hover td {
     color: white;
     font-weight: 600;
     z-index: 10000;
-    box-shadow: 0 4px 20px rgba(183, 69, 69, 0.5);
-    animation: slideDown 0.3s ease;
+    box-shadow: 0 4px 20px rgba(183, 69, 69, 0.4);
+    animation: slideDown 0.25s ease;
     max-width: 90%;
 }
 
@@ -1199,11 +1201,11 @@ tbody tr:hover td {
 }
 
 .error-banner.fade-out {
-    animation: fadeOut 0.3s ease forwards;
+    animation: fadeOut 0.4s ease forwards;
 }
 
 @keyframes fadeOut {
-    to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+    to { opacity: 0; transform: translateX(-50%) translateY(-15px); }
 }
 
 /* Success Banner */
@@ -1219,8 +1221,8 @@ tbody tr:hover td {
     color: white;
     font-weight: 600;
     z-index: 10000;
-    box-shadow: 0 4px 20px rgba(114, 170, 94, 0.5);
-    animation: slideDown 0.3s ease;
+    box-shadow: 0 4px 20px rgba(114, 170, 94, 0.4);
+    animation: slideDown 0.25s ease;
     max-width: 90%;
 }
 
@@ -1249,16 +1251,16 @@ a:focus-visible {
 
 /* Improved Table Row Animations */
 tbody tr {
-    transition: background 0.15s ease, transform 0.1s ease;
+    transition: background 0.15s ease, transform 0.15s ease;
 }
 
 tbody tr:hover {
-    transform: translateX(2px);
+    transform: translateX(1px);
 }
 
 /* Better Modal Animations */
 .modal-overlay {
-    animation: modalFadeIn 0.2s ease;
+    animation: modalFadeIn 0.25s ease;
 }
 
 @keyframes modalFadeIn {
@@ -1267,11 +1269,11 @@ tbody tr:hover {
 }
 
 .modal-overlay.active .modal-container {
-    animation: modalSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: modalSlideIn 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 @keyframes modalSlideIn {
-    from { opacity: 0; transform: scale(0.95) translateY(-20px); }
+    from { opacity: 0; transform: scale(0.97) translateY(-10px); }
     to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
@@ -1584,13 +1586,13 @@ tbody tr:hover {
 .gamemode-btn:hover {
     background: var(--bg-tertiary);
     border-color: var(--hytale-gold);
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 .gamemode-btn.active-gamemode {
-    background: rgba(244, 160, 38, 0.1);
+    background: rgba(244, 160, 38, 0.08);
     border-color: var(--hytale-gold);
-    box-shadow: 0 0 20px rgba(244, 160, 38, 0.2);
+    box-shadow: 0 0 15px rgba(244, 160, 38, 0.15);
 }
 
 .gamemode-btn .material-symbols-outlined {
@@ -1634,8 +1636,8 @@ tbody tr:hover {
 .item-browser-card:hover {
     background: var(--bg-tertiary);
     border-color: var(--hytale-gold);
-    transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
 }
 
 .item-browser-card:hover::before {
@@ -1643,9 +1645,9 @@ tbody tr:hover {
 }
 
 .item-browser-card.selected {
-    background: rgba(244, 160, 38, 0.15);
+    background: rgba(244, 160, 38, 0.12);
     border-color: var(--hytale-gold);
-    box-shadow: 0 0 20px rgba(244, 160, 38, 0.4), inset 0 0 20px rgba(244, 160, 38, 0.1);
+    box-shadow: 0 0 15px rgba(244, 160, 38, 0.3), inset 0 0 15px rgba(244, 160, 38, 0.08);
 }
 
 .item-browser-card.selected::before {
@@ -1674,7 +1676,7 @@ tbody tr:hover {
 }
 
 .item-browser-card:hover .item-browser-icon {
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 .item-browser-info {
