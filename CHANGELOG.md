@@ -1,5 +1,19 @@
 # Changelog
 
+## Version 1.0.1 - February 15, 2026
+
+Welcome to the latest update! This version introduces a comprehensive Backup and Restore system for your Hytale server.
+
+### New Features
+
+**Backup System**
+- Create full server backups manually with a single click
+- Schedule automatic backups at custom intervals
+- View a detailed list of all backups with timestamps and file sizes
+- Restore your server to any previous backup point (requires server restart)
+- Delete old or unwanted backups to manage disk space
+- Added confirmation dialogs for critical actions to prevent accidents
+
 ## Version 1.0.0 - February 10, 2026
 
 Welcome to the first official release of Admin WebDash! This mod provides a powerful web-based control panel for managing your Hytale server.

@@ -4,6 +4,7 @@ import uk.co.grimtech.admin.AdminWebDashPlugin;
 import uk.co.grimtech.admin.CustomLogger;
 import uk.co.grimtech.admin.util.MuteTracker;
 import uk.co.grimtech.admin.util.WarpManager;
+import uk.co.grimtech.admin.util.BackupManager;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -148,6 +149,22 @@ public class DashboardAPI {
             return getAllItems();
         } else if (path.equals("/api/curseforge/clear-cache") && method.equals("POST")) {
             return clearCurseForgeCache();
+        } else if (path.equals("/api/backups")) {
+            return BackupManager.getBackups();
+        } else if (path.equals("/api/backup/create") && method.equals("POST")) {
+            return BackupManager.createBackup();
+        } else if (path.equals("/api/backup/restore") && method.equals("POST")) {
+             try {
+                JsonObject json = GSON.fromJson(body, JsonObject.class);
+                if (!json.has("name")) return "{\"error\": \"Missing backup name\"}";
+                return BackupManager.restoreBackup(json.get("name").getAsString());
+             } catch (Exception e) {
+                 return "{\"error\": \"" + e.getMessage() + "\"}";
+             }
+        } else if (path.equals("/api/backup/schedule") && method.equals("POST")) {
+            return BackupManager.scheduleBackups(body);
+        } else if (path.equals("/api/backup/delete") && method.equals("POST")) {
+            return BackupManager.deleteBackup(body);
         }
         
         return "{\"error\": \"Invalid endpoint\"}";
@@ -158,7 +175,7 @@ public class DashboardAPI {
         
         // Try to get version from plugin manifest
         AdminWebDashPlugin plugin = AdminWebDashPlugin.getInstance();
-        String versionString = "1.0.0"; // fallback
+        String versionString = "1.0.1"; // fallback
         
         if (plugin != null && plugin.getManifest() != null) {
             versionString = plugin.getManifest().getVersion().toString();

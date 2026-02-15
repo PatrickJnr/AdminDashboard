@@ -1591,6 +1591,7 @@ function startSync() {
     fetchChat();
     fetchMutes();
     fetchWarps();
+    fetchBackups();
     fetchVersion();
 }
 
@@ -2045,3 +2046,183 @@ async function clearCurseForgeCache() {
 
 // Make it available globally for console access
 window.clearCurseForgeCache = clearCurseForgeCache;
+
+// ==================== BACKUP SYSTEM ====================
+let backupInterval = 0;
+
+async function fetchBackups() {
+    if (!dashboardToken) return;
+
+    // Show loading if empty
+    const tbody = document.getElementById('backup-list-body');
+    if (tbody && tbody.children.length === 0) {
+        if(document.getElementById('backup-loading')) document.getElementById('backup-loading').style.display = 'flex';
+        if(document.getElementById('backup-empty')) document.getElementById('backup-empty').style.display = 'none';
+    }
+
+    try {
+        const res = await fetch('/api/backups', {
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const backups = await res.json();
+        renderBackups(backups);
+        
+        // Update badge
+        if(document.getElementById('backup-count-badge')) document.getElementById('backup-count-badge').textContent = backups.length;
+        
+    } catch (e) {
+        console.error('Failed to fetch backups', e);
+        showNotification('Failed to fetch backups', 'error');
+    } finally {
+        if(document.getElementById('backup-loading')) document.getElementById('backup-loading').style.display = 'none';
+    }
+}
+
+function renderBackups(backups) {
+    const tbody = document.getElementById('backup-list-body');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    if (backups.length === 0) {
+        if(document.getElementById('backup-empty')) document.getElementById('backup-empty').style.display = 'block';
+        return;
+    }
+    
+    if(document.getElementById('backup-empty')) document.getElementById('backup-empty').style.display = 'none';
+    
+    backups.forEach(backup => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--border-color)';
+        
+        const date = new Date(backup.timestamp);
+        const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        
+        tr.innerHTML = `
+            <td style="padding: 0.5rem; font-family: monospace;">${backup.name}</td>
+            <td style="padding: 0.5rem;">${formatBytes(backup.size)}</td>
+            <td style="padding: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">${dateStr}</td>
+            <td style="padding: 0.5rem; text-align: right;">
+                <button class="btn btn-secondary" onclick="restoreBackup('${backup.name}')" title="Restore this backup" style="margin-right: 0.25rem;">
+                    <span class="material-symbols-outlined" style="font-size: 1rem;">history</span>
+                </button>
+                <button class="btn btn-danger" onclick="deleteBackup('${backup.name}')" title="Delete backup">
+                    <span class="material-symbols-outlined" style="font-size: 1rem;">delete</span>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+async function createBackup() {
+    if (!dashboardToken) return;
+    
+    showNotification('Starting backup...', 'success');
+    
+    try {
+        const res = await fetch('/api/backup/create', {
+            method: 'POST',
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            showNotification('Backup created successfully', 'success');
+            fetchBackups();
+        } else {
+            showNotification(data.error || 'Backup failed', 'error');
+        }
+    } catch (e) {
+        showNotification('Backup request failed', 'error');
+    }
+}
+
+async function restoreBackup(name) {
+    if (!await customConfirm(`Are you sure you want to restore "${name}"?
+    
+WARNING: This will:
+1. Kick all players
+2. Unload all worlds
+3. Overwrite current world data
+4. Reload worlds (may require server restart if file locks persist)
+
+Current progress since this backup will be LOST!`, 'CONFIRM RESTORE', true)) return;
+    
+    showNotification('Initiating restore...', 'success');
+    
+    try {
+        const res = await fetch('/api/backup/restore', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken 
+            },
+            body: JSON.stringify({ name: name })
+        });
+        const data = await res.json();
+        
+        if (data.status === 'restore_started') {
+            showNotification('Restore started. Check server console/logs.', 'success');
+        } else {
+            showNotification(data.error || 'Restore failed', 'error');
+        }
+    } catch (e) {
+        showNotification('Restore request failed', 'error');
+    }
+}
+
+async function deleteBackup(name) {
+    if (!await customConfirm(`Delete backup "${name}"? This cannot be undone.`, 'Delete Backup', true)) return;
+    
+    try {
+        const res = await fetch('/api/backup/delete', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken 
+            },
+            body: JSON.stringify({ name: name })
+        });
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            showNotification('Backup deleted', 'success');
+            fetchBackups();
+        } else {
+            showNotification(data.error || 'Failed to delete backup', 'error');
+        }
+    } catch (e) {
+        showNotification('Delete request failed', 'error');
+    }
+}
+
+async function updateBackupSchedule() {
+    const input = document.getElementById('backup-interval-input');
+    const interval = parseInt(input.value);
+    
+    if (isNaN(interval) || interval < 0) {
+        showNotification('Invalid interval', 'error');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/backup/schedule', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken 
+            },
+            body: JSON.stringify({ intervalMinutes: interval })
+        });
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            showNotification('Backup schedule updated', 'success');
+        } else {
+            showNotification(data.error || 'Failed to update schedule', 'error');
+        }
+    } catch (e) {
+        showNotification('Schedule update failed', 'error');
+    }
+}

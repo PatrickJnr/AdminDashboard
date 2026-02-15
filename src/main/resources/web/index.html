@@ -299,6 +299,55 @@
                     </div>
                 </div>
             </div>
+            
+            <div class="hytale-panel" style="margin-top: 1rem;">
+                <div class="hytale-panel-inner">
+                    <div class="card-header">
+                        <div>
+                            <h2 style="display: inline;">Backups</h2>
+                            <span id="backup-count-badge" class="mod-count-badge">0</span>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <div class="backup-schedule-controls" style="display: flex; align-items: center; gap: 0.5rem; margin-right: 1rem;">
+                                <span style="font-size: 0.8125rem; color: var(--text-secondary);">Auto-Backup (min):</span>
+                                <input type="number" id="backup-interval-input" class="search-input" style="width: 60px; padding: 0.25rem;" min="0" placeholder="Off">
+                                <button class="btn btn-secondary" onclick="updateBackupSchedule()" title="Save Schedule">
+                                    <span class="material-symbols-outlined">save</span>
+                                </button>
+                            </div>
+                            <button class="btn btn-secondary" onclick="createBackup()">
+                                <span class="material-symbols-outlined">add_circle</span>
+                                Create Backup
+                            </button>
+                            <button class="btn btn-secondary" onclick="fetchBackups()">
+                                <span class="material-symbols-outlined">refresh</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="management-content">
+                         <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="text-align: left; border-bottom: 1px solid var(--border-color);">
+                                    <th style="padding: 0.5rem;">Filename</th>
+                                    <th style="padding: 0.5rem;">Size</th>
+                                    <th style="padding: 0.5rem;">Date</th>
+                                    <th style="padding: 0.5rem; text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="backup-list-body">
+                            </tbody>
+                        </table>
+                        <div id="backup-loading" style="display: none; justify-content: center; padding: 2rem;">
+                            <div class="spinner"></div>
+                        </div>
+                        <div id="backup-empty" style="display: none; text-align: center; padding: 2rem; color: var(--text-secondary);">
+                            <span class="material-symbols-outlined" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;">dns</span>
+                            No backups found
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
         </div>
             </div>
         </div>

@@ -10,6 +10,7 @@ import uk.co.grimtech.admin.web.ChatLog;
 import uk.co.grimtech.admin.web.HytaleHttpServer;
 import uk.co.grimtech.admin.util.MuteTracker;
 import uk.co.grimtech.admin.util.WarpManager;
+import uk.co.grimtech.admin.util.BackupManager;
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.FileReader;
@@ -24,6 +25,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
     private static String adminToken;
     private static boolean loggingEnabled = false; // Default to false for production
     private static int port = 9081; // Default port
+    private static int backupInterval = 0; // Default disabled
     private HytaleHttpServer httpServer;
 
     // Public getter for plugin instance
@@ -64,6 +66,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
         // Load data trackers
         MuteTracker.load();
         WarpManager.load();
+        BackupManager.setSchedule(backupInterval);
         LOGGER.info("[AdminWebDash] Data trackers initialized");
 
         try {
@@ -127,6 +130,9 @@ public class AdminWebDashPlugin extends JavaPlugin {
                     if (config.has("adminToken")) {
                         adminToken = config.get("adminToken").getAsString();
                     }
+                    if (config.has("backupInterval")) {
+                        backupInterval = config.get("backupInterval").getAsInt();
+                    }
                     if (config.has("loggingEnabled")) {
                         loggingEnabled = config.get("loggingEnabled").getAsBoolean();
                     }
@@ -156,6 +162,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
             // Save config with all settings
             JsonObject config = new JsonObject();
             config.addProperty("port", port);
+            config.addProperty("backupInterval", backupInterval);
             config.addProperty("adminToken", adminToken);
             config.addProperty("loggingEnabled", loggingEnabled);
             try (FileWriter writer = new FileWriter(configFile)) {
