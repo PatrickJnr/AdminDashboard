@@ -1652,11 +1652,17 @@ let confirmResolve = null;
 let promptResolve = null;
 
 // Custom confirm dialog
-function customConfirm(message, title = 'Confirm Action', isDanger = false) {
+function customConfirm(message, title = 'Confirm Action', isDanger = false, allowHtml = false) {
     return new Promise((resolve) => {
         confirmResolve = resolve;
         document.getElementById('confirm-title').textContent = title;
-        document.getElementById('confirm-message').textContent = message;
+        
+        const msgEl = document.getElementById('confirm-message');
+        if (allowHtml) {
+            msgEl.innerHTML = message;
+        } else {
+            msgEl.textContent = message;
+        }
         
         const confirmBtn = document.getElementById('confirm-btn');
         if (isDanger) {
@@ -2139,15 +2145,17 @@ async function createBackup() {
 }
 
 async function restoreBackup(name) {
-    if (!await customConfirm(`Are you sure you want to restore "${name}"?
-    
-WARNING: This will:
-1. Kick all players
-2. Unload all worlds
-3. Overwrite current world data
-4. Reload worlds (may require server restart if file locks persist)
+    const msg = `Are you sure you want to restore "<b>${name}</b>"?<br><br>
+    <strong style="color: #ff4444;">WARNING: This will:</strong>
+    <ul style="text-align: left; margin: 10px 0; padding-left: 20px;">
+        <li>Kick all players</li>
+        <li>Unload all worlds</li>
+        <li>Overwrite current world data</li>
+        <li>Reload worlds (may require restart)</li>
+    </ul>
+    Current progress since this backup will be <strong>LOST!</strong>`;
 
-Current progress since this backup will be LOST!`, 'CONFIRM RESTORE', true)) return;
+    if (!await customConfirm(msg, 'CONFIRM RESTORE', true, true)) return;
     
     showNotification('Initiating restore...', 'success');
     
