@@ -389,6 +389,15 @@
                                 Built with performance and usability in mind, it integrates seamlessly with the Hytale server environment 
                                 to give administrators the tools they need to manage their communities effectively.
                             </p>
+                            
+                            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--text-primary); font-size: 0.9rem;">Direct Navigation Paths</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem;">
+                                <code style="background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; font-family: 'Monaco', monospace; font-size: 0.8rem;">/server</code>
+                                <code style="background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; font-family: 'Monaco', monospace; font-size: 0.8rem;">/players</code>
+                                <code style="background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; font-family: 'Monaco', monospace; font-size: 0.8rem;">/moderation</code>
+                                <code style="background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; font-family: 'Monaco', monospace; font-size: 0.8rem;">/world</code>
+                                <code style="background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; font-family: 'Monaco', monospace; font-size: 0.8rem;">/info</code>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -415,6 +424,24 @@
                             <div class="system-stat-row">
                                 <span class="system-stat-label">CPU Cores</span>
                                 <span class="system-stat-value" id="sys-cores">Loading...</span>
+                            </div>
+                            <div class="system-stat-row has-progress" style="grid-column: span 2;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                    <span class="system-stat-label">Memory Usage</span>
+                                    <span class="system-stat-value" id="sys-memory-text">...</span>
+                                </div>
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar-fill" id="sys-memory-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="system-stat-row has-progress" style="grid-column: span 2;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                    <span class="system-stat-label">Disk Usage</span>
+                                    <span class="system-stat-value" id="sys-disk-text">...</span>
+                                </div>
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar-fill" id="sys-disk-bar" style="width: 0%"></div>
+                                </div>
                             </div>
                         </div>
                     </div>

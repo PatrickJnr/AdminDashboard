@@ -1,18 +1,25 @@
 
 
 
-function switchTab(tabName) {
+const routes = {
+    '/': 'server',
+    '/dashboard': 'server',
+    '/server': 'server',
+    '/players': 'player',
+    '/moderation': 'moderation',
+    '/world': 'world',
+    '/info': 'info'
+};
 
+function switchTab(tabName, updateHistory = true) {
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
-    
 
     const selectedTab = document.getElementById('tab-' + tabName);
     if (selectedTab) {
         selectedTab.classList.add('active');
     }
-    
 
     document.querySelectorAll('.sidebar-item').forEach(item => {
         item.classList.remove('active');
@@ -21,7 +28,24 @@ function switchTab(tabName) {
     if (activeItem) {
         activeItem.classList.add('active');
     }
+
+    // history.pushState
+    if (updateHistory) {
+        const path = '/' + tabName;
+        history.pushState({ tab: tabName }, '', path);
+    }
 }
+
+window.addEventListener('popstate', (event) => {
+    if (event.state && event.state.tab) {
+        switchTab(event.state.tab, false);
+    } else {
+        // Fallback for initial load or external navigation
+        const path = window.location.pathname;
+        const tab = routes[path] || 'server';
+        switchTab(tab, false);
+    }
+});
 
 let allPlayers = [];
 let dashboardToken = localStorage.getItem('hytale_admin_token');
@@ -188,6 +212,24 @@ async function fetchVersion() {
             if (data.osName) document.getElementById('sys-os-name').textContent = data.osName;
             if (data.osArch) document.getElementById('sys-os-arch').textContent = data.osArch;
             if (data.cores) document.getElementById('sys-cores').textContent = data.cores;
+
+            // Update Memory Stats
+            if (data.heapUsed && data.heapMax) {
+                const memPct = Math.round((data.heapUsed / data.heapMax) * 100);
+                const memText = document.getElementById('sys-memory-text');
+                const memBar = document.getElementById('sys-memory-bar');
+                if (memText) memText.textContent = `${formatBytes(data.heapUsed)} / ${formatBytes(data.heapMax)}`;
+                if (memBar) memBar.style.width = `${memPct}%`;
+            }
+
+            // Update Disk Stats
+            if (data.diskUsed && data.diskTotal) {
+                const diskPct = Math.round((data.diskUsed / data.diskTotal) * 100);
+                const diskText = document.getElementById('sys-disk-text');
+                const diskBar = document.getElementById('sys-disk-bar');
+                if (diskText) diskText.textContent = `${formatBytes(data.diskUsed)} / ${formatBytes(data.diskTotal)}`;
+                if (diskBar) diskBar.style.width = `${diskPct}%`;
+            }
         }
     } catch (e) {
         document.getElementById('sidebar-version').textContent = 'v1.0.0';
@@ -428,6 +470,10 @@ async function fetchMods() {
         // Sort mods alphabetically by name
         mods.sort((a, b) => a.name.localeCompare(b.name));
         
+        // Initialize Router
+    const initialPath = window.location.pathname;
+    const initialTab = routes[initialPath] || 'server';
+    switchTab(initialTab, false); // Don't push state on initial load
         // Update counts
         document.getElementById('mod-count').textContent = mods.length;
         const modCountBadgeServer = document.getElementById('mod-count-badge-server');

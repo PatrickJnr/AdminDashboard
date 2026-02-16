@@ -204,6 +204,25 @@ public class DashboardAPI {
         version.addProperty("osArch", System.getProperty("os.arch"));
         version.addProperty("cores", Runtime.getRuntime().availableProcessors());
         
+        // Memory Usage (Heap)
+        Runtime runtime = Runtime.getRuntime();
+        long maxMemory = runtime.maxMemory();
+        long totalMemory = runtime.totalMemory();
+        long freeMemory = runtime.freeMemory();
+        long usedMemory = totalMemory - freeMemory;
+        
+        version.addProperty("heapUsed", usedMemory);
+        version.addProperty("heapMax", maxMemory);
+        
+        // Disk Usage (Current Partition)
+        java.io.File root = new java.io.File(".");
+        long totalSpace = root.getTotalSpace();
+        long freeSpace = root.getUsableSpace();
+        long usedSpace = totalSpace - freeSpace;
+        
+        version.addProperty("diskUsed", usedSpace);
+        version.addProperty("diskTotal", totalSpace);
+        
         return GSON.toJson(version);
     }
 

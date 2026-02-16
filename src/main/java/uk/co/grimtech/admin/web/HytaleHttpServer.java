@@ -49,20 +49,19 @@ public class HytaleHttpServer {
         public void handle(HttpExchange t) throws IOException {
             String path = t.getRequestURI().getPath();
             
-            // Redirect root to versioned path to bust cache
-            if (path.equals("/")) {
-                String version = String.valueOf(System.currentTimeMillis());
-                t.getResponseHeaders().set("Location", "/dashboard.html?v=" + version);
-                t.sendResponseHeaders(302, -1);
-                t.close();
-                return;
+            // Clean URL Routing: Serve index.html for known routes
+            if (path.equals("/") || 
+                path.equals("/dashboard") || 
+                path.equals("/server") || 
+                path.equals("/players") || 
+                path.equals("/moderation") || 
+                path.equals("/world") || 
+                path.equals("/info")) {
+                
+                path = "/index.html";
             }
             
-            // Strip query parameters for file lookup
-            if (path.contains("?")) {
-                path = path.substring(0, path.indexOf("?"));
-            }
-            
+            // Legacy redirect (optional, but good for compatibility)
             if (path.equals("/dashboard.html")) {
                 path = "/index.html";
             }
