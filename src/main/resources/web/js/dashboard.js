@@ -8,6 +8,9 @@ const routes = {
     '/players': 'player',
     '/moderation': 'moderation',
     '/world': 'world',
+    '/metrics': 'metrics',
+    '/logs': 'logs',
+    '/config': 'config',
     '/info': 'info'
 };
 
@@ -635,95 +638,6 @@ async function viewBansFile() {
     }
 }
 
-function closeBansFileModal() {
-    document.getElementById('bans-file-modal').classList.remove('active');
-}
-
-async function refreshBansFile() {
-    await viewBansFile();
-    showNotification('File refreshed', 'success');
-}
-
-function copyBansFile() {
-    const content = document.getElementById('bans-file-content').textContent;
-    navigator.clipboard.writeText(content).then(() => {
-        showNotification('Copied to clipboard', 'success');
-    }).catch(() => {
-        showNotification('Failed to copy to clipboard', 'error');
-    });
-}
-
-// Console Mode
-let currentConsoleMode = 'chat';
-
-function switchConsoleTab(mode) {
-    const isConsole = mode === 'console';
-    setConsoleMode(isConsole);
-    if (isConsole) {
-        fetchConsole();
-    } else {
-        fetchChat();
-    }
-}
-
-function setConsoleMode(enabled) {
-    currentConsoleMode = enabled ? 'console' : 'chat'; // Update currentConsoleMode based on 'enabled'
-    
-    // Update buttons
-    const chatBtn = document.getElementById('btn-mode-chat');
-    const consoleBtn = document.getElementById('btn-mode-console');
-    
-    if (!enabled) { // If chat mode is enabled (i.e., console mode is disabled)
-        chatBtn.classList.replace('btn-secondary', 'btn-primary');
-        consoleBtn.classList.replace('btn-primary', 'btn-secondary');
-        document.getElementById('console-header-title').textContent = 'Server Chat';
-    } else { // If console mode is enabled
-        chatBtn.classList.replace('btn-primary', 'btn-secondary');
-        consoleBtn.classList.replace('btn-secondary', 'btn-primary');
-        document.getElementById('console-header-title').textContent = 'Server Console';
-        fetchConsole();
-    }
-    
-    // Clear container
-    const container = document.getElementById('console-log');
-    container.innerHTML = '<div class="console-entry">Loading...</div>';
-}
-
-async function fetchChat() {
-    if (!dashboardToken) return;
-    if (currentConsoleMode !== 'chat') return;
-    try {
-        const res = await fetch('/api/chat', {
-            headers: { 'X-Admin-Token': dashboardToken }
-        });
-        const messages = await res.json();
-        renderChat(messages);
-    } catch (e) {
-        console.error('Failed to fetch chat', e);
-    }
-}
-
-function renderChat(messages) {
-    const container = document.getElementById('console-log');
-    const atBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
-    
-    container.innerHTML = '';
-    messages.forEach(msg => {
-        const div = document.createElement('div');
-        div.className = 'console-entry';
-        const timeStr = new Date(msg.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        div.innerHTML = `
-            <span class="console-time">[${timeStr}]</span>
-            <span class="console-sender">${msg.sender}:</span>
-            <span>${msg.message}</span>
-        `;
-        container.appendChild(div);
-    });
-
-    if (atBottom) {
-        container.scrollTop = container.scrollHeight;
-    }
-}
 
 function renderPlayers() {
     const tbody = document.getElementById('player-table-body');
@@ -934,38 +848,6 @@ async function kickPlayer(uuid) {
 // Actions Modal
 let currentActionPlayer = { uuid: null, name: null };
 
-function openActionsModal(uuid, name) {
-    currentActionPlayer = { uuid, name };
-    document.getElementById('actions-player-name').textContent = `${name} - Actions`;
-    
-    // Set up event listeners for action buttons
-    document.getElementById('action-inventory').onclick = () => {
-        closeActionsModal();
-        viewInv(uuid);
-    };
-    
-    document.getElementById('action-teleport').onclick = () => {
-        closeActionsModal();
-        teleportToPlayer(uuid, name);
-    };
-    
-    document.getElementById('action-op').onclick = () => {
-        closeActionsModal();
-        toggleOP(uuid, name);
-    };
-    
-    document.getElementById('action-ban').onclick = () => {
-        closeActionsModal();
-        banPlayer(uuid, name);
-    };
-    
-    document.getElementById('action-kick').onclick = () => {
-        closeActionsModal();
-        kickPlayer(uuid);
-    };
-    
-    document.getElementById('actions-modal').classList.add('active');
-}
 
 function closeActionsModal() {
     document.getElementById('actions-modal').classList.remove('active');
@@ -1670,17 +1552,95 @@ function openActionsModal(uuid, name) {
     document.getElementById('actions-modal').classList.add('active');
 }
 
+function renderWorlds(worlds) {
+    const container = document.getElementById('world-list-container');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    worlds.forEach(world => {
+        const div = document.createElement('div');
+        div.className = 'ban-item';
+        div.innerHTML = `
+            <div class="ban-info">
+                <div class="ban-uuid" style="font-weight: 600; color: var(--hytale-gold);">${world.name}</div>
+                <div class="ban-reason">${world.loaded ? 'Loaded' : 'Unloaded'} - ${world.players || 0} Players</div>
+                <div class="ban-date">${world.loaded ? (world.ticking ? 'Ticking' : 'Paused') : 'Inactive'}</div>
+            </div>
+            <div class="ban-actions" style="display: flex; gap: 0.5rem;">
+                ${world.loaded ? `
+                    <button class="btn btn-secondary" onclick="toggleWorldState('${world.name}', ${!world.ticking})">
+                        <span class="material-symbols-outlined">${world.ticking ? 'pause' : 'play_arrow'}</span>
+                        ${world.ticking ? 'Pause' : 'Resume'}
+                    </button>
+                    <button class="btn btn-danger" onclick="unloadWorld('${world.name}')">Unload</button>
+                ` : `
+                    <button class="btn btn-primary" onclick="loadWorld('${world.name}')">Load</button>
+                `}
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+async function fetchWorlds() {
+    if (!dashboardToken) return;
+    try {
+        const res = await fetch('/api/worlds/list', { headers: { 'X-Admin-Token': dashboardToken } });
+        const worlds = await res.json();
+        renderWorlds(worlds);
+    } catch (e) { console.error('Failed to fetch worlds', e); }
+}
+
+async function loadWorld(name) {
+    try {
+        await fetch('/api/worlds/load', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Token': dashboardToken },
+            body: JSON.stringify({ name })
+        });
+        showNotification(`Loading world: ${name}`, 'success');
+        fetchWorlds();
+    } catch (e) { showNotification('Failed to load world', 'error'); }
+}
+
+async function unloadWorld(name) {
+    if (!await customConfirm(`Unload world "${name}"?`, 'Confirm Unload', true)) return;
+    try {
+        await fetch('/api/worlds/unload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Token': dashboardToken },
+            body: JSON.stringify({ name })
+        });
+        showNotification(`Unloading world: ${name}`, 'success');
+        fetchWorlds();
+    } catch (e) { showNotification('Failed to unload world', 'error'); }
+}
+
+async function toggleWorldState(name, ticking) {
+    try {
+        await fetch('/api/worlds/state', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Token': dashboardToken },
+            body: JSON.stringify({ name, ticking })
+        });
+        fetchWorlds();
+    } catch (e) { showNotification('Failed to toggle world state', 'error'); }
+}
+
 // Update startSync to fetch new data
 function startSync() {
     setInterval(fetchStats, 2000);
-    setInterval(fetchStats, 2000);
+    setInterval(fetchAdvancedMetrics, 2000);
     setInterval(() => {
         if (currentConsoleMode === 'chat') fetchChat();
         else fetchConsole();
     }, 2000);
     setInterval(fetchMutes, 5000);
     setInterval(fetchWarps, 10000);
+    setInterval(fetchWorlds, 5000);
+    
     fetchStats();
+    fetchAdvancedMetrics();
     fetchMods();
     fetchBannedPlayers();
     fetchChat();
@@ -1688,6 +1648,234 @@ function startSync() {
     fetchWarps();
     fetchBackups();
     fetchVersion();
+    fetchLogs();
+    fetchConfig();
+    fetchWorlds();
+}
+
+// Metrics Implementation
+let metricsChart = null;
+const MAX_METRICS_POINTS = 30;
+let metricsData = {
+    labels: [],
+    cpu: [],
+    memory: [],
+    tps: []
+};
+
+function initMetricsChart() {
+    const ctx = document.getElementById('metricsChart');
+    if (!ctx) return;
+
+    metricsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: metricsData.labels,
+            datasets: [
+                {
+                    label: 'CPU (%)',
+                    data: metricsData.cpu,
+                    borderColor: '#efa3e3',
+                    backgroundColor: 'rgba(239, 163, 227, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Memory (GB)',
+                    data: metricsData.memory,
+                    borderColor: '#a3cf93',
+                    backgroundColor: 'rgba(163, 207, 147, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'TPS',
+                    data: metricsData.tps,
+                    borderColor: '#f4d06f',
+                    backgroundColor: 'rgba(244, 208, 111, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    yAxisID: 'y-tps'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: 'rgba(255, 255, 255, 0.5)' }
+                },
+                'y-tps': {
+                    position: 'right',
+                    beginAtZero: true,
+                    max: 20,
+                    grid: { display: false },
+                    ticks: { color: 'rgba(244, 208, 111, 0.5)' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { display: false }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: { color: '#fff', boxWidth: 12, usePointStyle: true }
+                }
+            }
+        }
+    });
+}
+
+async function fetchAdvancedMetrics() {
+    if (!dashboardToken) return;
+    try {
+        const res = await fetch('/api/metrics', {
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const data = await res.json();
+        
+        // Update Chart
+        const now = new Date().toLocaleTimeString();
+        metricsData.labels.push(now);
+        metricsData.cpu.push(data.processCpuLoad * 100);
+        metricsData.memory.push(data.heapUsed / (1024 * 1024 * 1024));
+        metricsData.tps.push(data.tps);
+        
+        if (metricsData.labels.length > MAX_METRICS_POINTS) {
+            metricsData.labels.shift();
+            metricsData.cpu.shift();
+            metricsData.memory.shift();
+            metricsData.tps.shift();
+        }
+        
+        if (!metricsChart) {
+            initMetricsChart();
+        } else {
+            metricsChart.update('none');
+        }
+        
+        // Update counters
+        const elCpu = document.getElementById('metric-cpu');
+        const elMem = document.getElementById('metric-mem');
+        const elThreads = document.getElementById('metric-threads');
+        const elGC = document.getElementById('metric-gc');
+        
+        if (elCpu) elCpu.textContent = Math.round(data.processCpuLoad * 100) + '%';
+        if (elMem) elMem.textContent = (data.heapUsed / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+        if (elThreads) elThreads.textContent = data.threadCount;
+        if (elGC) elGC.textContent = data.gcCollections;
+        
+    } catch (e) { console.error('Metrics fetch failed', e); }
+}
+
+// Logs Implementation
+async function fetchLogs() {
+    if (!dashboardToken) return;
+    try {
+        const res = await fetch('/api/logs/list', { headers: { 'X-Admin-Token': dashboardToken } });
+        const logs = await res.json();
+        renderLogList(logs);
+    } catch (e) { console.error('Failed to fetch logs', e); }
+}
+
+function renderLogList(logs) {
+    const container = document.getElementById('log-file-list');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    logs.forEach(log => {
+        const div = document.createElement('div');
+        div.className = 'plugin-item';
+        div.style.cursor = 'pointer';
+        div.innerHTML = `
+            <div class="plugin-info">
+                <span class="material-symbols-outlined">description</span>
+                <div>
+                    <div style="font-weight: 600;">${log.name}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">${formatBytes(log.size)} - ${new Date(log.modified).toLocaleString()}</div>
+                </div>
+            </div>
+        `;
+        div.onclick = () => viewLog(log.name);
+        container.appendChild(div);
+    });
+}
+
+async function viewLog(name) {
+    try {
+        const res = await fetch(`/api/logs/view?name=${encodeURIComponent(name)}`, {
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const data = await res.json();
+        const viewer = document.getElementById('log-viewer-content');
+        if (viewer) {
+            viewer.textContent = data.content;
+            viewer.scrollTop = viewer.scrollHeight;
+        }
+        const nameDisplay = document.getElementById('current-log-name');
+        if (nameDisplay) nameDisplay.textContent = name;
+    } catch (e) { showNotification('Failed to load log', 'error'); }
+}
+
+async function downloadLog() {
+    const name = document.getElementById('current-log-name').textContent;
+    if (!name || name === 'Select a log file') return;
+    window.open(`/api/logs/download?name=${encodeURIComponent(name)}&token=${dashboardToken}`, '_blank');
+}
+
+// Config Implementation
+async function fetchConfig() {
+    if (!dashboardToken) return;
+    try {
+        const res = await fetch('/api/config/get', { headers: { 'X-Admin-Token': dashboardToken } });
+        const config = await res.json();
+        
+        if (document.getElementById('cfg-serverName')) document.getElementById('cfg-serverName').value = config.serverName;
+        if (document.getElementById('cfg-motd')) document.getElementById('cfg-motd').value = config.motd;
+        if (document.getElementById('cfg-maxPlayers')) document.getElementById('cfg-maxPlayers').value = config.maxPlayers;
+        if (document.getElementById('cfg-viewRadius')) document.getElementById('cfg-viewRadius').value = config.maxViewRadius;
+        
+        // Render log levels
+        const llContainer = document.getElementById('log-levels-list');
+        if (llContainer) {
+            llContainer.innerHTML = '';
+            for (const [pkg, level] of Object.entries(config.logLevels)) {
+                const div = document.createElement('div');
+                div.className = 'plugin-item';
+                div.innerHTML = `
+                    <div style="flex:1; font-family: monospace; font-size: 0.875rem;">${pkg}</div>
+                    <div style="font-weight: 600; color: var(--hytale-gold);">${level}</div>
+                `;
+                llContainer.appendChild(div);
+            }
+        }
+    } catch (e) { console.error('Failed to fetch config', e); }
+}
+
+async function updateConfig() {
+    const payload = {
+        serverName: document.getElementById('cfg-serverName').value,
+        motd: document.getElementById('cfg-motd').value,
+        maxPlayers: parseInt(document.getElementById('cfg-maxPlayers').value)
+    };
+    
+    try {
+        const res = await fetch('/api/config/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Token': dashboardToken },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+            showNotification('Server configuration updated', 'success');
+        } else {
+            showNotification(data.error || 'Failed to update config', 'error');
+        }
+    } catch (e) { showNotification('Update request failed', 'error'); }
 }
 
 // Time Control
@@ -1817,6 +2005,77 @@ function closePromptModal(result) {
     }
 }
 
+let currentConsoleMode = 'chat';
+let lastChatId = 0;
+
+function switchConsoleTab(mode) {
+    currentConsoleMode = mode;
+    const btnChat = document.getElementById('btn-mode-chat');
+    const btnConsole = document.getElementById('btn-mode-console');
+    const header = document.getElementById('console-header-title');
+    
+    if (btnChat) btnChat.className = mode === 'chat' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+    if (btnConsole) btnConsole.className = mode === 'console' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+    
+    if (header) header.textContent = mode === 'chat' ? 'Server Chat' : 'Server Console';
+    
+    const container = document.getElementById('console-log');
+    if (container) container.innerHTML = `<div class="console-entry">Switching to ${mode}...</div>`;
+    
+    if (mode === 'chat') fetchChat();
+    else fetchConsole();
+}
+
+async function fetchChat() {
+    if (!dashboardToken) return;
+    if (currentConsoleMode !== 'chat') return;
+    
+    try {
+        const res = await fetch('/api/chat', {
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const messages = await res.json();
+        renderChat(messages);
+    } catch (e) {
+        console.error('Failed to fetch chat', e);
+    }
+}
+
+function renderChat(messages) {
+    const container = document.getElementById('console-log');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (messages.length === 0) {
+        container.innerHTML = '<div class="console-entry" style="opacity: 0.5;">No chat messages yet.</div>';
+        return;
+    }
+    
+    messages.forEach(msg => {
+        const div = document.createElement('div');
+        div.className = 'chat-entry';
+        const date = new Date(msg.timestamp);
+        const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        
+        div.innerHTML = `
+            <span class="chat-time">[${timeStr}]</span>
+            <span class="chat-author" style="color: var(--hytale-gold); font-weight: 600;">${msg.sender}:</span>
+            <span class="chat-message">${msg.message}</span>
+        `;
+        container.appendChild(div);
+    });
+    
+    chatAutoScroll();
+}
+
+function chatAutoScroll() {
+    const container = document.getElementById('console-log');
+    if (container) {
+        container.scrollTop = container.scrollHeight;
+    }
+}
+
 // Custom alert dialog
 function customAlert(message, title = 'Notice') {
     return new Promise((resolve) => {
@@ -1876,7 +2135,7 @@ function renderConsole(data) {
     chatAutoScroll();
 }
 
-function chatAutoScroll() {
+function closeAlertModal() {
     document.getElementById('alert-modal').classList.remove('active');
     if (window.alertResolve) {
         window.alertResolve();
@@ -1906,9 +2165,38 @@ document.getElementById('confirm-modal').addEventListener('click', (e) => {
 document.getElementById('prompt-modal').addEventListener('click', (e) => {
     if (e.target.id === 'prompt-modal') closePromptModal(null);
 });
-document.getElementById('alert-modal').addEventListener('click', (e) => {
-    if (e.target.id === 'alert-modal') closeAlertModal();
-});
+// Moderation File Viewing
+async function viewBansFile() {
+    try {
+        const res = await fetch('/api/bans/raw', {
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const data = await res.json();
+        
+        document.getElementById('bans-file-path').textContent = data.path || 'Unknown';
+        document.getElementById('bans-file-modified').textContent = data.modified || 'Unknown';
+        document.getElementById('bans-file-content').textContent = data.content || '[]';
+        
+        document.getElementById('bans-file-modal').classList.add('active');
+    } catch (e) {
+        showNotification('Failed to read bans file', 'error');
+    }
+}
+
+function closeBansFileModal() {
+    document.getElementById('bans-file-modal').classList.remove('active');
+}
+
+function refreshBansFile() {
+    viewBansFile();
+}
+
+function copyBansFile() {
+    const content = document.getElementById('bans-file-content').textContent;
+    navigator.clipboard.writeText(content).then(() => {
+        showNotification('Copied to clipboard!', 'success');
+    });
+}
 
 
 // ==================== IMPROVED GAMEMODE MODAL ====================
@@ -2471,4 +2759,42 @@ async function updateBackupSchedule() {
     } catch (e) {
         showNotification('Schedule update failed', 'error');
     }
+}
+
+// Alias for saveConfig used in index.html
+function saveConfig() {
+    updateConfig();
+}
+
+function clearLogViewer() {
+    const viewer = document.getElementById('log-viewer-content');
+    if (viewer) viewer.textContent = 'Select a log file to view...';
+    const nameDisplay = document.getElementById('current-log-name');
+    if (nameDisplay) nameDisplay.textContent = 'Select a log file';
+}
+
+async function addLogLevel() {
+    const pkg = document.getElementById('new-log-pkg').value.trim();
+    const level = document.getElementById('new-log-lvl').value;
+    
+    if (!pkg) {
+        showNotification('Please enter a package name', 'error');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/config/loglevel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Token': dashboardToken },
+            body: JSON.stringify({ package: pkg, level: level })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showNotification(`Log level set for ${pkg}`, 'success');
+            fetchConfig();
+            document.getElementById('new-log-pkg').value = '';
+        } else {
+            showNotification(data.error || 'Failed to set log level', 'error');
+        }
+    } catch (e) { showNotification('Request failed', 'error'); }
 }

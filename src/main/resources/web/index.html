@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&family=Lexend:wght@700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div id="login-overlay" class="login-overlay">
@@ -50,6 +51,18 @@
                 <button class="sidebar-item" onclick="switchTab('world')" data-tab="world" title="World">
                     <span class="material-symbols-outlined">public</span>
                     <span class="sidebar-label">World</span>
+                </button>
+                <button class="sidebar-item" onclick="switchTab('metrics')" data-tab="metrics" title="Metrics">
+                    <span class="material-symbols-outlined">monitoring</span>
+                    <span class="sidebar-label">Metrics</span>
+                </button>
+                <button class="sidebar-item" onclick="switchTab('logs')" data-tab="logs" title="Logs">
+                    <span class="material-symbols-outlined">description</span>
+                    <span class="sidebar-label">Logs</span>
+                </button>
+                <button class="sidebar-item" onclick="switchTab('config')" data-tab="config" title="Config">
+                    <span class="material-symbols-outlined">settings</span>
+                    <span class="sidebar-label">Config</span>
                 </button>
                 <button class="sidebar-item" onclick="switchTab('server')" data-tab="server" title="Server">
                     <span class="material-symbols-outlined">dns</span>
@@ -291,6 +304,140 @@
                             <div id="warp-list" class="ban-list"></div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="tab-content" id="tab-metrics">
+            <div class="stats-grid" style="margin-bottom: 2rem;">
+                <div class="stat-card hytale-panel">
+                    <div class="hytale-panel-inner">
+                        <div class="stat-label">
+                            <span class="material-symbols-outlined">analytics</span>
+                            CPU Usage
+                        </div>
+                        <div id="metric-cpu" class="stat-value">0%</div>
+                    </div>
+                </div>
+                <div class="stat-card hytale-panel">
+                    <div class="hytale-panel-inner">
+                        <div class="stat-label">
+                            <span class="material-symbols-outlined">memory</span>
+                            JVM Memory
+                        </div>
+                        <div id="metric-mem" class="stat-value">0 GB</div>
+                    </div>
+                </div>
+                <div class="stat-card hytale-panel">
+                    <div class="hytale-panel-inner">
+                        <div class="stat-label">
+                            <span class="material-symbols-outlined">account_tree</span>
+                            Threads
+                        </div>
+                        <div id="metric-threads" class="stat-value">0</div>
+                    </div>
+                </div>
+                <div class="stat-card hytale-panel">
+                    <div class="hytale-panel-inner">
+                        <div class="stat-label">
+                            <span class="material-symbols-outlined">delete_sweep</span>
+                            GC Count
+                        </div>
+                        <div id="metric-gc" class="stat-value">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hytale-panel">
+                <div class="hytale-panel-inner">
+                    <div class="card-header">
+                        <h2>Performance History</h2>
+                    </div>
+                    <div style="height: 400px; position: relative;">
+                        <canvas id="metricsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="hytale-panel" style="margin-top: 1rem;">
+                <div class="hytale-panel-inner">
+                    <div class="card-header">
+                        <h2>World Performance (TPS)</h2>
+                    </div>
+                    <div id="world-metrics-container" class="world-metrics-list"></div>
+                </div>
+            </div>
+        </div>
+        <div class="tab-content" id="tab-logs">
+            <div class="logs-layout">
+                <div class="hytale-panel log-sidebar">
+                    <div class="hytale-panel-inner">
+                        <div class="card-header">
+                            <h2>Log Files</h2>
+                            <button class="btn btn-sm btn-secondary" onclick="fetchLogs()"><span class="material-symbols-outlined">refresh</span></button>
+                        </div>
+                        <div id="log-file-list" class="log-file-list"></div>
+                    </div>
+                </div>
+                <div class="hytale-panel log-viewer-panel">
+                    <div class="hytale-panel-inner">
+                        <div class="card-header">
+                            <h2 id="log-viewer-title">Viewer - <span id="current-log-name" style="font-size: 0.9rem; color: var(--hytale-gold);">Select a log file</span></h2>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-secondary" id="btn-download-log" onclick="downloadLog()">Download</button>
+                                <button class="btn btn-sm btn-secondary" onclick="clearLogViewer()">Clear</button>
+                            </div>
+                        </div>
+                        <pre id="log-viewer-content" class="log-viewer-content">Select a log file to view...</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="tab-content" id="tab-config">
+            <div class="hytale-panel">
+                <div class="hytale-panel-inner">
+                    <div class="card-header">
+                        <h2>Server Configuration</h2>
+                        <button class="btn btn-primary" onclick="saveConfig()">Save Changes</button>
+                    </div>
+                    <form id="config-form" class="config-form">
+                        <div class="config-section">
+                            <h3>General</h3>
+                            <div class="input-group">
+                                <label>Server Name</label>
+                                <input type="text" name="serverName">
+                            </div>
+                            <div class="input-group">
+                                <label>MOTD</label>
+                                <input type="text" name="motd">
+                            </div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label>Max Players</label>
+                                    <input type="number" name="maxPlayers">
+                                </div>
+                                <div class="input-group">
+                                    <label>Max View Radius</label>
+                                    <input type="number" name="maxViewRadius">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="config-section">
+                            <h3>Logging Levels</h3>
+                            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Note: Changes take effect immediately but may be lost on restart if not saved to disk.</p>
+                            <div id="log-level-list" class="log-level-list"></div>
+                            <div class="add-log-level">
+                                <input type="text" id="new-log-pkg" placeholder="Package (e.g. com.hypixel)">
+                                <select id="new-log-lvl">
+                                    <option value="INFO">INFO</option>
+                                    <option value="DEBUG">DEBUG</option>
+                                    <option value="WARN">WARN</option>
+                                    <option value="ERROR">ERROR</option>
+                                    <option value="TRACE">TRACE</option>
+                                </select>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="addLogLevel()">Add</button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

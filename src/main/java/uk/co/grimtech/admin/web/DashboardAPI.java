@@ -9,6 +9,7 @@ import uk.co.grimtech.admin.util.ConsoleManager;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -47,6 +48,9 @@ import com.hypixel.hytale.server.core.modules.accesscontrol.ban.InfiniteBan;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import com.hypixel.hytale.assetstore.AssetPack;
+import com.hypixel.hytale.metrics.JVMMetrics;
+import org.bson.BsonDocument;
+import org.bson.BsonValue;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -63,6 +67,7 @@ import java.util.concurrent.TimeUnit;
 public class DashboardAPI {
     private static final Gson GSON = new Gson();
     private static CustomLogger LOGGER;
+    private static long lastMetricsLogTime = 0;
     
 
     private static CustomLogger getLogger() {
@@ -98,6 +103,8 @@ public class DashboardAPI {
             return getPlayerInventory(uuidStr);
         } else if (path.equals("/api/stats")) {
             return getServerStats();
+        } else if (path.equals("/api/metrics")) {
+            return getAdvancedMetrics();
         } else if (path.equals("/api/broadcast") && method.equals("POST")) {
             return broadcastMessage(body);
         } else if (path.equals("/api/plugins")) {
@@ -178,6 +185,26 @@ public class DashboardAPI {
                 e.printStackTrace();
                 return "{\"error\": \"Internal Server Error: " + e.getMessage() + "\"}";
             }
+        } else if (path.equals("/api/logs/list")) {
+            return listLogs();
+        } else if (path.startsWith("/api/logs/view/")) {
+            String logName = path.substring("/api/logs/view/".length());
+            return viewLog(logName);
+        } else if (path.equals("/api/logs/download/")) {
+            String logName = path.substring("/api/logs/download/".length());
+            return downloadLog(logName);
+        } else if (path.equals("/api/worlds/list")) {
+            return listWorlds();
+        } else if (path.equals("/api/worlds/load") && method.equals("POST")) {
+            return loadWorld(body);
+        } else if (path.equals("/api/worlds/unload") && method.equals("POST")) {
+            return unloadWorld(body);
+        } else if (path.equals("/api/worlds/state") && method.equals("POST")) {
+            return toggleWorldState(body);
+        } else if (path.equals("/api/config/get")) {
+            return getServerConfig();
+        } else if (path.equals("/api/config/set") && method.equals("POST")) {
+            return updateServerConfig(body);
         }
         
         return "{\"error\": \"Invalid endpoint\"}";
@@ -633,6 +660,321 @@ public class DashboardAPI {
         stats.addProperty("memoryPercent", Math.round((double) usedMemory / maxMemory * 100.0));
 
         return GSON.toJson(stats);
+    }
+
+    private static String getAdvancedMetrics() {
+        try {
+            JsonObject root = new JsonObject();
+            
+            // JVM Metrics Registration Dump
+            BsonDocument jvmBson = JVMMetrics.METRICS_REGISTRY.dumpToBson(null).asDocument();
+            JsonObject jvmJson = bsonToJson(jvmBson);
+            
+            // Log structure for debugging if missing fields
+            if (!jvmJson.has("System")) {
+                getLogger().info("[Metrics] Missing 'System' key in JVM metrics. Keys found: " + jvmJson.keySet());
+            }
+            
+            // 1. CPU Usage (Process CPU Load)
+            double cpu = 0;
+            if (jvmJson.has("System") && jvmJson.getAsJsonObject("System").has("ProcessCpuLoad")) {
+                cpu = jvmJson.getAsJsonObject("System").get("ProcessCpuLoad").getAsDouble();
+            }
+            root.addProperty("processCpuLoad", cpu);
+            
+            // 2. Memory Usage (Heap Used)
+            long heapUsed = 0;
+            if (jvmJson.has("Memory") && jvmJson.getAsJsonObject("Memory").has("HeapMemoryUsage")) {
+                heapUsed = jvmJson.getAsJsonObject("Memory").getAsJsonObject("HeapMemoryUsage").get("Used").getAsLong();
+            }
+            root.addProperty("heapUsed", heapUsed);
+            
+            // 3. Thread Count
+            if (jvmJson.has("Threads")) {
+                root.addProperty("threadCount", jvmJson.getAsJsonArray("Threads").size());
+            } else {
+                root.addProperty("threadCount", 0);
+            }
+            
+            // 4. GC Collections (Sum across all collectors)
+            long gcCount = 0;
+            if (jvmJson.has("GarbageCollectors")) {
+                for (com.google.gson.JsonElement ge : jvmJson.getAsJsonArray("GarbageCollectors")) {
+                    JsonObject collector = ge.getAsJsonObject();
+                    if (collector.has("CollectionCount")) {
+                        gcCount += collector.get("CollectionCount").getAsLong();
+                    }
+                }
+            }
+            root.addProperty("gcCollections", gcCount);
+            
+            // 5. Total TPS (Average across worlds)
+            double totalTps = 0;
+            int worldCount = 0;
+            
+            // World Metrics (Detailed and per-world)
+            JsonObject worlds = new JsonObject();
+            for (World world : Universe.get().getWorlds().values()) {
+                BsonDocument worldBson = World.METRICS_REGISTRY.dumpToBson(world).asDocument();
+                JsonObject worldJson = bsonToJson(worldBson);
+                
+                // Calculate TPS for this specific world
+                double worldTps = 30.0;
+                double avgTickNanos = world.getBufferedTickLengthMetricSet().getAverage(0);
+                if (avgTickNanos > 0) {
+                    worldTps = Math.min(30.0, 1000000000.0 / avgTickNanos);
+                }
+                worldJson.addProperty("tps", Math.round(worldTps * 10.0) / 10.0);
+                
+                worlds.add(world.getName(), worldJson);
+                totalTps += worldTps;
+                worldCount++;
+            }
+            root.add("worlds", worlds);
+            root.addProperty("tps", worldCount > 0 ? (Math.round((totalTps / worldCount) * 10.0) / 10.0) : 30.0);
+            
+            String jsonOutput = GSON.toJson(root);
+            // Log once every 30 seconds to avoid spamming
+            if (System.currentTimeMillis() - lastMetricsLogTime > 30000) {
+                getLogger().info("[Metrics] Response: " + jsonOutput);
+                lastMetricsLogTime = System.currentTimeMillis();
+            }
+            
+            return jsonOutput;
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error getting advanced metrics: " + e.getMessage(), e);
+            JsonObject error = new JsonObject();
+            error.addProperty("error", e.getMessage());
+            return GSON.toJson(error);
+        }
+    }
+
+    private static JsonObject bsonToJson(BsonDocument bson) {
+        JsonObject json = new JsonObject();
+        for (String key : bson.keySet()) {
+            json.add(key, bsonValueToJson(bson.get(key)));
+        }
+        return json;
+    }
+
+    private static com.google.gson.JsonElement bsonValueToJson(BsonValue value) {
+        if (value.isNull()) return com.google.gson.JsonNull.INSTANCE;
+        if (value.isDocument()) return bsonToJson(value.asDocument());
+        if (value.isArray()) {
+            JsonArray array = new JsonArray();
+            for (BsonValue item : value.asArray()) {
+                array.add(bsonValueToJson(item));
+            }
+            return array;
+        }
+        if (value.isString()) return new com.google.gson.JsonPrimitive(value.asString().getValue());
+        if (value.isNumber()) return new com.google.gson.JsonPrimitive(value.asNumber().doubleValue());
+        if (value.isBoolean()) return new com.google.gson.JsonPrimitive(value.asBoolean().getValue());
+        if (value.isDateTime()) return new com.google.gson.JsonPrimitive(value.asDateTime().getValue());
+        
+        return new com.google.gson.JsonPrimitive(value.toString());
+    }
+
+    private static String listLogs() {
+        try {
+            java.nio.file.Path logsDir = java.nio.file.Path.of("logs");
+            if (!java.nio.file.Files.exists(logsDir)) return "[]";
+            
+            com.google.gson.JsonArray logs = new com.google.gson.JsonArray();
+            try (var stream = java.nio.file.Files.list(logsDir)) {
+                stream.forEach(p -> {
+                    if (java.nio.file.Files.isRegularFile(p)) {
+                        com.google.gson.JsonObject log = new com.google.gson.JsonObject();
+                        log.addProperty("name", p.getFileName().toString());
+                        try {
+                            log.addProperty("size", java.nio.file.Files.size(p));
+                            log.addProperty("lastModified", java.nio.file.Files.getLastModifiedTime(p).toMillis());
+                        } catch (Exception ignored) {}
+                        logs.add(log);
+                    }
+                });
+            }
+            return GSON.toJson(logs);
+        } catch (Exception e) {
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static String viewLog(String name) {
+        try {
+            java.nio.file.Path logPath = java.nio.file.Path.of("logs").resolve(name).normalize();
+            if (!logPath.startsWith(java.nio.file.Path.of("logs").normalize())) {
+                return "{\"error\": \"Invalid log path\"}";
+            }
+            if (!java.nio.file.Files.exists(logPath)) return "{\"error\": \"Log not found\"}";
+            
+            // Read last 1MB of the log to prevent crashing the browser
+            long size = java.nio.file.Files.size(logPath);
+            long limit = 1024 * 1024; // 1MB
+            
+            String content;
+            if (size > limit) {
+                try (var raf = new java.io.RandomAccessFile(logPath.toFile(), "r")) {
+                    raf.seek(size - limit);
+                    byte[] bytes = new byte[(int) limit];
+                    raf.readFully(bytes);
+                    content = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+                    content = "... [TRUNCATED] ...\n" + content;
+                }
+            } else {
+                content = java.nio.file.Files.readString(logPath, java.nio.charset.StandardCharsets.UTF_8);
+            }
+            
+            com.google.gson.JsonObject result = new com.google.gson.JsonObject();
+            result.addProperty("name", name);
+            result.addProperty("content", content);
+            return GSON.toJson(result);
+        } catch (Exception e) {
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static String downloadLog(String name) {
+        try {
+            java.nio.file.Path logPath = java.nio.file.Path.of("logs").resolve(name).normalize();
+            if (!logPath.startsWith(java.nio.file.Path.of("logs").normalize())) {
+                return "{\"error\": \"Invalid log path\"}";
+            }
+            if (!java.nio.file.Files.exists(logPath)) return "{\"error\": \"Log not found\"}";
+            
+            byte[] data = java.nio.file.Files.readAllBytes(logPath);
+            return "FILE_DATA:" + java.util.Base64.getEncoder().encodeToString(data);
+        } catch (Exception e) {
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static String listWorlds() {
+        try {
+            JsonArray worlds = new JsonArray();
+            Universe universe = Universe.get();
+            
+            // Loaded worlds
+            Map<String, World> loadedWorlds = universe.getWorlds();
+            
+            // All worlds on disk
+            Path worldsDir = universe.getPath().resolve("worlds");
+            if (Files.exists(worldsDir)) {
+                try (var stream = Files.list(worldsDir)) {
+                    stream.forEach(p -> {
+                        if (Files.isDirectory(p)) {
+                            String name = p.getFileName().toString();
+                            JsonObject worldJson = new JsonObject();
+                            worldJson.addProperty("name", name);
+                            
+                            World loaded = loadedWorlds.get(name);
+                            worldJson.addProperty("loaded", loaded != null);
+                            if (loaded != null) {
+                                worldJson.addProperty("ticking", !loaded.isPaused());
+                                worldJson.addProperty("players", universe.getPlayers().stream()
+                                    .filter(pr -> pr.getReference() != null && pr.getReference().isValid() && 
+                                                 pr.getReference().getStore().getExternalData().getWorld() == loaded)
+                                    .count());
+                            }
+                            worlds.add(worldJson);
+                        }
+                    });
+                }
+            }
+            return GSON.toJson(worlds);
+        } catch (Exception e) {
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static String loadWorld(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            String name = json.get("name").getAsString();
+            Universe.get().loadWorld(name);
+            return "{\"success\": true}";
+        } catch (Exception e) {
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static String unloadWorld(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            String name = json.get("name").getAsString();
+            Universe.get().removeWorld(name);
+            return "{\"success\": true}";
+        } catch (Exception e) {
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static String toggleWorldState(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            String name = json.get("name").getAsString();
+            boolean ticking = json.get("ticking").getAsBoolean();
+            
+            World world = Universe.get().getWorlds().get(name);
+            if (world != null) {
+                world.setPaused(!ticking);
+            }
+            return "{\"success\": true}";
+        } catch (Exception e) {
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static String getServerConfig() {
+        try {
+            com.hypixel.hytale.server.core.HytaleServerConfig config = HytaleServer.get().getConfig();
+            
+            JsonObject result = new JsonObject();
+            result.addProperty("serverName", config.getServerName());
+            result.addProperty("motd", config.getMotd());
+            result.addProperty("maxPlayers", config.getMaxPlayers());
+            result.addProperty("maxViewRadius", config.getMaxViewRadius());
+            
+            // Log levels
+            JsonObject logLevels = new JsonObject();
+            for (Map.Entry<String, java.util.logging.Level> entry : config.getLogLevels().entrySet()) {
+                logLevels.addProperty(entry.getKey(), entry.getValue().getName());
+            }
+            result.add("logLevels", logLevels);
+            
+            // Defaults
+            JsonObject defaults = new JsonObject();
+            defaults.addProperty("defaultWorld", config.getDefaults().getWorld());
+            defaults.addProperty("defaultGameMode", config.getDefaults().getGameMode().toString());
+            result.add("defaults", defaults);
+            
+            return GSON.toJson(result);
+        } catch (Exception e) {
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static String updateServerConfig(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            com.hypixel.hytale.server.core.HytaleServerConfig config = HytaleServer.get().getConfig();
+            
+            if (json.has("serverName")) config.setServerName(json.get("serverName").getAsString());
+            if (json.has("motd")) config.setMotd(json.get("motd").getAsString());
+            if (json.has("maxPlayers")) config.setMaxPlayers(json.get("maxPlayers").getAsInt());
+            if (json.has("maxViewRadius")) config.setMaxViewRadius(json.get("maxViewRadius").getAsInt());
+            
+            if (json.has("logLevel")) {
+                JsonObject ll = json.getAsJsonObject("logLevel");
+                String pkg = ll.get("package").getAsString();
+                String level = ll.get("level").getAsString();
+                config.getLogLevels().put(pkg, java.util.logging.Level.parse(level.toUpperCase()));
+            }
+            
+            return "{\"success\": true}";
+        } catch (Exception e) {
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
     }
 
     private static String broadcastMessage(String body) {
