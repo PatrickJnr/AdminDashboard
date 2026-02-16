@@ -86,12 +86,77 @@ public class BackupManager {
     public static String createBackup() {
         try {
             AdminWebDashPlugin.getCustomLogger().info("Starting manual backup...");
-            BackupTask.start(Universe.get().getPath(), backupDirectory).join();
-            AdminWebDashPlugin.getCustomLogger().info("Manual backup completed.");
-            return "{\"status\": \"success\"}";
+            
+            String timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new java.util.Date());
+            String fileName = timestamp + ".zip";
+            String tempFileName = fileName + ".tmp";
+            
+            Path backupFile = backupDirectory.resolve(fileName);
+            Path tempFile = backupDirectory.resolve(tempFileName);
+            
+            Path sourceDir = Universe.get().getPath();
+            
+            CompletableFuture.runAsync(() -> {
+                try {
+                    zipDirectory(sourceDir, tempFile);
+                    Files.move(tempFile, backupFile);
+                    AdminWebDashPlugin.getCustomLogger().info("Manual backup completed: " + fileName);
+                } catch (Exception e) {
+                    AdminWebDashPlugin.getCustomLogger().log("ERROR", "Backup failed", e);
+                    // Try to clean up temp file
+                    try { Files.deleteIfExists(tempFile); } catch (Exception ignored) {}
+                }
+            });
+
+            return "{\"status\": \"success\", \"message\": \"Backup started in background\", \"filename\": \"" + fileName + "\"}";
         } catch (Exception e) {
-            AdminWebDashPlugin.getCustomLogger().log("ERROR", "Backup failed", e);
+            AdminWebDashPlugin.getCustomLogger().log("ERROR", "Backup failed to start", e);
             return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static void zipDirectory(Path sourceDir, Path zipFile) throws IOException {
+        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(Files.newOutputStream(zipFile))) {
+            Files.walkFileTree(sourceDir, new java.nio.file.SimpleFileVisitor<Path>() {
+                @Override
+                public java.nio.file.FileVisitResult preVisitDirectory(Path dir, java.nio.file.attribute.BasicFileAttributes attrs) throws IOException {
+                    // Exclude logs directory as it changes frequently causing CRC errors
+                    if (dir.endsWith("logs") || dir.endsWith("Backups")) {
+                        return java.nio.file.FileVisitResult.SKIP_SUBTREE;
+                    }
+                    return java.nio.file.FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public java.nio.file.FileVisitResult visitFile(Path file, java.nio.file.attribute.BasicFileAttributes attrs) throws IOException {
+                    try {
+                        // Skip if file is inside logs or backups (double check)
+                        // Also skip the backup file itself if sourceDir is parent of backupDir
+                        if (file.equals(zipFile)) return java.nio.file.FileVisitResult.CONTINUE;
+                        
+                        Path targetFile = sourceDir.relativize(file);
+                        
+                        zos.putNextEntry(new ZipEntry(targetFile.toString()));
+                        
+                        // Read file and write to zip
+                        // Handle file read errors gracefully (e.g. file locked/changed)
+                        try (InputStream is = Files.newInputStream(file)) {
+                             byte[] buffer = new byte[1024];
+                             int len;
+                             while ((len = is.read(buffer)) > 0) {
+                                 zos.write(buffer, 0, len);
+                             }
+                        } catch (IOException e) {
+                             System.err.println("Failed to zip file (skipping): " + file + " - " + e.getMessage());
+                        }
+                        
+                        zos.closeEntry();
+                    } catch (Exception e) {
+                         System.err.println("Error processing file for zip: " + file + " - " + e.getMessage());
+                    }
+                    return java.nio.file.FileVisitResult.CONTINUE;
+                }
+            });
         }
     }
 
@@ -148,7 +213,14 @@ public class BackupManager {
             scheduledBackupTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
                 try {
                     AdminWebDashPlugin.getCustomLogger().info("Running scheduled backup...");
-                    BackupTask.start(Universe.get().getPath(), backupDirectory).join();
+                    
+                    String timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new java.util.Date());
+                    String fileName = "scheduled_" + timestamp + ".zip";
+                    Path backupFile = backupDirectory.resolve(fileName);
+                    Path sourceDir = Universe.get().getPath();
+
+                    zipDirectory(sourceDir, backupFile);
+                    AdminWebDashPlugin.getCustomLogger().info("Scheduled backup completed: " + fileName);
                 } catch (Exception e) {
                     AdminWebDashPlugin.getCustomLogger().log("ERROR", "Scheduled backup failed", e);
                 }
@@ -165,6 +237,13 @@ public class BackupManager {
             if (!json.has("intervalMinutes")) return "{\"error\": \"Missing intervalMinutes\"}";
             
             int interval = json.get("intervalMinutes").getAsInt();
+            
+            // Update and save config
+            AdminWebDashPlugin.getInstance().updateBackupInterval(interval);
+            
+            // scheduling happens via the plugin reloading or we can just update the task here?
+            // The plugin loads config on start. But we also need to update the running task.
+            // setSchedule is called by the plugin start, but we should also call it here for immediate effect.
             setSchedule(interval);
             
             return "{\"status\": \"success\"}";

@@ -132,8 +132,12 @@
             </div>
             <div class="hytale-panel">
                 <div class="hytale-panel-inner">
-                    <div class="card-header">
-                        <h2>Server Chat</h2>
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2 id="console-header-title">Server Chat</h2>
+                        <div class="btn-group">
+                            <button id="btn-mode-chat" class="btn btn-sm btn-primary" onclick="setConsoleMode('chat')">Chat</button>
+                            <button id="btn-mode-console" class="btn btn-sm btn-secondary" onclick="setConsoleMode('console')">Console</button>
+                        </div>
                     </div>
                     <div id="console-log" class="console-container">
                         <div class="console-entry">Initializing chat...</div>
@@ -269,7 +273,8 @@
                             </div>
                         </div>
                         <div class="management-content">
-                            <div class="warp-create-section">
+                            <div class="card-header">
+                                <h2>Server Activity</h2>
                                 <div style="display: flex; gap: 0.5rem;">
                                     <input type="text" id="warp-name-input" class="search-input" placeholder="Warp name..." style="flex: 1;">
                                     <button class="btn btn-secondary" onclick="createWarpFromInput()">

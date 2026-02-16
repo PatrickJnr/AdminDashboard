@@ -203,6 +203,30 @@ public class AdminWebDashPlugin extends JavaPlugin {
         }
     }
 
+    public void updateBackupInterval(int interval) {
+        backupInterval = interval;
+        
+        // Save config
+        try {
+            File dataDir = new File("mods/AdminWebDash");
+            if (!dataDir.exists()) dataDir.mkdirs();
+            File configFile = new File(dataDir, "config.json");
+            
+            JsonObject config = new JsonObject();
+            config.addProperty("port", port);
+            config.addProperty("backupInterval", backupInterval);
+            config.addProperty("adminToken", adminToken);
+            config.addProperty("loggingEnabled", loggingEnabled);
+            
+            try (FileWriter writer = new FileWriter(configFile)) {
+                GSON.toJson(config, writer);
+            }
+            LOGGER.info("[AdminWebDash] Backup interval updated to " + interval + " and saved to config.");
+        } catch (Exception e) {
+            LOGGER.severe("[AdminWebDash] Failed to save config: " + e.getMessage());
+        }
+    }
+
     @Override
     protected void shutdown() {
         if (httpServer != null) {

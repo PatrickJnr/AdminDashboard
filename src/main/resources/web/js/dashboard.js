@@ -599,8 +599,35 @@ function copyBansFile() {
     });
 }
 
+// Console Mode
+let currentConsoleMode = 'chat';
+
+function setConsoleMode(enabled) {
+    currentConsoleMode = enabled ? 'console' : 'chat'; // Update currentConsoleMode based on 'enabled'
+    
+    // Update buttons
+    const chatBtn = document.getElementById('btn-mode-chat');
+    const consoleBtn = document.getElementById('btn-mode-console');
+    
+    if (!enabled) { // If chat mode is enabled (i.e., console mode is disabled)
+        chatBtn.classList.replace('btn-secondary', 'btn-primary');
+        consoleBtn.classList.replace('btn-primary', 'btn-secondary');
+        document.getElementById('console-header-title').textContent = 'Server Chat';
+    } else { // If console mode is enabled
+        chatBtn.classList.replace('btn-primary', 'btn-secondary');
+        consoleBtn.classList.replace('btn-secondary', 'btn-primary');
+        document.getElementById('console-header-title').textContent = 'Server Console';
+        fetchConsole();
+    }
+    
+    // Clear container
+    const container = document.getElementById('console-log');
+    container.innerHTML = '<div class="console-entry">Loading...</div>';
+}
+
 async function fetchChat() {
     if (!dashboardToken) return;
+    if (currentConsoleMode !== 'chat') return;
     try {
         const res = await fetch('/api/chat', {
             headers: { 'X-Admin-Token': dashboardToken }
@@ -1582,7 +1609,11 @@ function openActionsModal(uuid, name) {
 // Update startSync to fetch new data
 function startSync() {
     setInterval(fetchStats, 2000);
-    setInterval(fetchChat, 2000);
+    setInterval(fetchStats, 2000);
+    setInterval(() => {
+        if (currentConsoleMode === 'chat') fetchChat();
+        else fetchConsole();
+    }, 2000);
     setInterval(fetchMutes, 5000);
     setInterval(fetchWarps, 10000);
     fetchStats();
@@ -1734,7 +1765,54 @@ function customAlert(message, title = 'Notice') {
     });
 }
 
-function closeAlertModal() {
+async function fetchConsole() {
+    if (!dashboardToken) return;
+    if (currentConsoleMode !== 'console') return;
+    
+    try {
+        const res = await fetch('/api/console', {
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const data = await res.json();
+        
+        if (data.error) {
+            console.error('Console error:', data.error);
+            return;
+        }
+        
+        renderConsole(data);
+    } catch (e) {
+        console.error('Failed to fetch console', e);
+    }
+}
+
+function renderConsole(data) {
+    const container = document.getElementById('console-log');
+    if (!container) return;
+    
+    // If filename changed or container empty, clear it
+    // But for now we just replace content since we fetch 100 lines
+    // Optimally we'd append, but for V1 we just show the window
+    
+    container.innerHTML = '';
+    
+    if (data.lines && data.lines.length > 0) {
+        data.lines.forEach(line => {
+             const div = document.createElement('div');
+             div.className = 'console-entry';
+             div.style.whiteSpace = 'pre-wrap';
+             div.style.fontFamily = 'monospace';
+             div.textContent = line;
+             container.appendChild(div);
+        });
+    } else {
+         container.innerHTML = '<div class="console-entry">No logs found.</div>';
+    }
+    
+    chatAutoScroll();
+}
+
+function chatAutoScroll() {
     document.getElementById('alert-modal').classList.remove('active');
     if (window.alertResolve) {
         window.alertResolve();
@@ -2055,6 +2133,7 @@ window.clearCurseForgeCache = clearCurseForgeCache;
 
 // ==================== BACKUP SYSTEM ====================
 let backupInterval = 0;
+let pendingBackupFile = null;
 
 async function fetchBackups() {
     if (!dashboardToken) return;
@@ -2097,6 +2176,15 @@ function renderBackups(backups) {
     
     if(document.getElementById('backup-empty')) document.getElementById('backup-empty').style.display = 'none';
     
+    // Check for pending backup completion
+    if (pendingBackupFile) {
+        const found = backups.find(b => b.name === pendingBackupFile);
+        if (found) {
+            showNotification('Backup created successfully', 'success');
+            pendingBackupFile = null;
+        }
+    }
+
     backups.forEach(backup => {
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid var(--border-color)';
@@ -2124,7 +2212,7 @@ function renderBackups(backups) {
 async function createBackup() {
     if (!dashboardToken) return;
     
-    showNotification('Starting backup...', 'success');
+    showNotification('Starting backup...', 'info');
     
     try {
         const res = await fetch('/api/backup/create', {
@@ -2134,7 +2222,13 @@ async function createBackup() {
         const data = await res.json();
         
         if (data.status === 'success') {
-            showNotification('Backup created successfully', 'success');
+            // Store filename to watch for completion
+             if (data.filename) {
+                pendingBackupFile = data.filename;
+            } else {
+                // Fallback for older backend versions
+                showNotification('Backup created successfully', 'success');
+            }
             fetchBackups();
         } else {
             showNotification(data.error || 'Backup failed', 'error');

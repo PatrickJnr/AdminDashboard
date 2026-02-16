@@ -5,6 +5,7 @@ import uk.co.grimtech.admin.CustomLogger;
 import uk.co.grimtech.admin.util.MuteTracker;
 import uk.co.grimtech.admin.util.WarpManager;
 import uk.co.grimtech.admin.util.BackupManager;
+import uk.co.grimtech.admin.util.ConsoleManager;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -165,6 +166,13 @@ public class DashboardAPI {
             return BackupManager.scheduleBackups(body);
         } else if (path.equals("/api/backup/delete") && method.equals("POST")) {
             return BackupManager.deleteBackup(body);
+        } else if (path.equals("/api/console")) {
+            try {
+                return ConsoleManager.getConsoleLog();
+            } catch (Exception e) {
+                e.printStackTrace();
+                return "{\"error\": \"Internal Server Error: " + e.getMessage() + "\"}";
+            }
         }
         
         return "{\"error\": \"Invalid endpoint\"}";

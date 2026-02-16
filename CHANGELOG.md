@@ -14,6 +14,11 @@ Welcome to the latest update! This version introduces a comprehensive Backup and
 - Delete old or unwanted backups to manage disk space
 - Added confirmation dialogs for critical actions to prevent accidents
 
+**Server Activity & Console**
+- Renamed "Server Chat" to "Server Activity" to better reflect its purpose.
+- Added **Server Console** view to monitor raw server logs in real-time.
+- Toggle between formatted Chat and raw Console views instantly.
+
 ## Version 1.0.0 - February 10, 2026
 
 Welcome to the first official release of Admin WebDash! This mod provides a powerful web-based control panel for managing your Hytale server.
