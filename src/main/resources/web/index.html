@@ -55,6 +55,10 @@
                     <span class="material-symbols-outlined">dns</span>
                     <span class="sidebar-label">Server</span>
                 </button>
+                <button class="sidebar-item" onclick="switchTab('info')" data-tab="info" title="Info">
+                    <span class="material-symbols-outlined">info</span>
+                    <span class="sidebar-label">Info</span>
+                </button>
             </div>
             <div class="sidebar-footer">
                 <div class="sidebar-version" id="sidebar-version">Loading...</div>
@@ -364,11 +368,97 @@
                     </div>
                 </div>
             </div>
-            </div>
         </div>
+
+        <div class="tab-content" id="tab-info">
+            <!-- Top Row: About & Specs -->
+            <div style="display: flex; flex-wrap: wrap; gap: 2rem; margin-bottom: 2rem; align-items: stretch;">
+                
+                <!-- About Card -->
+                <div class="hytale-panel" style="flex: 2; min-width: 300px; margin-bottom: 0;">
+                    <div class="hytale-panel-inner" style="height: 100%;">
+                        <div class="card-header">
+                            <h2>About Admin WebDash</h2>
+                        </div>
+                        <div style="color: var(--text-secondary); line-height: 1.6;">
+                            <p style="margin-bottom: 1rem;">
+                                The <strong>Admin WebDash</strong> is a comprehensive web-based administration tool for Hytale servers. 
+                                It provides real-time monitoring, player management, and server control directly from your browser.
+                            </p>
+                            <p>
+                                Built with performance and usability in mind, it integrates seamlessly with the Hytale server environment 
+                                to give administrators the tools they need to manage their communities effectively.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Specs Card -->
+                <div class="hytale-panel" style="flex: 1; min-width: 300px; margin-bottom: 0;">
+                    <div class="hytale-panel-inner" style="height: 100%;">
+                        <div class="card-header" style="margin-bottom: 1rem;">
+                            <h3>System Specs</h3>
+                        </div>
+                        <div class="system-info-grid">
+                            <div class="system-stat-row">
+                                <span class="system-stat-label">Java Version</span>
+                                <span class="system-stat-value" id="sys-java">Loading...</span>
+                            </div>
+                            <div class="system-stat-row">
+                                <span class="system-stat-label">OS Name</span>
+                                <span class="system-stat-value" id="sys-os-name">Loading...</span>
+                            </div>
+                            <div class="system-stat-row">
+                                <span class="system-stat-label">Architecture</span>
+                                <span class="system-stat-value" id="sys-os-arch">Loading...</span>
+                            </div>
+                            <div class="system-stat-row">
+                                <span class="system-stat-label">CPU Cores</span>
+                                <span class="system-stat-value" id="sys-cores">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Row: Actions -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                <!-- Discord -->
+                <a href="https://discord.gg/YUxuTa4ZzX" target="_blank" rel="noopener" style="text-decoration: none;">
+                    <div class="hytale-panel" style="height: 100%; margin-bottom: 0; transition: transform 0.2s ease;">
+                        <div class="hytale-panel-inner" style="display: flex; align-items: center; gap: 1.5rem; padding: 1.5rem; height: 100%;">
+                            <span class="material-symbols-outlined" style="font-size: 2.5rem; color: #5865F2;">forum</span>
+                            <div style="flex: 1;">
+                                <h3 style="margin-bottom: 0.25rem; color: var(--text-primary); font-size: 1rem;">Join Discord</h3>
+                                <p style="font-size: 0.8125rem; margin-bottom: 0.75rem;">Get support & chat with community.</p>
+                                <div class="btn btn-discord" style="width: 100%; text-align: center;">Join Server</div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Ko-fi -->
+                <a href="https://ko-fi.com/patrickjr" target="_blank" rel="noopener" style="text-decoration: none;">
+                    <div class="hytale-panel" style="height: 100%; margin-bottom: 0; transition: transform 0.2s ease;">
+                        <div class="hytale-panel-inner" style="display: flex; align-items: center; gap: 1.5rem; padding: 1.5rem; height: 100%;">
+                            <span class="material-symbols-outlined" style="font-size: 2.5rem; color: #FF5E5B;">favorite</span>
+                            <div style="flex: 1;">
+                                <h3 style="margin-bottom: 0.25rem; color: var(--text-primary); font-size: 1rem;">Support Project</h3>
+                                <p style="font-size: 0.8125rem; margin-bottom: 0.75rem;">Support development on Ko-fi.</p>
+                                <div class="btn btn-kofi" style="width: 100%; text-align: center;">Support</div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Footer -->
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); text-align: center; color: var(--text-secondary); font-size: 0.875rem;">
+                <p>Version <span id="info-version">Loading...</span> &bull; Developed by Patrick Jr.</p>
             </div>
         </div>
     </div>
+</div>
     <div id="inventory-modal" class="modal-overlay">
         <div class="modal-container hytale-panel">
             <div class="hytale-panel-inner">

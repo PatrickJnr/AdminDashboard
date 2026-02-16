@@ -180,6 +180,14 @@ async function fetchVersion() {
         const data = await res.json();
         if (data.version) {
             document.getElementById('sidebar-version').textContent = 'v' + data.version;
+            const infoVer = document.getElementById('info-version');
+            if (infoVer) infoVer.textContent = 'v' + data.version;
+
+            // System Specs
+            if (data.javaVersion) document.getElementById('sys-java').textContent = data.javaVersion;
+            if (data.osName) document.getElementById('sys-os-name').textContent = data.osName;
+            if (data.osArch) document.getElementById('sys-os-arch').textContent = data.osArch;
+            if (data.cores) document.getElementById('sys-cores').textContent = data.cores;
         }
     } catch (e) {
         document.getElementById('sidebar-version').textContent = 'v1.0.0';

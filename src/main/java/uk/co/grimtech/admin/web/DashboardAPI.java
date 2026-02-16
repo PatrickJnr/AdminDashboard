@@ -197,6 +197,13 @@ public class DashboardAPI {
         version.addProperty("version", versionString);
         version.addProperty("name", "Admin WebDash");
         version.addProperty("author", "Patrick Jr.");
+        
+        // System Info
+        version.addProperty("javaVersion", System.getProperty("java.version"));
+        version.addProperty("osName", System.getProperty("os.name"));
+        version.addProperty("osArch", System.getProperty("os.arch"));
+        version.addProperty("cores", Runtime.getRuntime().availableProcessors());
+        
         return GSON.toJson(version);
     }
 
