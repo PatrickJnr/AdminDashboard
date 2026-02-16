@@ -21,20 +21,20 @@ public class ConsoleManager {
 
     public static String getConsoleLog() {
         try {
-            // Locate logs directory relative to working dir
+
             File logsDir = new File("logs");
             if (!logsDir.exists() || !logsDir.isDirectory()) {
                 return error("Logs directory not found");
             }
 
-            // Find valid log files (excluding directory-like files if any)
+
             File[] logFiles = logsDir.listFiles((dir, name) -> name.endsWith(".log"));
             
             if (logFiles == null || logFiles.length == 0) {
                 return error("No log files found");
             }
 
-            // Sort by last modified (newest first)
+
             Arrays.sort(logFiles, Comparator.comparingLong(File::lastModified).reversed());
             
             // Pick the newest file that IS NOT the dashboard log
@@ -71,7 +71,7 @@ public class ConsoleManager {
     private static String readLastLines(File file, int linesToRead) {
         List<String> lines = new ArrayList<>();
         
-        // Use RandomAccessFile for efficient reading of large files
+
         try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
             long fileLength = raf.length();
             long pointer = fileLength - 1;

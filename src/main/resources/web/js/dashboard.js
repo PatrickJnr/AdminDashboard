@@ -1,19 +1,19 @@
-// Hytale Admin Dashboard JavaScript
 
-// Tab Switching
+
+
 function switchTab(tabName) {
-    // Hide all tabs
+
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
     
-    // Show selected tab
+
     const selectedTab = document.getElementById('tab-' + tabName);
     if (selectedTab) {
         selectedTab.classList.add('active');
     }
     
-    // Update sidebar active state
+
     document.querySelectorAll('.sidebar-item').forEach(item => {
         item.classList.remove('active');
     });
@@ -30,7 +30,7 @@ let connectionStatus = 'connected';
 let retryCount = 0;
 const MAX_RETRIES = 3;
 
-// Utility Functions
+
 function formatBytes(bytes) {
     if (bytes === 0) return '0 B';
     
@@ -91,16 +91,16 @@ function updateConnectionStatus(status) {
     }
 }
 
-// Keyboard Shortcuts
+
 document.addEventListener('keydown', (e) => {
-    // Ctrl/Cmd + R: Refresh data
+
     if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
         e.preventDefault();
         fetchStats();
         showNotification('Data refreshed', 'success');
     }
     
-    // Escape: Close modals
+
     if (e.key === 'Escape') {
         closeInventory();
         closeTeleportModal();
@@ -108,14 +108,14 @@ document.addEventListener('keydown', (e) => {
         closeBansFileModal();
     }
     
-    // Ctrl/Cmd + F: Focus search
+
     if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault();
         document.getElementById('search').focus();
     }
 });
 
-// Show keyboard hint on first load
+
 let hintShown = localStorage.getItem('keyboard_hint_shown');
 if (!hintShown) {
     setTimeout(() => {
@@ -133,7 +133,7 @@ if (!hintShown) {
     }, 2000);
 }
 
-// Login
+
 function login(event) {
     if (event) event.preventDefault();
     const token = document.getElementById('token-input').value;
@@ -155,7 +155,7 @@ function login(event) {
     });
 }
 
-// Auto-login
+
 if (dashboardToken) {
     fetchStats(true).then(success => {
         if (success) {

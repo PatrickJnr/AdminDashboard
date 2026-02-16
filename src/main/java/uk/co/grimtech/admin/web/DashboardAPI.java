@@ -64,7 +64,7 @@ public class DashboardAPI {
     private static final Gson GSON = new Gson();
     private static CustomLogger LOGGER;
     
-    // Get logger from main plugin
+
     private static CustomLogger getLogger() {
         if (LOGGER == null) {
             LOGGER = AdminWebDashPlugin.getCustomLogger();
@@ -83,9 +83,7 @@ public class DashboardAPI {
             String identifier = path.substring("/api/avatar/".length());
             byte[] avatar = AvatarCache.getAvatar(identifier);
             if (avatar != null) {
-                // Return base64 or similar if we want to keep handleRequest returning String,
-                // or modify HytaleHttpServer to handle byte[] responses.
-                // For now, let's return a special marker or base64.
+                // Return base64 encoded avatar data
                 return "AVATAR_DATA:" + java.util.Base64.getEncoder().encodeToString(avatar);
             }
             return "{\"error\": \"Avatar not found\"}";

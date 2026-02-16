@@ -31,14 +31,14 @@ public class BackupManager {
     private static ScheduledFuture<?> scheduledBackupTask;
 
     static {
-        // Resolve backup directory
+
         if (Options.getOptionSet().has(Options.BACKUP_DIRECTORY)) {
             backupDirectory = Options.getOptionSet().valueOf(Options.BACKUP_DIRECTORY);
         } else {
             backupDirectory = Paths.get("Backups");
         }
         
-        // Ensure directory exists
+
         try {
             if (!Files.exists(backupDirectory)) {
                 Files.createDirectories(backupDirectory);
@@ -84,7 +84,7 @@ public class BackupManager {
         return GSON.toJson(backups);
     }
 
-    // Progress tracking
+
     private static final java.util.concurrent.atomic.AtomicInteger totalFiles = new java.util.concurrent.atomic.AtomicInteger(0);
     private static final java.util.concurrent.atomic.AtomicInteger processedFiles = new java.util.concurrent.atomic.AtomicInteger(0);
     private static volatile boolean isBackingUp = false;
@@ -121,7 +121,7 @@ public class BackupManager {
         }
         
         try {
-            // 1. Check Disk Space
+
             File backupDirFile = backupDirectory.toFile();
             if (backupDirFile.exists() && backupDirFile.getUsableSpace() < MIN_DISK_SPACE_BYTES) {
                  return "{\"error\": \"Not enough disk space. Requires at least 500MB free.\"}";
@@ -153,7 +153,7 @@ public class BackupManager {
                     zipDirectory(sourceDir, tempFile);
                     Files.move(tempFile, backupFile);
                     
-                    // 2. Retention Policy: Clean up old backups
+
                     cleanupOldBackups();
                     
                     AdminWebDashPlugin.getCustomLogger().info("Manual backup completed: " + fileName);

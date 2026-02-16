@@ -28,12 +28,12 @@ public class AdminWebDashPlugin extends JavaPlugin {
     private static int backupInterval = 0; // Default disabled
     private HytaleHttpServer httpServer;
 
-    // Public getter for plugin instance
+
     public static AdminWebDashPlugin getInstance() {
         return instance;
     }
 
-    // Public getter for other classes to use the configured logger
+
     public static CustomLogger getCustomLogger() {
         return LOGGER;
     }
@@ -67,7 +67,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
         
         loadConfig();
         
-        // Load data trackers
+
         MuteTracker.load();
         WarpManager.load();
         BackupManager.setSchedule(backupInterval);
@@ -79,7 +79,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
             int actualPort = httpServer.getActualPort();
             LOGGER.info("[AdminWebDash] HTTP Server started on port " + actualPort);
             
-            // Print to console with actual port
+
             System.out.println("[AdminWebDash] ========================================");
             System.out.println("[AdminWebDash] Admin Token: " + adminToken);
             System.out.println("[AdminWebDash] Dashboard URL: http://localhost:" + actualPort);
