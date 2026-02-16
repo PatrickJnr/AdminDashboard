@@ -59,6 +59,7 @@ public class HytaleHttpServer {
                 path.equals("/metrics") || 
                 path.equals("/logs") || 
                 path.equals("/config") || 
+                path.equals("/files") || 
                 path.equals("/info")) {
                 
                 path = "/index.html";

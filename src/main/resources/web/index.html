@@ -36,22 +36,26 @@
                 </div>
             </div>
             <div class="sidebar-items">
+                <!-- DASHBOARD -->
+                <div class="sidebar-section-label">Dashboard</div>
                 <button class="sidebar-item active" onclick="switchTab('dashboard')" data-tab="dashboard" title="Dashboard">
                     <span class="material-symbols-outlined">dashboard</span>
-                    <span class="sidebar-label">Dashboard</span>
+                    <span class="sidebar-label">Overview</span>
                 </button>
+
+                <!-- GAMEPLAY -->
+                <div class="sidebar-section-label">Gameplay</div>
                 <button class="sidebar-item" onclick="switchTab('players')" data-tab="players" title="Players">
                     <span class="material-symbols-outlined">group</span>
                     <span class="sidebar-label">Players</span>
-                </button>
-                <button class="sidebar-item" onclick="switchTab('moderation')" data-tab="moderation" title="Moderation">
-                    <span class="material-symbols-outlined">gavel</span>
-                    <span class="sidebar-label">Moderation</span>
                 </button>
                 <button class="sidebar-item" onclick="switchTab('world')" data-tab="world" title="World">
                     <span class="material-symbols-outlined">public</span>
                     <span class="sidebar-label">World</span>
                 </button>
+
+                <!-- SYSTEM -->
+                <div class="sidebar-section-label">System</div>
                 <button class="sidebar-item" onclick="switchTab('metrics')" data-tab="metrics" title="Metrics">
                     <span class="material-symbols-outlined">monitoring</span>
                     <span class="sidebar-label">Metrics</span>
@@ -60,19 +64,23 @@
                     <span class="material-symbols-outlined">description</span>
                     <span class="sidebar-label">Logs</span>
                 </button>
+                <button class="sidebar-item" onclick="switchTab('files')" data-tab="files" title="Files">
+                    <span class="material-symbols-outlined">folder</span>
+                    <span class="sidebar-label">Files</span>
+                </button>
                 <button class="sidebar-item" onclick="switchTab('config')" data-tab="config" title="Config">
                     <span class="material-symbols-outlined">settings</span>
                     <span class="sidebar-label">Config</span>
                 </button>
-                <button class="sidebar-item" onclick="switchTab('server')" data-tab="server" title="Server">
-                    <span class="material-symbols-outlined">dns</span>
-                    <span class="sidebar-label">Server</span>
-                </button>
+
+                <!-- OTHER -->
+                <div class="sidebar-section-label">Other</div>
                 <button class="sidebar-item" onclick="switchTab('info')" data-tab="info" title="Info">
                     <span class="material-symbols-outlined">info</span>
-                    <span class="sidebar-label">Info</span>
+                    <span class="sidebar-label">About</span>
                 </button>
             </div>
+            
             <div class="sidebar-footer">
                 <div class="sidebar-version" id="sidebar-version">Loading...</div>
                 <a href="https://www.curseforge.com/members/patrickjr/projects" target="_blank" rel="noopener" class="sidebar-author" title="Created by Patrick Jr.">
@@ -163,59 +171,77 @@
             </div>
         </div>
         <div class="tab-content" id="tab-players">
-            <div class="hytale-panel">
-                <div class="hytale-panel-inner">
-                    <div class="card-header">
-                        <h2>Connected Players</h2>
-                        <input type="text" id="search" class="search-input" placeholder="Search player name...">
-                    </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Player</th>
-                                <th>Status</th>
-                                <th>Health</th>
-                                <th>Stamina</th>
-                                <th>Mana</th>
-                                <th>Defence</th>
-                                <th>Location</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="player-table-body"></tbody>
-                    </table>
+            
+            <!-- Sub-nav for Players -->
+            <div class="sub-nav-container" style="margin-bottom: 1.5rem;">
+                 <div class="btn-group">
+                    <button id="btn-sub-online" class="btn btn-primary" onclick="switchPlayerSubTab('online')">
+                        <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 4px;">group</span> Online
+                    </button>
+                    <button id="btn-sub-banned" class="btn btn-secondary" onclick="switchPlayerSubTab('banned')">
+                        <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 4px;">gavel</span> Moderation
+                    </button>
                 </div>
             </div>
-        </div>
-        <div class="tab-content" id="tab-moderation">
-            <div class="moderation-grid">
+
+            <!-- Online Players View -->
+            <div id="view-players-online">
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
-                            <div>
-                                <h2 style="display: inline;">Banned Players</h2>
-                                <span id="ban-count-badge" class="mod-count-badge">0</span>
-                            </div>
-                            <button class="btn btn-secondary" onclick="viewBansFile()" title="View bans.json file" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">
-                                <span class="material-symbols-outlined" style="font-size: 1rem;">description</span>
-                                View File
-                            </button>
+                            <h2>Connected Players</h2>
+                            <input type="text" id="search" class="search-input" placeholder="Search player name...">
                         </div>
-                        <div class="management-content">
-                            <div id="ban-list" class="ban-list"></div>
-                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Player</th>
+                                    <th>Status</th>
+                                    <th>Health</th>
+                                    <th>Stamina</th>
+                                    <th>Mana</th>
+                                    <th>Defence</th>
+                                    <th>Location</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="player-table-body"></tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="hytale-panel">
-                    <div class="hytale-panel-inner">
-                        <div class="card-header">
-                            <div>
-                                <h2 style="display: inline;">Muted Players</h2>
-                                <span id="mute-count-badge" class="mod-count-badge">0</span>
+            </div>
+
+            <!-- Moderation View -->
+            <div id="view-players-banned" style="display: none;">
+                <div class="moderation-grid">
+                    <div class="hytale-panel">
+                        <div class="hytale-panel-inner">
+                            <div class="card-header">
+                                <div>
+                                    <h2 style="display: inline;">Banned Players</h2>
+                                    <span id="ban-count-badge" class="mod-count-badge">0</span>
+                                </div>
+                                <button class="btn btn-secondary" onclick="viewBansFile()" title="View bans.json file" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">
+                                    <span class="material-symbols-outlined" style="font-size: 1rem;">description</span>
+                                    View File
+                                </button>
+                            </div>
+                            <div class="management-content">
+                                <div id="ban-list" class="ban-list"></div>
                             </div>
                         </div>
-                        <div class="management-content">
-                            <div id="mute-list" class="ban-list"></div>
+                    </div>
+                    <div class="hytale-panel">
+                        <div class="hytale-panel-inner">
+                            <div class="card-header">
+                                <div>
+                                    <h2 style="display: inline;">Muted Players</h2>
+                                    <span id="mute-count-badge" class="mod-count-badge">0</span>
+                                </div>
+                            </div>
+                            <div class="management-content">
+                                <div id="mute-list" class="ban-list"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -360,13 +386,59 @@
                 </div>
             </div>
 
-            <div class="hytale-panel">
-                <div class="hytale-panel-inner">
-                    <div class="card-header">
-                        <h2>Performance History</h2>
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                <div class="hytale-panel" style="margin-bottom: 0;">
+                    <div class="hytale-panel-inner" style="height: 100%;">
+                        <div class="card-header">
+                            <h2>Performance History</h2>
+                        </div>
+                        <div style="height: 400px; position: relative;">
+                            <canvas id="metricsChart"></canvas>
+                        </div>
                     </div>
-                    <div style="height: 400px; position: relative;">
-                        <canvas id="metricsChart"></canvas>
+                </div>
+
+                <div class="hytale-panel" style="min-width: 300px; margin-bottom: 0;">
+                    <div class="hytale-panel-inner" style="height: 100%;">
+                        <div class="card-header" style="margin-bottom: 1rem;">
+                            <h3>System Specs</h3>
+                        </div>
+                        <div class="system-info-grid">
+                            <div class="system-stat-row">
+                                <span class="system-stat-label">Java Version</span>
+                                <span class="system-stat-value" id="sys-java">Loading...</span>
+                            </div>
+                            <div class="system-stat-row">
+                                <span class="system-stat-label">OS Name</span>
+                                <span class="system-stat-value" id="sys-os-name">Loading...</span>
+                            </div>
+                            <div class="system-stat-row">
+                                <span class="system-stat-label">Architecture</span>
+                                <span class="system-stat-value" id="sys-os-arch">Loading...</span>
+                            </div>
+                            <div class="system-stat-row">
+                                <span class="system-stat-label">CPU Cores</span>
+                                <span class="system-stat-value" id="sys-cores">Loading...</span>
+                            </div>
+                            <div class="system-stat-row has-progress" style="grid-column: span 2;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                    <span class="system-stat-label">Memory Usage</span>
+                                    <span class="system-stat-value" id="sys-memory-text">...</span>
+                                </div>
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar-fill" id="sys-memory-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="system-stat-row has-progress" style="grid-column: span 2;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                    <span class="system-stat-label">Disk Usage</span>
+                                    <span class="system-stat-value" id="sys-disk-text">...</span>
+                                </div>
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar-fill" id="sys-disk-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -454,7 +526,7 @@
                 </div>
             </div>
         </div>
-        <div class="tab-content" id="tab-server">
+        <div class="tab-content" id="tab-files">
             <div class="hytale-panel">
                 <div class="hytale-panel-inner">
                     <div class="card-header">
@@ -532,11 +604,10 @@
 
         <div class="tab-content" id="tab-info">
             <!-- Top Row: About & Specs -->
-            <div style="display: flex; flex-wrap: wrap; gap: 2rem; margin-bottom: 2rem; align-items: stretch;">
-                
-                <!-- About Card -->
-                <div class="hytale-panel" style="flex: 2; min-width: 300px; margin-bottom: 0;">
-                    <div class="hytale-panel-inner" style="height: 100%;">
+            <!-- Top Row: About -->
+            <div style="margin-bottom: 2rem;">
+                <div class="hytale-panel" style="margin-bottom: 0;">
+                    <div class="hytale-panel-inner">
                         <div class="card-header">
                             <h2>About Admin WebDash</h2>
                         </div>
@@ -549,52 +620,6 @@
                                 Built with performance and usability in mind, it integrates seamlessly with the Hytale server environment 
                                 to give administrators the tools they need to manage their communities effectively.
                             </p>
-                            
-                        </div>
-                    </div>
-                </div>
-
-                <!-- System Specs Card -->
-                <div class="hytale-panel" style="flex: 1; min-width: 300px; margin-bottom: 0;">
-                    <div class="hytale-panel-inner" style="height: 100%;">
-                        <div class="card-header" style="margin-bottom: 1rem;">
-                            <h3>System Specs</h3>
-                        </div>
-                        <div class="system-info-grid">
-                            <div class="system-stat-row">
-                                <span class="system-stat-label">Java Version</span>
-                                <span class="system-stat-value" id="sys-java">Loading...</span>
-                            </div>
-                            <div class="system-stat-row">
-                                <span class="system-stat-label">OS Name</span>
-                                <span class="system-stat-value" id="sys-os-name">Loading...</span>
-                            </div>
-                            <div class="system-stat-row">
-                                <span class="system-stat-label">Architecture</span>
-                                <span class="system-stat-value" id="sys-os-arch">Loading...</span>
-                            </div>
-                            <div class="system-stat-row">
-                                <span class="system-stat-label">CPU Cores</span>
-                                <span class="system-stat-value" id="sys-cores">Loading...</span>
-                            </div>
-                            <div class="system-stat-row has-progress" style="grid-column: span 2;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                    <span class="system-stat-label">Memory Usage</span>
-                                    <span class="system-stat-value" id="sys-memory-text">...</span>
-                                </div>
-                                <div class="progress-bar-container">
-                                    <div class="progress-bar-fill" id="sys-memory-bar" style="width: 0%"></div>
-                                </div>
-                            </div>
-                            <div class="system-stat-row has-progress" style="grid-column: span 2;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                    <span class="system-stat-label">Disk Usage</span>
-                                    <span class="system-stat-value" id="sys-disk-text">...</span>
-                                </div>
-                                <div class="progress-bar-container">
-                                    <div class="progress-bar-fill" id="sys-disk-bar" style="width: 0%"></div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>

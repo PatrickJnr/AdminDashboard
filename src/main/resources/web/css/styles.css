@@ -116,6 +116,16 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
+.sidebar-section-label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    color: var(--hytale-gold, #ecbc62);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 1rem 0 0.25rem;
+    text-align: center;
+    opacity: 0.8;
+}
 .sidebar-footer {
     padding: 1rem 0;
     border-top: 2px solid var(--hytale-divider);

@@ -1,18 +1,47 @@
 
 
-
 const routes = {
-    '/': 'server',
-    '/dashboard': 'server',
-    '/server': 'server',
-    '/players': 'player',
-    '/moderation': 'moderation',
+    '/': 'dashboard',
+    '/dashboard': 'dashboard',
+    '/players': 'players',
     '/world': 'world',
     '/metrics': 'metrics',
     '/logs': 'logs',
+    '/files': 'files',
     '/config': 'config',
     '/info': 'info'
 };
+
+function switchPlayerSubTab(subTab) {
+    const onlineView = document.getElementById('view-players-online');
+    const bannedView = document.getElementById('view-players-banned');
+    const btnOnline = document.getElementById('btn-sub-online');
+    const btnBanned = document.getElementById('btn-sub-banned');
+
+    if (subTab === 'online') {
+        if (onlineView) onlineView.style.display = 'block';
+        if (bannedView) bannedView.style.display = 'none';
+        if (btnOnline) {
+            btnOnline.classList.remove('btn-secondary');
+            btnOnline.classList.add('btn-primary');
+        }
+        if (btnBanned) {
+            btnBanned.classList.remove('btn-primary');
+            btnBanned.classList.add('btn-secondary');
+        }
+    } else {
+        if (onlineView) onlineView.style.display = 'none';
+        if (bannedView) bannedView.style.display = 'block';
+        if (btnOnline) {
+            btnOnline.classList.remove('btn-primary');
+            btnOnline.classList.add('btn-secondary');
+        }
+        if (btnBanned) {
+            btnBanned.classList.remove('btn-secondary');
+            btnBanned.classList.add('btn-primary');
+        }
+    }
+}
 
 function switchTab(tabName, updateHistory = true) {
     document.querySelectorAll('.tab-content').forEach(tab => {
@@ -45,7 +74,7 @@ window.addEventListener('popstate', (event) => {
     } else {
         // Fallback for initial load or external navigation
         const path = window.location.pathname;
-        const tab = routes[path] || 'server';
+        const tab = routes[path] || 'dashboard';
         switchTab(tab, false);
     }
 });
@@ -2562,7 +2591,19 @@ async function fetchBackups() {
         // Update badge
         if(document.getElementById('backup-count-badge')) document.getElementById('backup-count-badge').textContent = backups.length;
         
-        // Also fetch schedule settings
+        
+    } catch (e) {
+        console.error('Failed to fetch backups', e);
+        showNotification('Failed to fetch backups', 'error');
+    } finally {
+        if(document.getElementById('backup-loading')) document.getElementById('backup-loading').style.display = 'none';
+        fetchBackupSchedule();
+    }
+}
+
+async function fetchBackupSchedule() {
+    if (!dashboardToken) return;
+    try {
         const schedRes = await fetch('/api/backup/schedule', {
              headers: { 'X-Admin-Token': dashboardToken }
         });
@@ -2571,16 +2612,9 @@ async function fetchBackups() {
             backupInterval = sched.intervalMinutes;
             const input = document.getElementById('backup-interval-input');
             if (input) input.value = backupInterval > 0 ? backupInterval : '';
-            
-            // Update the display text if needed (though the input value is usually enough)
-            // If there's a display element for "Current: X mins", update it here.
         }
-        
     } catch (e) {
-        console.error('Failed to fetch backups', e);
-        showNotification('Failed to fetch backups', 'error');
-    } finally {
-        if(document.getElementById('backup-loading')) document.getElementById('backup-loading').style.display = 'none';
+        console.error('Failed to fetch backup schedule', e);
     }
 }
 
@@ -2808,6 +2842,7 @@ async function updateBackupSchedule() {
         
         if (data.status === 'success') {
             showNotification('Backup schedule updated', 'success');
+            fetchBackupSchedule();
         } else {
             showNotification(data.error || 'Failed to update schedule', 'error');
         }

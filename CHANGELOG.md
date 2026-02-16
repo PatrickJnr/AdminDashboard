@@ -2,10 +2,16 @@
 
 ## Version 1.0.1 - February 16, 2026
 
+### Dashboard Update
+- **Reorganized Sidebar:** Grouped navigation into logical categories for faster access
+- **Unified Players Tab:** Merged Online Players and Moderation into a single view
+- **Enhanced Metrics:** Moved system specifications to the Metrics tab
+- **Files Tab:** Renamed "Server" to "Files" for clarity
+
 ### Improvements
 - **Clean URLs:** Added direct navigation support for all dashboard tabs (prevents 404 on refresh)
 - **System Stats:** Added Memory and Disk usage visualization to the Info tab
-- **Log List Cleanup:** Hidden temporary `.lck` files and fixed date formatting in the Log Explorer
+- **Log List Cleanup:** Hidden temporary `.lck` files
 
 ### New Features
 
