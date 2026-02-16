@@ -2239,6 +2239,10 @@ async function pollBackupStatus() {
         const text = document.getElementById('backup-status-text');
         const percentage = document.getElementById('backup-percentage');
         
+        const createBtn = document.querySelector('button[onclick="createBackup()"]');
+        const restoreBtns = document.querySelectorAll('button[title="Restore this backup"]');
+        const deleteBtns = document.querySelectorAll('button[title="Delete backup"]');
+        
         if (status.active) {
             if (container) container.style.display = 'block';
             if (text) text.textContent = status.message || 'Backing up...';
@@ -2246,6 +2250,11 @@ async function pollBackupStatus() {
             const percent = Math.round(status.progress * 100);
             if (bar) bar.style.width = percent + '%';
             if (percentage) percentage.textContent = percent + '%';
+            
+            // Disable buttons
+            if (createBtn) createBtn.disabled = true;
+            restoreBtns.forEach(b => b.disabled = true);
+            deleteBtns.forEach(b => b.disabled = true);
             
         } else {
             // Backup finished or idle
@@ -2269,6 +2278,11 @@ async function pollBackupStatus() {
                      clearInterval(backupPollInterval);
                      backupPollInterval = null;
                  }
+                 
+                 // Re-enable buttons
+                 if (createBtn) createBtn.disabled = false;
+                 restoreBtns.forEach(b => b.disabled = false);
+                 deleteBtns.forEach(b => b.disabled = false);
             }
         }
         

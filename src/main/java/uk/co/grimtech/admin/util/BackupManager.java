@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.util.backup.BackupTask;
 import uk.co.grimtech.admin.AdminWebDashPlugin;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.DirectoryStream;
@@ -111,13 +112,24 @@ public class BackupManager {
         return GSON.toJson(status);
     }
 
+    private static final int MAX_BACKUPS = 10;
+    private static final long MIN_DISK_SPACE_BYTES = 500 * 1024 * 1024; // 500 MB
+
     public static String createBackup() {
         if (isBackingUp) {
             return "{\"error\": \"Backup already in progress\"}";
         }
         
         try {
+            // 1. Check Disk Space
+            File backupDirFile = backupDirectory.toFile();
+            if (backupDirFile.exists() && backupDirFile.getUsableSpace() < MIN_DISK_SPACE_BYTES) {
+                 return "{\"error\": \"Not enough disk space. Requires at least 500MB free.\"}";
+            }
+            
             AdminWebDashPlugin.getCustomLogger().info("Starting manual backup...");
+            AdminWebDashPlugin.getCustomLogger().info("WARN: Performing Live Backup. World data is not paused/flushed.");
+            
             isBackingUp = true;
             currentStatusMessage = "Initializing...";
             processedFiles.set(0);
@@ -140,6 +152,10 @@ public class BackupManager {
                     
                     zipDirectory(sourceDir, tempFile);
                     Files.move(tempFile, backupFile);
+                    
+                    // 2. Retention Policy: Clean up old backups
+                    cleanupOldBackups();
+                    
                     AdminWebDashPlugin.getCustomLogger().info("Manual backup completed: " + fileName);
                     currentStatusMessage = "Completed";
                 } catch (Exception e) {
@@ -157,6 +173,37 @@ public class BackupManager {
             isBackingUp = false;
             AdminWebDashPlugin.getCustomLogger().log("ERROR", "Backup failed to start", e);
             return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static void cleanupOldBackups() {
+        try {
+            List<Path> backups = new ArrayList<>();
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(backupDirectory, "*.zip")) {
+                for (Path entry : stream) {
+                    backups.add(entry);
+                }
+            }
+            
+            if (backups.size() > MAX_BACKUPS) {
+                // Sort by date (oldest first)
+                backups.sort((p1, p2) -> {
+                    try {
+                        return Files.getLastModifiedTime(p1).compareTo(Files.getLastModifiedTime(p2));
+                    } catch (IOException e) {
+                        return 0;
+                    }
+                });
+                
+                int toDelete = backups.size() - MAX_BACKUPS;
+                for (int i = 0; i < toDelete; i++) {
+                    Path p = backups.get(i);
+                    AdminWebDashPlugin.getCustomLogger().info("Retention Policy: Deleting old backup " + p.getFileName());
+                    Files.deleteIfExists(p);
+                }
+            }
+        } catch (Exception e) {
+             AdminWebDashPlugin.getCustomLogger().log("ERROR", "Failed to cleanup old backups", e);
         }
     }
 
