@@ -456,7 +456,7 @@ table {
 }
 th {
     text-align: left;
-    padding: 0.75rem 1rem;
+    padding: 1rem 1.25rem;
     background: rgba(0, 0, 0, 0.2);
     font-size: 0.75rem;
     text-transform: uppercase;
@@ -466,7 +466,7 @@ th {
     letter-spacing: 0.05em;
 }
 td {
-    padding: 0.75rem 1rem;
+    padding: 1rem 1.25rem;
     border-bottom: 1px solid var(--hytale-border);
     vertical-align: middle;
 }

@@ -602,6 +602,16 @@ function copyBansFile() {
 // Console Mode
 let currentConsoleMode = 'chat';
 
+function switchConsoleTab(mode) {
+    const isConsole = mode === 'console';
+    setConsoleMode(isConsole);
+    if (isConsole) {
+        fetchConsole();
+    } else {
+        fetchChat();
+    }
+}
+
 function setConsoleMode(enabled) {
     currentConsoleMode = enabled ? 'console' : 'chat'; // Update currentConsoleMode based on 'enabled'
     
@@ -2209,10 +2219,10 @@ function renderBackups(backups) {
         const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
         
         tr.innerHTML = `
-            <td style="padding: 0.5rem; font-family: monospace;">${backup.name}</td>
-            <td style="padding: 0.5rem;">${formatBytes(backup.size)}</td>
-            <td style="padding: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">${dateStr}</td>
-            <td style="padding: 0.5rem; text-align: right;">
+            <td style="font-family: monospace;">${backup.name}</td>
+            <td>${formatBytes(backup.size)}</td>
+            <td style="color: var(--text-secondary); font-size: 0.875rem;">${dateStr}</td>
+            <td style="text-align: right;">
                 <button class="btn btn-secondary" onclick="restoreBackup('${backup.name}')" title="Restore this backup" style="margin-right: 0.25rem;">
                     <span class="material-symbols-outlined" style="font-size: 1rem;">history</span>
                 </button>

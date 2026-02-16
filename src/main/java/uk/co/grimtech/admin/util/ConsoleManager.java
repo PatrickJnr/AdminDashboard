@@ -37,8 +37,28 @@ public class ConsoleManager {
             // Sort by last modified (newest first)
             Arrays.sort(logFiles, Comparator.comparingLong(File::lastModified).reversed());
             
-            // Pick the newest file (usually latest.log or the current dated log)
-            File latestLog = logFiles[0];
+            // Pick the newest file that IS NOT the dashboard log
+            File latestLog = null;
+            for (File file : logFiles) {
+                String name = file.getName();
+                if (name.equals("dashboard.log")) continue;
+                // Prefer server logs
+                if (name.contains("server") || name.equals("latest.log")) {
+                    latestLog = file;
+                    break;
+                }
+            }
+            // Fallback to absolute newest if no server log found (but still skipping dashboard.log)
+            if (latestLog == null && logFiles.length > 0) {
+                 for (File file : logFiles) {
+                    if (!file.getName().equals("dashboard.log")) {
+                        latestLog = file;
+                        break;
+                    }
+                }
+            }
+            
+            if (latestLog == null) return error("No server logs found");
 
             return readLastLines(latestLog, MAX_LINES);
 

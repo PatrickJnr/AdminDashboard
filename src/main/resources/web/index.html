@@ -135,8 +135,8 @@
                     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                         <h2 id="console-header-title">Server Chat</h2>
                         <div class="btn-group">
-                            <button id="btn-mode-chat" class="btn btn-sm btn-primary" onclick="setConsoleMode('chat')">Chat</button>
-                            <button id="btn-mode-console" class="btn btn-sm btn-secondary" onclick="setConsoleMode('console')">Console</button>
+                            <button id="btn-mode-chat" class="btn btn-sm btn-primary" onclick="switchConsoleTab('chat')">Chat</button>
+                            <button id="btn-mode-console" class="btn btn-sm btn-secondary" onclick="switchConsoleTab('console')">Console</button>
                         </div>
                     </div>
                     <div id="console-log" class="console-container">
@@ -345,10 +345,10 @@
                          <table style="width: 100%; border-collapse: collapse;">
                             <thead>
                                 <tr style="text-align: left; border-bottom: 1px solid var(--border-color);">
-                                    <th style="padding: 0.5rem;">Filename</th>
-                                    <th style="padding: 0.5rem;">Size</th>
-                                    <th style="padding: 0.5rem;">Date</th>
-                                    <th style="padding: 0.5rem; text-align: right;">Actions</th>
+                                    <th>Filename</th>
+                                    <th>Size</th>
+                                    <th>Date</th>
+                                    <th style="text-align: right;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="backup-list-body">
