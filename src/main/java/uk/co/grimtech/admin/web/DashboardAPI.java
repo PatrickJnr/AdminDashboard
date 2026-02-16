@@ -162,8 +162,15 @@ public class DashboardAPI {
              } catch (Exception e) {
                  return "{\"error\": \"" + e.getMessage() + "\"}";
              }
-        } else if (path.equals("/api/backup/schedule") && method.equals("POST")) {
-            return BackupManager.scheduleBackups(body);
+        } else if (path.equals("/api/backup/schedule")) {
+             if (method.equals("POST")) {
+                 return BackupManager.scheduleBackups(body);
+             } else if (method.equals("GET")) {
+                 int interval = AdminWebDashPlugin.getInstance().getBackupInterval();
+                 return "{\"intervalMinutes\": " + interval + "}";
+             }
+        } else if (path.equals("/api/backup/status")) {
+            return BackupManager.getBackupStatus();
         } else if (path.equals("/api/backup/delete") && method.equals("POST")) {
             return BackupManager.deleteBackup(body);
         } else if (path.equals("/api/console")) {

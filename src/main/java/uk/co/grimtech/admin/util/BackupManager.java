@@ -83,9 +83,45 @@ public class BackupManager {
         return GSON.toJson(backups);
     }
 
+    // Progress tracking
+    private static final java.util.concurrent.atomic.AtomicInteger totalFiles = new java.util.concurrent.atomic.AtomicInteger(0);
+    private static final java.util.concurrent.atomic.AtomicInteger processedFiles = new java.util.concurrent.atomic.AtomicInteger(0);
+    private static volatile boolean isBackingUp = false;
+    private static volatile String currentStatusMessage = "";
+
+    public static String getBackupStatus() {
+        JsonObject status = new JsonObject();
+        boolean active = isBackingUp;
+        status.addProperty("active", active);
+        
+        if (active) {
+            int total = totalFiles.get();
+            int processed = processedFiles.get();
+            double progress = total > 0 ? (double) processed / total : 0;
+            
+            status.addProperty("progress", progress);
+            status.addProperty("processed", processed);
+            status.addProperty("total", total);
+            status.addProperty("message", currentStatusMessage);
+        } else {
+            status.addProperty("progress", 0);
+            status.addProperty("message", currentStatusMessage.isEmpty() ? "Idle" : currentStatusMessage);
+        }
+        
+        return GSON.toJson(status);
+    }
+
     public static String createBackup() {
+        if (isBackingUp) {
+            return "{\"error\": \"Backup already in progress\"}";
+        }
+        
         try {
             AdminWebDashPlugin.getCustomLogger().info("Starting manual backup...");
+            isBackingUp = true;
+            currentStatusMessage = "Initializing...";
+            processedFiles.set(0);
+            totalFiles.set(0);
             
             String timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new java.util.Date());
             String fileName = timestamp + ".zip";
@@ -98,21 +134,53 @@ public class BackupManager {
             
             CompletableFuture.runAsync(() -> {
                 try {
+                    currentStatusMessage = "Scanning files...";
+                    totalFiles.set(countFiles(sourceDir));
+                    currentStatusMessage = "Backing up...";
+                    
                     zipDirectory(sourceDir, tempFile);
                     Files.move(tempFile, backupFile);
                     AdminWebDashPlugin.getCustomLogger().info("Manual backup completed: " + fileName);
+                    currentStatusMessage = "Completed";
                 } catch (Exception e) {
                     AdminWebDashPlugin.getCustomLogger().log("ERROR", "Backup failed", e);
+                    currentStatusMessage = "Failed: " + e.getMessage();
                     // Try to clean up temp file
                     try { Files.deleteIfExists(tempFile); } catch (Exception ignored) {}
+                } finally {
+                    isBackingUp = false;
                 }
             });
 
             return "{\"status\": \"success\", \"message\": \"Backup started in background\", \"filename\": \"" + fileName + "\"}";
         } catch (Exception e) {
+            isBackingUp = false;
             AdminWebDashPlugin.getCustomLogger().log("ERROR", "Backup failed to start", e);
             return "{\"error\": \"" + e.getMessage() + "\"}";
         }
+    }
+
+    private static int countFiles(Path sourceDir) {
+        final java.util.concurrent.atomic.AtomicInteger count = new java.util.concurrent.atomic.AtomicInteger(0);
+        try {
+            Files.walkFileTree(sourceDir, new java.nio.file.SimpleFileVisitor<Path>() {
+                @Override
+                public java.nio.file.FileVisitResult preVisitDirectory(Path dir, java.nio.file.attribute.BasicFileAttributes attrs) throws IOException {
+                    if (dir.endsWith("logs") || dir.endsWith("Backups")) {
+                        return java.nio.file.FileVisitResult.SKIP_SUBTREE;
+                    }
+                    return java.nio.file.FileVisitResult.CONTINUE;
+                }
+                @Override
+                public java.nio.file.FileVisitResult visitFile(Path file, java.nio.file.attribute.BasicFileAttributes attrs) throws IOException {
+                    count.incrementAndGet();
+                    return java.nio.file.FileVisitResult.CONTINUE;
+                }
+            });
+        } catch (IOException e) {
+            AdminWebDashPlugin.getCustomLogger().log("ERROR", "Failed to count files", e);
+        }
+        return count.get();
     }
 
     private static void zipDirectory(Path sourceDir, Path zipFile) throws IOException {
@@ -148,11 +216,14 @@ public class BackupManager {
                              }
                         } catch (IOException e) {
                              System.err.println("Failed to zip file (skipping): " + file + " - " + e.getMessage());
+                        } finally {
+                            zos.closeEntry();
+                            processedFiles.incrementAndGet();
                         }
-                        
-                        zos.closeEntry();
-                    } catch (Exception e) {
-                         System.err.println("Error processing file for zip: " + file + " - " + e.getMessage());
+
+                    } catch (IOException e) {
+                         // Similar handling for ZipEntry errors
+                         System.err.println("Failed to add zip entry: " + file);
                     }
                     return java.nio.file.FileVisitResult.CONTINUE;
                 }

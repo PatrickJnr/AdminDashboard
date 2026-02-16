@@ -49,6 +49,10 @@ public class AdminWebDashPlugin extends JavaPlugin {
     public static String getAdminToken() {
         return adminToken;
     }
+    
+    public int getBackupInterval() {
+        return backupInterval;
+    }
 
     public AdminWebDashPlugin(@Nonnull JavaPluginInit init) {
         super(init);

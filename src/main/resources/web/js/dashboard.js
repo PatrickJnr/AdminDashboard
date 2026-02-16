@@ -2155,6 +2155,20 @@ async function fetchBackups() {
         // Update badge
         if(document.getElementById('backup-count-badge')) document.getElementById('backup-count-badge').textContent = backups.length;
         
+        // Also fetch schedule settings
+        const schedRes = await fetch('/api/backup/schedule', {
+             headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const sched = await schedRes.json();
+        if (sched.intervalMinutes !== undefined) {
+            backupInterval = sched.intervalMinutes;
+            const input = document.getElementById('backup-interval-input');
+            if (input) input.value = backupInterval > 0 ? backupInterval : '';
+            
+            // Update the display text if needed (though the input value is usually enough)
+            // If there's a display element for "Current: X mins", update it here.
+        }
+        
     } catch (e) {
         console.error('Failed to fetch backups', e);
         showNotification('Failed to fetch backups', 'error');
@@ -2176,14 +2190,16 @@ function renderBackups(backups) {
     
     if(document.getElementById('backup-empty')) document.getElementById('backup-empty').style.display = 'none';
     
+    if(document.getElementById('backup-empty')) document.getElementById('backup-empty').style.display = 'none';
+    
     // Check for pending backup completion
-    if (pendingBackupFile) {
-        const found = backups.find(b => b.name === pendingBackupFile);
-        if (found) {
-            showNotification('Backup created successfully', 'success');
-            pendingBackupFile = null;
-        }
-    }
+    // if (pendingBackupFile) {
+    //    const found = backups.find(b => b.name === pendingBackupFile);
+    //    if (found) {
+    //        showNotification('Backup created successfully', 'success');
+    //        pendingBackupFile = null;
+    //    }
+    // }
 
     backups.forEach(backup => {
         const tr = document.createElement('tr');
@@ -2209,10 +2225,62 @@ function renderBackups(backups) {
     });
 }
 
+let backupPollInterval = null;
+
+async function pollBackupStatus() {
+    try {
+        const res = await fetch('/api/backup/status', {
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const status = await res.json();
+        
+        const container = document.getElementById('backup-progress-container');
+        const bar = document.getElementById('backup-progress-bar');
+        const text = document.getElementById('backup-status-text');
+        const percentage = document.getElementById('backup-percentage');
+        
+        if (status.active) {
+            if (container) container.style.display = 'block';
+            if (text) text.textContent = status.message || 'Backing up...';
+            
+            const percent = Math.round(status.progress * 100);
+            if (bar) bar.style.width = percent + '%';
+            if (percentage) percentage.textContent = percent + '%';
+            
+        } else {
+            // Backup finished or idle
+            if (container && container.style.display !== 'none') {
+                 // Was active, now done
+                 if (status.message === 'Completed') {
+                     showNotification('Backup created successfully', 'success');
+                     fetchBackups();
+                 } else if (status.message && status.message.startsWith('Failed')) {
+                     showNotification(status.message, 'error');
+                 }
+                 
+                 // Hide after a brief delay
+                 setTimeout(() => {
+                     container.style.display = 'none';
+                     if (bar) bar.style.width = '0%';
+                 }, 2000);
+                 
+                 // Stop polling
+                 if (backupPollInterval) {
+                     clearInterval(backupPollInterval);
+                     backupPollInterval = null;
+                 }
+            }
+        }
+        
+    } catch (e) {
+        console.error('Failed to poll status', e);
+    }
+}
+
 async function createBackup() {
     if (!dashboardToken) return;
     
-    showNotification('Starting backup...', 'info');
+    // showNotification('Starting backup...', 'info');
     
     try {
         const res = await fetch('/api/backup/create', {
@@ -2222,19 +2290,17 @@ async function createBackup() {
         const data = await res.json();
         
         if (data.status === 'success') {
-            // Store filename to watch for completion
-             if (data.filename) {
-                pendingBackupFile = data.filename;
-            } else {
-                // Fallback for older backend versions
-                showNotification('Backup created successfully', 'success');
-            }
-            fetchBackups();
+            // New polling logic
+            if (backupPollInterval) clearInterval(backupPollInterval);
+            backupPollInterval = setInterval(pollBackupStatus, 1000);
+            pollBackupStatus(); // Immediate check
+            
         } else {
             showNotification(data.error || 'Backup failed', 'error');
         }
     } catch (e) {
-        showNotification('Backup request failed', 'error');
+        console.error('Backup creation error', e);
+        showNotification('Failed to start backup', 'error');
     }
 }
 
