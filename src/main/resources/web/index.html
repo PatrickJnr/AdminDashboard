@@ -285,6 +285,19 @@
                     <div class="hytale-panel-inner">
                         <div class="card-header">
                             <div>
+                                <h2 style="display: inline;">World Management</h2>
+                            </div>
+                        </div>
+                        <p style="color: var(--text-secondary); font-size: 0.8125rem; margin-bottom: 1rem">Monitor and manage all worlds on the server.</p>
+                        <div class="management-content">
+                            <div id="world-list-container" class="ban-list"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="hytale-panel">
+                    <div class="hytale-panel-inner">
+                        <div class="card-header">
+                            <div>
                                 <h2 style="display: inline;">Warp Points</h2>
                                 <span id="warp-count-badge" class="mod-count-badge">0</span>
                             </div>
@@ -404,20 +417,20 @@
                             <h3>General</h3>
                             <div class="input-group">
                                 <label>Server Name</label>
-                                <input type="text" name="serverName">
+                                <input type="text" id="cfg-serverName" name="serverName">
                             </div>
                             <div class="input-group">
                                 <label>MOTD</label>
-                                <input type="text" name="motd">
+                                <input type="text" id="cfg-motd" name="motd">
                             </div>
                             <div class="input-row">
                                 <div class="input-group">
                                     <label>Max Players</label>
-                                    <input type="number" name="maxPlayers">
+                                    <input type="number" id="cfg-maxPlayers" name="maxPlayers">
                                 </div>
                                 <div class="input-group">
                                     <label>Max View Radius</label>
-                                    <input type="number" name="maxViewRadius">
+                                    <input type="number" id="cfg-viewRadius" name="maxViewRadius">
                                 </div>
                             </div>
                         </div>

@@ -1559,14 +1559,14 @@ function renderWorlds(worlds) {
     
     worlds.forEach(world => {
         const div = document.createElement('div');
-        div.className = 'ban-item';
+        div.className = `world-item ${world.loaded ? 'loaded' : 'unloaded'}`;
         div.innerHTML = `
-            <div class="ban-info">
-                <div class="ban-uuid" style="font-weight: 600; color: var(--hytale-gold);">${world.name}</div>
-                <div class="ban-reason">${world.loaded ? 'Loaded' : 'Unloaded'} - ${world.players || 0} Players</div>
-                <div class="ban-date">${world.loaded ? (world.ticking ? 'Ticking' : 'Paused') : 'Inactive'}</div>
+            <div class="world-info">
+                <div class="world-name">${world.name}</div>
+                <div class="world-status">${world.loaded ? 'Loaded' : 'Unloaded'} - ${world.players || 0} Players</div>
+                <div class="world-meta">${world.loaded ? (world.ticking ? 'Ticking' : 'Paused') : 'Inactive'}</div>
             </div>
-            <div class="ban-actions" style="display: flex; gap: 0.5rem;">
+            <div class="world-actions" style="display: flex; gap: 0.5rem;">
                 ${world.loaded ? `
                     <button class="btn btn-secondary" onclick="toggleWorldState('${world.name}', ${!world.ticking})">
                         <span class="material-symbols-outlined">${world.ticking ? 'pause' : 'play_arrow'}</span>
@@ -1769,6 +1769,35 @@ async function fetchAdvancedMetrics() {
         if (elThreads) elThreads.textContent = data.threadCount;
         if (elGC) elGC.textContent = data.gcCollections;
         
+        // Update World Performance (TPS)
+        const worldContainer = document.getElementById('world-metrics-container');
+        if (worldContainer) {
+            worldContainer.innerHTML = '';
+            if (data.worlds && Object.keys(data.worlds).length > 0) {
+                Object.entries(data.worlds).forEach(([name, metrics]) => {
+                    const div = document.createElement('div');
+                    div.className = 'metric-card';
+                    div.style.padding = '1rem';
+                    div.innerHTML = `
+                        <div style="font-weight: 600; font-size: 0.875rem; margin-bottom: 0.5rem; color: var(--text-secondary);">${name}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                            <span style="font-size: 1.5rem; font-weight: 700; font-family: 'Lexend'; color: var(--accent-primary);">${metrics.tps}</span>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">TPS</span>
+                        </div>
+                        <div class="stat-trend ${metrics.tps >= 29 ? 'positive' : 'negative'}">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">
+                                ${metrics.tps >= 29 ? 'check_circle' : 'warning'}
+                            </span>
+                            <span>${metrics.tps >= 29 ? 'Stable' : 'Degraded'}</span>
+                        </div>
+                    `;
+                    worldContainer.appendChild(div);
+                });
+            } else {
+                worldContainer.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-muted);">No worlds loaded</div>';
+            }
+        }
+        
     } catch (e) { console.error('Metrics fetch failed', e); }
 }
 
@@ -1789,25 +1818,29 @@ function renderLogList(logs) {
     
     logs.forEach(log => {
         const div = document.createElement('div');
-        div.className = 'plugin-item';
+        div.className = 'plugin-item log-item';
         div.style.cursor = 'pointer';
         div.innerHTML = `
-            <div class="plugin-info">
+            <div class="plugin-info" onclick="viewLog('${log.name}')">
                 <span class="material-symbols-outlined">description</span>
                 <div>
                     <div style="font-weight: 600;">${log.name}</div>
                     <div style="font-size: 0.75rem; color: var(--text-secondary);">${formatBytes(log.size)} - ${new Date(log.modified).toLocaleString()}</div>
                 </div>
             </div>
+            <div class="log-actions">
+                <button class="btn-icon btn-danger" onclick="deleteLogFile('${log.name}')" title="Delete Log">
+                    <span class="material-symbols-outlined">delete</span>
+                </button>
+            </div>
         `;
-        div.onclick = () => viewLog(log.name);
         container.appendChild(div);
     });
 }
 
 async function viewLog(name) {
     try {
-        const res = await fetch(`/api/logs/view?name=${encodeURIComponent(name)}`, {
+        const res = await fetch(`/api/logs/view/${encodeURIComponent(name)}`, {
             headers: { 'X-Admin-Token': dashboardToken }
         });
         const data = await res.json();
@@ -1821,10 +1854,32 @@ async function viewLog(name) {
     } catch (e) { showNotification('Failed to load log', 'error'); }
 }
 
+async function deleteLogFile(name) {
+    if (!await customConfirm(`Are you sure you want to delete log file "<b>${name}</b>"?<br>This action cannot be undone.`, 'CONFIRM DELETE', true, true)) return;
+    
+    try {
+        const res = await fetch(`/api/logs/delete/${encodeURIComponent(name)}`, {
+            method: 'POST',
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const data = await res.json();
+        if (data.success) {
+            showNotification(`Log file ${name} deleted`, 'success');
+            fetchLogs();
+            if (document.getElementById('current-log-name').textContent === name) {
+                document.getElementById('current-log-name').textContent = 'Select a log file';
+                document.getElementById('log-viewer-content').textContent = 'Pruned logs... waiting for new events.';
+            }
+        } else {
+            showNotification(data.error || 'Failed to delete log', 'error');
+        }
+    } catch (e) { showNotification('Failed to delete log', 'error'); }
+}
+
 async function downloadLog() {
     const name = document.getElementById('current-log-name').textContent;
     if (!name || name === 'Select a log file') return;
-    window.open(`/api/logs/download?name=${encodeURIComponent(name)}&token=${dashboardToken}`, '_blank');
+    window.open(`/api/logs/download/${encodeURIComponent(name)}?token=${dashboardToken}`, '_blank');
 }
 
 // Config Implementation
@@ -1864,7 +1919,7 @@ async function updateConfig() {
     };
     
     try {
-        const res = await fetch('/api/config/update', {
+        const res = await fetch('/api/config/set', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Admin-Token': dashboardToken },
             body: JSON.stringify(payload)

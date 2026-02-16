@@ -187,10 +187,17 @@ public class DashboardAPI {
             }
         } else if (path.equals("/api/logs/list")) {
             return listLogs();
+        } else if (path.equals("/api/logs/view")) {
+            return "{\"error\": \"Missing name parameter\"}";
         } else if (path.startsWith("/api/logs/view/")) {
             String logName = path.substring("/api/logs/view/".length());
             return viewLog(logName);
-        } else if (path.equals("/api/logs/download/")) {
+        } else if (path.startsWith("/api/logs/delete/")) {
+            String logName = path.substring("/api/logs/delete/".length());
+            return deleteLog(logName);
+        } else if (path.equals("/api/logs/download")) {
+            return "{\"error\": \"Missing name parameter\"}";
+        } else if (path.startsWith("/api/logs/download/")) {
             String logName = path.substring("/api/logs/download/".length());
             return downloadLog(logName);
         } else if (path.equals("/api/worlds/list")) {
@@ -205,6 +212,8 @@ public class DashboardAPI {
             return getServerConfig();
         } else if (path.equals("/api/config/set") && method.equals("POST")) {
             return updateServerConfig(body);
+        } else if (path.equals("/api/config/loglevel") && method.equals("POST")) {
+            return setLogLevel(body);
         }
         
         return "{\"error\": \"Invalid endpoint\"}";
@@ -783,12 +792,13 @@ public class DashboardAPI {
             com.google.gson.JsonArray logs = new com.google.gson.JsonArray();
             try (var stream = java.nio.file.Files.list(logsDir)) {
                 stream.forEach(p -> {
-                    if (java.nio.file.Files.isRegularFile(p)) {
+                    String fileName = p.getFileName().toString();
+                    if (java.nio.file.Files.isRegularFile(p) && !fileName.endsWith(".lck")) {
                         com.google.gson.JsonObject log = new com.google.gson.JsonObject();
-                        log.addProperty("name", p.getFileName().toString());
+                        log.addProperty("name", fileName);
                         try {
                             log.addProperty("size", java.nio.file.Files.size(p));
-                            log.addProperty("lastModified", java.nio.file.Files.getLastModifiedTime(p).toMillis());
+                            log.addProperty("modified", java.nio.file.Files.getLastModifiedTime(p).toMillis());
                         } catch (Exception ignored) {}
                         logs.add(log);
                     }
@@ -849,40 +859,75 @@ public class DashboardAPI {
         }
     }
 
+    private static String deleteLog(String name) {
+        try {
+            java.nio.file.Path logPath = java.nio.file.Path.of("logs").resolve(name).normalize();
+            if (!logPath.startsWith(java.nio.file.Path.of("logs").normalize())) {
+                return "{\"error\": \"Invalid log path\"}";
+            }
+            if (!java.nio.file.Files.exists(logPath)) return "{\"error\": \"Log not found\"}";
+            
+            java.nio.file.Files.delete(logPath);
+            return "{\"success\": true}";
+        } catch (Exception e) {
+            return "{\"error\": \"Failed to delete log: " + e.getMessage() + "\"}";
+        }
+    }
+
     private static String listWorlds() {
         try {
-            JsonArray worlds = new JsonArray();
+            JsonArray jsonArray = new JsonArray();
             Universe universe = Universe.get();
-            
-            // Loaded worlds
             Map<String, World> loadedWorlds = universe.getWorlds();
-            
-            // All worlds on disk
+            java.util.Set<String> processedNames = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+
+            // 1. Process all LOADED worlds first (includes instances)
+            for (Map.Entry<String, World> entry : loadedWorlds.entrySet()) {
+                String name = entry.getKey();
+                World world = entry.getValue();
+                processedNames.add(name);
+
+                JsonObject worldJson = new JsonObject();
+                worldJson.addProperty("name", name);
+                worldJson.addProperty("loaded", true);
+                worldJson.addProperty("ticking", !world.isPaused());
+                
+                // Optimized player counting for this world
+                long playerCount = universe.getPlayers().stream()
+                    .filter(pr -> {
+                        Ref<EntityStore> ref = pr.getReference();
+                        if (ref == null || !ref.isValid()) return false;
+                        World playerWorld = ref.getStore().getExternalData().getWorld();
+                        return playerWorld == world || (playerWorld != null && playerWorld.equals(world));
+                    })
+                    .count();
+                
+                worldJson.addProperty("players", playerCount);
+                jsonArray.add(worldJson);
+            }
+
+            // 2. Add UNLOADED worlds found on disk
             Path worldsDir = universe.getPath().resolve("worlds");
             if (Files.exists(worldsDir)) {
                 try (var stream = Files.list(worldsDir)) {
                     stream.forEach(p -> {
                         if (Files.isDirectory(p)) {
                             String name = p.getFileName().toString();
-                            JsonObject worldJson = new JsonObject();
-                            worldJson.addProperty("name", name);
-                            
-                            World loaded = loadedWorlds.get(name);
-                            worldJson.addProperty("loaded", loaded != null);
-                            if (loaded != null) {
-                                worldJson.addProperty("ticking", !loaded.isPaused());
-                                worldJson.addProperty("players", universe.getPlayers().stream()
-                                    .filter(pr -> pr.getReference() != null && pr.getReference().isValid() && 
-                                                 pr.getReference().getStore().getExternalData().getWorld() == loaded)
-                                    .count());
+                            if (!processedNames.contains(name)) {
+                                JsonObject worldJson = new JsonObject();
+                                worldJson.addProperty("name", name);
+                                worldJson.addProperty("loaded", false);
+                                worldJson.addProperty("ticking", false);
+                                worldJson.addProperty("players", 0);
+                                jsonArray.add(worldJson);
                             }
-                            worlds.add(worldJson);
                         }
                     });
                 }
             }
-            return GSON.toJson(worlds);
+            return GSON.toJson(jsonArray);
         } catch (Exception e) {
+            getLogger().log("ERROR", "Failed to list worlds", e);
             return "{\"error\": \"" + e.getMessage() + "\"}";
         }
     }
@@ -964,12 +1009,22 @@ public class DashboardAPI {
             if (json.has("maxPlayers")) config.setMaxPlayers(json.get("maxPlayers").getAsInt());
             if (json.has("maxViewRadius")) config.setMaxViewRadius(json.get("maxViewRadius").getAsInt());
             
-            if (json.has("logLevel")) {
-                JsonObject ll = json.getAsJsonObject("logLevel");
-                String pkg = ll.get("package").getAsString();
-                String level = ll.get("level").getAsString();
-                config.getLogLevels().put(pkg, java.util.logging.Level.parse(level.toUpperCase()));
-            }
+            return "{\"success\": true}";
+        } catch (Exception e) {
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static String setLogLevel(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("package") || !json.has("level")) return "{\"error\": \"Missing package or level\"}";
+            
+            String pkg = json.get("package").getAsString();
+            String level = json.get("level").getAsString();
+            
+            com.hypixel.hytale.server.core.HytaleServerConfig config = HytaleServer.get().getConfig();
+            config.getLogLevels().put(pkg, java.util.logging.Level.parse(level.toUpperCase()));
             
             return "{\"success\": true}";
         } catch (Exception e) {

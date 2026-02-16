@@ -1,12 +1,29 @@
 # Changelog
 
-## Version 1.0.1 - February 15, 2026
+## Version 1.0.1 - February 16, 2026
 
 ### Improvements
-- **Clean URLs:** Added direct navigation paths (e.g., `/server`, `/players`, `/info`)
-- **System Stats:** Added Memory (Heap) and Disk usage visualization to the Info tab
+- **Clean URLs:** Added direct navigation support for all dashboard tabs (prevents 404 on refresh)
+- **System Stats:** Added Memory and Disk usage visualization to the Info tab
+- **Log List Cleanup:** Hidden temporary `.lck` files and fixed date formatting in the Log Explorer
 
 ### New Features
+
+**Advanced Metrics**
+- New "Metrics" tab with live charts for CPU and Memory usage
+- Real-time world performance monitoring (TPS) for all loaded worlds
+
+**Log Explorer**
+- New "Logs" tab to browse all server log files
+- Built-in viewer to read logs directly in the dashboard
+- One-click download for any log file
+
+**World Management**
+- New "World" tab to see all worlds on the server
+- Monitor player counts and load/unload worlds dynamically
+
+**Server Configuration**
+- New "Config" tab for quick editing of server name, MOTD, and player limits
 
 **Backup System**
 - Create full server backups manually with a single click

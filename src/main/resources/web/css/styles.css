@@ -892,6 +892,7 @@ tbody tr:hover td {
 }
 .ban-info {
     flex: 1;
+    min-width: 0;
 }
 .ban-uuid {
     font-weight: 600;
@@ -899,6 +900,8 @@ tbody tr:hover td {
     font-family: monospace;
     font-size: 0.875rem;
     margin-bottom: 0.25rem;
+    word-break: break-all;
+    overflow-wrap: break-word;
 }
 .ban-reason {
     font-size: 0.75rem;
@@ -925,6 +928,89 @@ tbody tr:hover td {
     opacity: 0.3;
     margin-bottom: 0.5rem;
 }
+
+/* World Management Items */
+.world-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.875rem 1.25rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    border-left: 3px solid var(--hytale-border);
+    transition: all 0.2s ease;
+}
+.world-item.loaded {
+    background: rgba(114, 170, 94, 0.1);
+    border-left-color: #72aa5e;
+}
+.world-item.loaded:hover {
+    background: rgba(114, 170, 94, 0.15);
+    border-left-color: #a3cf93;
+}
+.world-item.unloaded {
+    opacity: 0.8;
+}
+.world-info {
+    flex: 1;
+    min-width: 0;
+}
+.world-name {
+    font-weight: 600;
+    color: var(--hytale-gold);
+    font-family: monospace;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+    word-break: break-all;
+    overflow-wrap: break-word;
+}
+.world-status {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+.world-meta {
+    font-size: 0.6875rem;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* Log Management */
+.log-item {
+    cursor: default !important; /* Overriding pointer since we have sub-clicks */
+}
+.log-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+.log-actions {
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.log-item:hover .log-actions {
+    opacity: 1;
+}
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+.btn-icon.btn-danger {
+    color: var(--danger-color);
+}
+.btn-icon.btn-danger:hover {
+    background: rgba(183, 69, 69, 0.2);
+    color: #efa3a3;
+}
+
 .modal-overlay {
     position: fixed;
     top: 0;
