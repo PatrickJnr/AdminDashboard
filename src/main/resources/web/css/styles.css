@@ -1684,6 +1684,7 @@ a:focus-visible {
     min-height: 2.6em;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -1700,6 +1701,7 @@ a:focus-visible {
     text-overflow: ellipsis;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
 }
 .empty-item-state {
