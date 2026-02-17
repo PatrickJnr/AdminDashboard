@@ -2119,3 +2119,78 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 .console-input-group .btn {
     border-radius: 0 0 4px 0;
 }
+
+/* Inventory Rarity and Drag-and-Drop */
+.inv-slot {
+    position: relative;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--hytale-border);
+    aspect-ratio: 1/1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.inv-slot:not(.empty):hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.inv-slot.empty {
+    cursor: default;
+    opacity: 0.6;
+}
+
+.inv-slot img {
+    width: 80%;
+    height: 80%;
+    object-fit: contain;
+    image-rendering: pixelated;
+    pointer-events: none;
+}
+
+.inv-slot[data-rarity-color] {
+    box-shadow: inset 0 0 10px rgba(var(--rarity-rgb), 0.2);
+}
+
+.inv-slot[data-rarity-color]:not(.empty) {
+    border-color: var(--rarity-color);
+}
+
+.inv-slot[data-rarity-color]:not(.empty):hover {
+    box-shadow: 0 4px 20px var(--rarity-color-opaque), inset 0 0 15px var(--rarity-color-opaque);
+}
+
+/* Drag and Drop Styles */
+.inv-slot.dragging {
+    opacity: 0.4;
+    transform: scale(0.9);
+    cursor: grabbing;
+}
+
+.inv-slot.drag-over {
+    background: rgba(236, 188, 98, 0.2);
+    border-color: var(--hytale-gold);
+    box-shadow: 0 0 15px rgba(236, 188, 98, 0.3);
+}
+
+.inv-slot.drop-target-invalid {
+    background: rgba(231, 76, 60, 0.2);
+    border-color: #e74c3c;
+}
+
+.item-count {
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 1px 1px 2px #000, 0 0 4px #000;
+    pointer-events: none;
+}

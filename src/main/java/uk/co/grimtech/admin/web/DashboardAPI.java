@@ -40,6 +40,7 @@ import com.hypixel.hytale.server.core.plugin.PluginBase;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemArmor;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
 import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
@@ -233,6 +234,8 @@ public class DashboardAPI {
             return executeCommand(body);
         } else if (path.equals("/api/world/entities")) {
             return getEntityStats();
+        } else if (path.equals("/api/inventory/move") && method.equals("POST")) {
+            return moveInventoryItem(body);
         } else if (path.equals("/api/logs/list")) {
             return listLogs();
         } else if (path.equals("/api/logs/view")) {
@@ -488,10 +491,68 @@ public class DashboardAPI {
                 item.addProperty("id", stack.getItemId());
                 item.addProperty("count", stack.getQuantity());
                 item.addProperty("slot", i);
+
+                // Add rarity info
+                Item itemAsset = stack.getItem();
+                if (itemAsset != null) {
+                    item.addProperty("rarity", itemAsset.getQualityIndex());
+                    ItemQuality quality = ItemQuality.getAssetMap().getAsset(itemAsset.getQualityIndex());
+                    if (quality == null) {
+                        quality = ItemQuality.getAssetMap().getAsset("Default");
+                    }
+                    if (quality != null && quality.getTextColor() != null) {
+                        com.hypixel.hytale.protocol.Color color = quality.getTextColor();
+                        String hex = String.format("#%02x%02x%02x", color.red \u0026 0xFF, color.green \u0026 0xFF, color.blue \u0026 0xFF);
+                        item.addProperty("rarityColor", hex);
+                    }
+                }
+
                 items.add(item);
             }
         }
         return items;
+    }
+
+    private static String moveInventoryItem(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            if (!json.has("playerUuid")) return "{\"error\": \"Missing playerUuid\"}";
+            
+            UUID uuid = UUID.fromString(json.get("playerUuid").getAsString());
+            int fromSection = json.get("fromSection").getAsInt();
+            int fromSlot = json.get("fromSlot").getAsInt();
+            int toSection = json.get("toSection").getAsInt();
+            int toSlot = json.get("toSlot").getAsInt();
+            int quantity = json.get("quantity").getAsInt();
+
+            PlayerRef ref = Universe.get().getPlayer(uuid);
+            if (ref == null) return "{\"error\": \"Player not found\"}";
+
+            Ref<EntityStore> entityRef = ref.getReference();
+            if (entityRef == null || !entityRef.isValid()) {
+                return "{\"error\": \"Player not in world\"}";
+            }
+
+            Store<EntityStore> store = entityRef.getStore();
+            World world = store.getExternalData().getWorld();
+
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    Player playerComp = store.getComponent(entityRef, Player.getComponentType());
+                    if (playerComp != null) {
+                        Inventory inv = playerComp.getInventory();
+                        inv.moveItem(fromSection, fromSlot, quantity, toSection, toSlot);
+                        return "{\"status\": \"success\"}";
+                    }
+                    return "{\"error\": \"Player component not found\"}";
+                } catch (Exception e) {
+                    return "{\"error\": \"" + e.getMessage() + "\"}";
+                }
+            }, world).get(2, TimeUnit.SECONDS);
+
+        } catch (Exception e) {
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
     }
 
     private static String getItemIcon(String itemId) {

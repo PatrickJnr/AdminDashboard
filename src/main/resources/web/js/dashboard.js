@@ -483,8 +483,11 @@ function toggleAccordion(id) {
     }
 }
 
+let currentInventoryPlayerUuid = null;
+
 async function viewInv(uuid) {
     try {
+        currentInventoryPlayerUuid = uuid;
         const modal = document.getElementById('inventory-modal');
         if (!modal) {
             await customAlert('ERROR: Modal element not found!', 'Error');
@@ -529,8 +532,15 @@ function renderInventorySection(containerId, items) {
     container.innerHTML = '';
     
     let slotCount = 9;
-    if (containerId === 'inv-storage') slotCount = 27;
-    if (containerId === 'inv-armor') slotCount = 4;
+    let sectionId = 0; // 0=Hotbar, 1=Storage, 2=Armor
+    
+    if (containerId === 'inv-storage') {
+        slotCount = 27;
+        sectionId = 1;
+    } else if (containerId === 'inv-armor') {
+        slotCount = 4;
+        sectionId = 2;
+    }
     
     const itemMap = {};
     if (Array.isArray(items)) {
@@ -544,9 +554,26 @@ function renderInventorySection(containerId, items) {
     for (let i = 0; i < slotCount; i++) {
         const slot = document.createElement('div');
         slot.className = 'inv-slot';
+        slot.setAttribute('data-section', sectionId);
+        slot.setAttribute('data-slot', i);
+        
+        // Drag and Drop
+        slot.ondragover = handleDragOver;
+        slot.ondragleave = handleDragLeave;
+        slot.ondrop = handleDrop;
         
         const item = itemMap[i];
         if (item && item.id) {
+            slot.setAttribute('draggable', 'true');
+            slot.ondragstart = handleDragStart;
+            
+            // Rarity
+            if (item.rarityColor) {
+                slot.style.setProperty('--rarity-color', item.rarityColor);
+                slot.style.setProperty('--rarity-color-opaque', item.rarityColor + '44');
+                slot.setAttribute('data-rarity-color', item.rarityColor);
+            }
+            
             const icon = document.createElement('img');
             icon.src = `/api/item/${encodeURIComponent(item.id)}/icon`;
             icon.alt = item.id;
@@ -555,7 +582,12 @@ function renderInventorySection(containerId, items) {
             
             slot.onmouseenter = (e) => {
                 const tooltip = document.getElementById('item-tooltip');
-                document.getElementById('tooltip-title').textContent = item.id.split(':').pop().replace(/_/g, ' ');
+                let rarityHtml = '';
+                if (item.rarity) {
+                    rarityHtml = `<div style="color: ${item.rarityColor || '#fff'}; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">${item.rarity}</div>`;
+                }
+                
+                document.getElementById('tooltip-title').innerHTML = rarityHtml + item.id.split(':').pop().replace(/_/g, ' ');
                 document.getElementById('tooltip-id').textContent = item.id;
                 document.getElementById('tooltip-count').textContent = item.count > 1 ? `Count: ${item.count}` : '';
                 tooltip.classList.add('visible');
@@ -584,12 +616,94 @@ function renderInventorySection(containerId, items) {
     }
 }
 
+// Drag and Drop Handlers
+function handleDragStart(e) {
+    const slot = e.currentTarget;
+    const section = slot.getAttribute('data-section');
+    const slotId = slot.getAttribute('data-slot');
+    
+    e.dataTransfer.setData('text/plain', JSON.stringify({
+        section: parseInt(section),
+        slot: parseInt(slotId)
+    }));
+    
+    slot.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+}
+
+async function handleDrop(e) {
+    e.preventDefault();
+    const targetSlot = e.currentTarget;
+    targetSlot.classList.remove('drag-over');
+    
+    try {
+        const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+        const fromSection = data.section;
+        const fromSlot = data.slot;
+        const toSection = parseInt(targetSlot.getAttribute('data-section'));
+        const toSlot = parseInt(targetSlot.getAttribute('data-slot'));
+        
+        // Don't move if same slot
+        if (fromSection === toSection && fromSlot === toSlot) return;
+        
+        await executeMove(fromSection, fromSlot, toSection, toSlot);
+    } catch (err) {
+        console.error('Drop error:', err);
+    }
+    
+    // Cleanup any dragging classes
+    document.querySelectorAll('.inv-slot.dragging').forEach(s => s.classList.remove('dragging'));
+}
+
+async function executeMove(fromSection, fromSlot, toSection, toSlot, quantity = -1) {
+    if (!currentInventoryPlayerUuid) return;
+    
+    try {
+        const response = await fetch('/api/inventory/move', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({
+                playerUuid: currentInventoryPlayerUuid,
+                fromSection,
+                fromSlot,
+                toSection,
+                toSlot,
+                quantity
+            })
+        });
+        
+        const data = await response.json();
+        if (data.status === 'success') {
+            // Refresh inventory
+            viewInv(currentInventoryPlayerUuid);
+        } else {
+            showNotification(data.error || 'Failed to move item', 'error');
+        }
+    } catch (err) {
+        showNotification('Failed to move item', 'error');
+    }
+}
+
 function closeInventory() {
     const modal = document.getElementById('inventory-modal');
     if (modal) {
         modal.classList.remove('active');
     }
     document.getElementById('item-tooltip').classList.remove('visible');
+    currentInventoryPlayerUuid = null;
 }
 
 function positionTooltip(e, tooltip) {
