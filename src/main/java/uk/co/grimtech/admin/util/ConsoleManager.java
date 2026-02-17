@@ -20,13 +20,19 @@ public class ConsoleManager {
     private static final int MAX_LINES = 200;
 
     public static String getConsoleLog() {
-        try {
+        return getLog(null);
+    }
 
+    public static String getChatLog() {
+        return getLog("] [Hytale]");
+    }
+
+    private static String getLog(String filter) {
+        try {
             File logsDir = new File("logs");
             if (!logsDir.exists() || !logsDir.isDirectory()) {
                 return error("Logs directory not found");
             }
-
 
             File[] logFiles = logsDir.listFiles((dir, name) -> name.endsWith(".log"));
             
@@ -34,21 +40,18 @@ public class ConsoleManager {
                 return error("No log files found");
             }
 
-
             Arrays.sort(logFiles, Comparator.comparingLong(File::lastModified).reversed());
             
-            // Pick the newest file that IS NOT the dashboard log
             File latestLog = null;
             for (File file : logFiles) {
                 String name = file.getName();
                 if (name.equals("dashboard.log")) continue;
-                // Prefer server logs
                 if (name.contains("server") || name.equals("latest.log")) {
                     latestLog = file;
                     break;
                 }
             }
-            // Fallback to absolute newest if no server log found (but still skipping dashboard.log)
+
             if (latestLog == null && logFiles.length > 0) {
                  for (File file : logFiles) {
                     if (!file.getName().equals("dashboard.log")) {
@@ -60,15 +63,15 @@ public class ConsoleManager {
             
             if (latestLog == null) return error("No server logs found");
 
-            return readLastLines(latestLog, MAX_LINES);
+            return readLastLines(latestLog, MAX_LINES, filter);
 
         } catch (Exception e) {
-            AdminWebDashPlugin.getCustomLogger().log("ERROR", "Failed to read console log", e);
+            AdminWebDashPlugin.getCustomLogger().log("ERROR", "Failed to read logs", e);
             return error("Internal error reading logs");
         }
     }
 
-    private static String readLastLines(File file, int linesToRead) {
+    private static String readLastLines(File file, int linesToRead, String filter) {
         List<String> lines = new ArrayList<>();
         
 
@@ -84,14 +87,16 @@ public class ConsoleManager {
                 int b = raf.read();
 
                 if (b == '\n') {
-                    // Line break found
-                    if (pointer < fileLength - 1) { // Skip trailing newline
+                    if (pointer < fileLength - 1) {
                         String line = sb.reverse().toString();
-                        // Sanitize line for JSON
                         line = line.replace("\r", "");
-                        lines.add(0, line);
+                        
+                        if (filter == null || line.contains(filter)) {
+                            lines.add(0, line);
+                            linesRead++;
+                        }
+                        
                         sb.setLength(0);
-                        linesRead++;
                     }
                 } else if (b != '\r') {
                     sb.append((char) b);
@@ -99,26 +104,26 @@ public class ConsoleManager {
                 pointer--;
             }
             
-            // Add the last remaining line (first line of file)
-            if (sb.length() > 0) {
+            if (sb.length() > 0 && linesRead < linesToRead) {
                 String line = sb.reverse().toString();
                 line = line.replace("\r", "");
-                lines.add(0, line);
+                if (filter == null || line.contains(filter)) {
+                    lines.add(0, line);
+                }
             }
         } catch (IOException e) {
             AdminWebDashPlugin.getCustomLogger().log("ERROR", "Error reading log file", e);
-            // Return what we have so far instead of failing completely
         }
 
         JsonObject response = new JsonObject();
         response.addProperty("status", "success");
         response.addProperty("filename", file.getName());
         
-        com.google.gson.JsonArray linesArray = new com.google.gson.JsonArray();
+        com.google.gson.JsonArray logsArray = new com.google.gson.JsonArray();
         for (String line : lines) {
-            linesArray.add(line);
+            logsArray.add(line);
         }
-        response.add("lines", linesArray);
+        response.add("logs", logsArray);
         
         return GSON.toJson(response);
     }

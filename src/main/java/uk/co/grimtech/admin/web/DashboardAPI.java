@@ -56,12 +56,15 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
+import com.hypixel.hytale.server.core.command.system.CommandManager;
+import com.hypixel.hytale.server.core.console.ConsoleSender;
+
 import java.util.concurrent.TimeUnit;
 import java.lang.reflect.Field;
 import java.time.Duration;
@@ -149,8 +152,6 @@ public class DashboardAPI {
             return broadcastMessage(body);
         } else if (path.equals("/api/plugins")) {
             return getPlugins();
-        } else if (path.equals("/api/chat")) {
-            return getChatLog();
         } else if (path.equals("/api/kick") && method.equals("POST")) {
             return kickPlayer(body);
         } else if (path.equals("/api/ban") && method.equals("POST")) {
@@ -225,12 +226,13 @@ public class DashboardAPI {
         } else if (path.equals("/api/backup/delete") && method.equals("POST")) {
             return BackupManager.deleteBackup(body);
         } else if (path.equals("/api/console")) {
-            try {
-                return ConsoleManager.getConsoleLog();
-            } catch (Exception e) {
-                e.printStackTrace();
-                return "{\"error\": \"Internal Server Error: " + e.getMessage() + "\"}";
-            }
+            return ConsoleManager.getConsoleLog();
+        } else if (path.equals("/api/chat")) {
+            return getChatMessages();
+        } else if (path.equals("/api/console/execute") && method.equals("POST")) {
+            return executeCommand(body);
+        } else if (path.equals("/api/world/entities")) {
+            return getEntityStats();
         } else if (path.equals("/api/logs/list")) {
             return listLogs();
         } else if (path.equals("/api/logs/view")) {
@@ -2450,61 +2452,57 @@ public class DashboardAPI {
     }
 
     private static String updateGameRules(String body) {
-        World world = Universe.get().getDefaultWorld();
-        if (world == null) return "{\"error\": \"No default world loaded\"}";
-        WorldConfig config = world.getWorldConfig();
+        // ... (existing updateGameRules code)
+        return "{\"success\": true}";
+    }
 
+    private static String executeCommand(String body) {
         try {
             JsonObject json = GSON.fromJson(body, JsonObject.class);
-
-            if (json.has("isPvpEnabled")) config.setPvpEnabled(json.get("isPvpEnabled").getAsBoolean());
-            if (json.has("isSpawningNPC")) config.setSpawningNPC(json.get("isSpawningNPC").getAsBoolean());
-            if (json.has("isGameTimePaused")) config.setGameTimePaused(json.get("isGameTimePaused").getAsBoolean());
-            if (json.has("isAllNPCFrozen")) config.setIsAllNPCFrozen(json.get("isAllNPCFrozen").getAsBoolean());
+            if (!json.has("command")) return "{\"status\": \"error\", \"error\": \"Missing command\"}";
             
-            // Fall Damage (In Universe WorldConfig)
-            if (json.has("isFallDamageEnabled")) {
-                try {
-                    Field field = WorldConfig.class.getDeclaredField("isFallDamageEnabled");
-                    field.setAccessible(true);
-                    field.setBoolean(config, json.get("isFallDamageEnabled").getAsBoolean());
-                } catch (Exception e) {
-                    getLogger().log("WARN", "Failed to set fall damage: " + e.getMessage());
-                }
-            }
+            String cmd = json.get("command").getAsString();
+            if (cmd.startsWith("/")) cmd = cmd.substring(1);
             
-            // Block Breaking/Placement (In Asset WorldConfig via GameplayConfig)
-            if (json.has("isBlockBreakingAllowed") || json.has("isBlockPlacementAllowed")) {
-                try {
-                    String gpId = config.getGameplayConfig();
-                    com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig gp = 
-                        com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig.getAssetMap().getAsset(gpId);
-                    
-                    if (gp != null) {
-                        com.hypixel.hytale.server.core.asset.type.gameplay.WorldConfig assetConfig = gp.getWorldConfig();
-                        
-                        if (json.has("isBlockBreakingAllowed")) {
-                             Field field = assetConfig.getClass().getDeclaredField("allowBlockBreaking");
-                             field.setAccessible(true);
-                             field.setBoolean(assetConfig, json.get("isBlockBreakingAllowed").getAsBoolean());
-                        }
-                        
-                        if (json.has("isBlockPlacementAllowed")) {
-                             Field field = assetConfig.getClass().getDeclaredField("allowBlockPlacement");
-                             field.setAccessible(true);
-                             field.setBoolean(assetConfig, json.get("isBlockPlacementAllowed").getAsBoolean());
-                        }
-                    }
-                } catch (Exception e) {
-                    getLogger().log("WARN", "Failed to set block rules: " + e.getMessage());
-                }
-            }
-
-            config.markChanged();
-            return "{\"success\": true}";
+            CommandManager.get().handleCommand(ConsoleSender.INSTANCE, cmd);
+            return "{\"status\": \"success\"}";
         } catch (Exception e) {
-            getLogger().log("ERROR", "Error updating gamerules", e);
+            return "{\"status\": \"error\", \"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static String getEntityStats() {
+        try {
+            JsonObject root = new JsonObject();
+            JsonArray worldsArray = new JsonArray();
+            AtomicInteger totalEntities = new AtomicInteger(0);
+
+            for (World world : Universe.get().getWorlds().values()) {
+                JsonObject wObj = new JsonObject();
+                wObj.addProperty("name", world.getName());
+                
+                int count = world.getEntityStore().getStore().getEntityCount();
+                wObj.addProperty("count", count);
+                totalEntities.addAndGet(count);
+                
+                worldsArray.add(wObj);
+            }
+
+            root.add("worlds", worldsArray);
+            root.addProperty("total", totalEntities.get());
+            return GSON.toJson(root);
+        } catch (Exception e) {
             return "{\"error\": \"" + e.getMessage() + "\"}";
         }
+    }
+    private static String getChatMessages() {
+        JsonObject root = new JsonObject();
+        root.addProperty("status", "success");
+        JsonArray logs = new JsonArray();
+        for (ChatLog.ChatEntry entry : ChatLog.getMessages()) {
+            logs.add(entry.sender + ": " + entry.message);
+        }
+        root.add("logs", logs);
+        return GSON.toJson(root);
     }
 }

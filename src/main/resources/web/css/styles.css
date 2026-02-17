@@ -13,6 +13,8 @@
     --danger: #b74545;
     --warning: #f4a926;
     --info: #4a9eff;
+    --glass-bg: rgba(26, 45, 74, 0.65);
+    --glass-blur: blur(12px) saturate(160%);
 }
 * {
     box-sizing: border-box;
@@ -27,7 +29,7 @@ body {
     font-family: 'Nunito Sans', sans-serif;
     font-size: 16px;
     background-color: var(--hytale-bg);
-    background-image: url('https://www.hytale.com/static/images/backgrounds/content-lower-480.jpg');
+    background-image: linear-gradient(rgba(15, 28, 48, 0.4), rgba(15, 28, 48, 0.4)), url('https://www.hytale.com/static/images/backgrounds/content-lower-480.jpg');
     background-attachment: fixed;
     background-size: cover;
     color: var(--text-primary);
@@ -308,7 +310,10 @@ body {
     position: relative;
     margin-bottom: 2rem;
     border-width: 1px;
-    background: linear-gradient(to bottom, #1a2d4a, #0f1c30);
+    border-width: 1px;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
 }
 .hytale-panel:hover {
     box-shadow: 0 6px 40px rgba(0, 0, 0, 0.6), inset 0 0 0 2px #4e5765, 0 0 15px rgba(236, 188, 98, 0.08);
@@ -2066,3 +2071,51 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 /* Form Layout */
 .input-row { display: flex; gap: 1rem; width: 100%; }
 .input-row .input-group { flex: 1; min-width: 0; }
+/* Toast System */
+.toast-container {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    z-index: 10000;
+}
+.toast {
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--hytale-border);
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transform: translateX(120%);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.toast.visible {
+    transform: translateX(0);
+}
+.toast.success { border-left: 4px solid var(--success); }
+.toast.error { border-left: 4px solid var(--danger); }
+.toast.info { border-left: 4px solid var(--info); }
+
+/* Console Input Group */
+.console-input-group {
+    display: flex;
+    border: 1px solid var(--hytale-border);
+    border-top: none;
+    background: #000;
+    border-radius: 0 0 4px 4px;
+}
+.console-input-group .search-input {
+    border: none;
+    background: transparent;
+    flex: 1;
+}
+.console-input-group .btn {
+    border-radius: 0 0 4px 0;
+}

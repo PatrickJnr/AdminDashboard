@@ -115,15 +115,113 @@ function formatUptime(ms) {
 }
 
 function showNotification(message, type = 'success') {
-    const banner = document.createElement('div');
-    banner.className = type === 'success' ? 'success-banner' : 'error-banner';
-    banner.textContent = message;
-    document.body.appendChild(banner);
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
     
+    const iconMap = {
+        'success': 'check_circle',
+        'error': 'error',
+        'info': 'info'
+    };
+
+    toast.innerHTML = `
+        <span class="material-symbols-outlined">${iconMap[type] || 'info'}</span>
+        <span>${message}</span>
+    `;
+
+    container.appendChild(toast);
+    
+    // Trigger animation
+    setTimeout(() => toast.classList.add('visible'), 10);
+    
+    // Remove after delay
     setTimeout(() => {
-        banner.classList.add('fade-out');
-        setTimeout(() => banner.remove(), 400);
-    }, 2500);
+        toast.classList.remove('visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+async function executeCommand() {
+    const input = document.getElementById('console-command-input');
+    const cmd = input.value.trim();
+    if (!cmd || !dashboardToken) return;
+
+    input.value = '';
+    const btn = event?.target || document.querySelector('#console-command-area button');
+    if (btn) btn.classList.add('loading');
+
+    try {
+        const res = await fetch('/api/console/execute', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ command: cmd })
+        });
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            showNotification('Command executed: ' + cmd, 'success');
+        } else {
+            showNotification('Command failed: ' + (data.error || 'Unknown error'), 'error');
+        }
+    } catch (e) {
+        showNotification('Failed to execute command', 'error');
+    } finally {
+        if (btn) btn.classList.remove('loading');
+    }
+}
+
+let currentConsoleMode = 'chat';
+function switchConsoleTab(mode) {
+    currentConsoleMode = mode;
+    const btnChat = document.getElementById('btn-mode-chat');
+    const btnConsole = document.getElementById('btn-mode-console');
+    const headerTitle = document.getElementById('console-header-title');
+    const commandArea = document.getElementById('console-command-area');
+
+    if (mode === 'chat') {
+        btnChat.classList.replace('btn-secondary', 'btn-primary');
+        btnConsole.classList.replace('btn-primary', 'btn-secondary');
+        if (headerTitle) headerTitle.textContent = 'Server Chat';
+        if (commandArea) commandArea.style.display = 'none';
+        fetchChat();
+    } else {
+        btnChat.classList.replace('btn-primary', 'btn-secondary');
+        btnConsole.classList.replace('btn-secondary', 'btn-primary');
+        if (headerTitle) headerTitle.textContent = 'Server Console';
+        if (commandArea) commandArea.style.display = 'flex';
+        fetchConsole();
+    }
+}
+
+async function fetchChat() {
+    if (!dashboardToken || currentConsoleMode !== 'chat') return;
+    try {
+        const res = await fetch('/api/chat', { headers: { 'X-Admin-Token': dashboardToken } });
+        const data = await res.json();
+        renderConsole(data.logs || []);
+    } catch (e) { console.error('Failed to fetch chat', e); }
+}
+
+async function fetchConsole() {
+    if (!dashboardToken || currentConsoleMode !== 'console') return;
+    try {
+        const res = await fetch('/api/console', { headers: { 'X-Admin-Token': dashboardToken } });
+        const data = await res.json();
+        renderConsole(data.logs || []);
+    } catch (e) { console.error('Failed to fetch console', e); }
+}
+
+function renderConsole(logs) {
+    const container = document.getElementById('console-log');
+    if (!container) return;
+    container.innerHTML = logs.map(line => `<div class="console-entry">${line}</div>`).join('');
+    container.scrollTop = container.scrollHeight;
 }
 
 function updateConnectionStatus(status) {
@@ -302,6 +400,9 @@ async function fetchStats(isInit = false) {
         tpsEl.style.color = stats.tps > 18 ? '#a3cf93' : (stats.tps > 15 ? '#f4d06f' : '#b74545');
 
         updateServerTime();
+        fetchEntityStats();
+        fetchChat();
+        fetchConsole();
         updateConnectionStatus('connected');
         return true;
     } catch (e) {
@@ -318,6 +419,18 @@ async function fetchStats(isInit = false) {
         }
         return false;
     }
+}
+
+async function fetchEntityStats() {
+    if (!dashboardToken || document.hidden) return;
+    try {
+        const res = await fetch('/api/world/entities', {
+            headers: { 'X-Admin-Token': dashboardToken }
+        });
+        const data = await res.json();
+        const el = document.getElementById('total-entities');
+        if (el) el.textContent = data.total || 0;
+    } catch (e) { console.error('Failed to fetch entity stats', e); }
 }
 
 function updateServerTime() {
@@ -2188,135 +2301,12 @@ function closePromptModal(result) {
     }
 }
 
-let currentConsoleMode = 'chat';
-let lastChatId = 0;
 
-function switchConsoleTab(mode) {
-    currentConsoleMode = mode;
-    const btnChat = document.getElementById('btn-mode-chat');
-    const btnConsole = document.getElementById('btn-mode-console');
-    const header = document.getElementById('console-header-title');
-    
-    if (btnChat) btnChat.className = mode === 'chat' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
-    if (btnConsole) btnConsole.className = mode === 'console' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
-    
-    if (header) header.textContent = mode === 'chat' ? 'Server Chat' : 'Server Console';
-    
-    const container = document.getElementById('console-log');
-    if (container) container.innerHTML = `<div class="console-entry">Switching to ${mode}...</div>`;
-    
-    if (mode === 'chat') fetchChat();
-    else fetchConsole();
-}
+// Removed duplicate console logic
 
-async function fetchChat() {
-    if (!dashboardToken) return;
-    if (currentConsoleMode !== 'chat') return;
-    
-    try {
-        const res = await fetch('/api/chat', {
-            headers: { 'X-Admin-Token': dashboardToken }
-        });
-        const messages = await res.json();
-        renderChat(messages);
-    } catch (e) {
-        console.error('Failed to fetch chat', e);
-    }
-}
 
-function renderChat(messages) {
-    const container = document.getElementById('console-log');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    if (messages.length === 0) {
-        container.innerHTML = '<div class="console-entry" style="opacity: 0.5;">No chat messages yet.</div>';
-        return;
-    }
-    
-    messages.forEach(msg => {
-        const div = document.createElement('div');
-        div.className = 'chat-entry';
-        const date = new Date(msg.timestamp);
-        const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        
-        div.innerHTML = `
-            <span class="chat-time">[${timeStr}]</span>
-            <span class="chat-author" style="color: var(--hytale-gold); font-weight: 600;">${msg.sender}:</span>
-            <span class="chat-message">${msg.message}</span>
-        `;
-        container.appendChild(div);
-    });
-    
-    chatAutoScroll();
-}
+// Removed redundant duplicates
 
-function chatAutoScroll() {
-    const container = document.getElementById('console-log');
-    if (container) {
-        container.scrollTop = container.scrollHeight;
-    }
-}
-
-// Custom alert dialog
-function customAlert(message, title = 'Notice') {
-    return new Promise((resolve) => {
-        document.getElementById('alert-title').textContent = title;
-        document.getElementById('alert-message').textContent = message;
-        document.getElementById('alert-modal').classList.add('active');
-        
-        // Store resolve for when modal closes
-        window.alertResolve = resolve;
-    });
-}
-
-async function fetchConsole() {
-    if (!dashboardToken) return;
-    if (currentConsoleMode !== 'console') return;
-    
-    try {
-        const res = await fetch('/api/console', {
-            headers: { 'X-Admin-Token': dashboardToken }
-        });
-        const data = await res.json();
-        
-        if (data.error) {
-            console.error('Console error:', data.error);
-            return;
-        }
-        
-        renderConsole(data);
-    } catch (e) {
-        console.error('Failed to fetch console', e);
-    }
-}
-
-function renderConsole(data) {
-    const container = document.getElementById('console-log');
-    if (!container) return;
-    
-    // If filename changed or container empty, clear it
-    // But for now we just replace content since we fetch 100 lines
-    // Optimally we'd append, but for V1 we just show the window
-    
-    container.innerHTML = '';
-    
-    if (data.lines && data.lines.length > 0) {
-        data.lines.forEach(line => {
-             const div = document.createElement('div');
-             div.className = 'console-entry';
-             div.style.whiteSpace = 'pre-wrap';
-             div.style.fontFamily = 'monospace';
-             div.textContent = line;
-             container.appendChild(div);
-        });
-    } else {
-         container.innerHTML = '<div class="console-entry">No logs found.</div>';
-    }
-    
-    chatAutoScroll();
-}
 
 function closeAlertModal() {
     document.getElementById('alert-modal').classList.remove('active');

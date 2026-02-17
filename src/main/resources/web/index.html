@@ -12,6 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+    <div id="toast-container" class="toast-container"></div>
     <div id="login-overlay" class="login-overlay">
         <div class="login-card hytale-panel">
             <div class="hytale-panel-inner">
@@ -154,6 +155,15 @@
                         <div id="server-uptime" class="stat-value">0h 0m</div>
                     </div>
                 </div>
+                <div class="stat-card hytale-panel">
+                    <div class="hytale-panel-inner">
+                        <div class="stat-label">
+                            <span class="material-symbols-outlined">pets</span>
+                            Total Entities
+                        </div>
+                        <div id="total-entities" class="stat-value">0</div>
+                    </div>
+                </div>
             </div>
             <div class="hytale-panel">
                 <div class="hytale-panel-inner">
@@ -166,6 +176,10 @@
                     </div>
                     <div id="console-log" class="console-container">
                         <div class="console-entry">Initializing chat...</div>
+                    </div>
+                    <div class="console-input-group" id="console-command-area" style="display: none;">
+                        <input type="text" id="console-command-input" class="search-input" placeholder="Enter server command..." style="flex: 1; border-radius: 0 0 0 4px; border-top: none;">
+                        <button class="btn btn-secondary" onclick="executeCommand()" style="border-radius: 0 0 4px 0; border-top: none;">EXECUTE</button>
                     </div>
                 </div>
             </div>
