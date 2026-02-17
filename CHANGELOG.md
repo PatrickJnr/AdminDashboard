@@ -7,6 +7,8 @@
 - **Unified Players Tab:** Merged Online Players and Moderation into a single view
 - **Enhanced Metrics:** Moved system specifications to the Metrics tab
 - **Files Tab:** Renamed "Server" to "Files" for clarity
+- **Inventory rarity:** Added rarity colors to inventory slots to match in-game quality
+- **Item movement:** Added drag-and-drop support to move items between inventory slots
 
 ### Improvements
 - **Clean URLs:** Added direct navigation support for all dashboard tabs (prevents 404 on refresh)

@@ -532,14 +532,14 @@ function renderInventorySection(containerId, items) {
     container.innerHTML = '';
     
     let slotCount = 9;
-    let sectionId = 0; // 0=Hotbar, 1=Storage, 2=Armor
+    let sectionId = -1; // -1=Hotbar, -2=Storage, -3=Armor
     
     if (containerId === 'inv-storage') {
         slotCount = 27;
-        sectionId = 1;
+        sectionId = -2;
     } else if (containerId === 'inv-armor') {
         slotCount = 4;
-        sectionId = 2;
+        sectionId = -3;
     }
     
     const itemMap = {};

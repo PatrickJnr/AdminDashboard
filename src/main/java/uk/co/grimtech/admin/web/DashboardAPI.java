@@ -541,8 +541,22 @@ public class DashboardAPI {
                     Player playerComp = store.getComponent(entityRef, Player.getComponentType());
                     if (playerComp != null) {
                         Inventory inv = playerComp.getInventory();
-                        inv.moveItem(fromSection, fromSlot, quantity, toSection, toSlot);
-                        return "{\"status\": \"success\"}";
+                        ItemContainer fromContainer = inv.getSectionById(fromSection);
+                        int finalQuantity = quantity;
+                        if (finalQuantity == -1 && fromContainer != null) {
+                            ItemStack stack = fromContainer.getItemStack((short) fromSlot);
+                            if (stack != null) {
+                                finalQuantity = stack.getQuantity();
+                            }
+                        }
+                        
+                        if (finalQuantity > 0) {
+                            inv.moveItem(fromSection, fromSlot, finalQuantity, toSection, toSlot);
+                            playerComp.markNeedsSave();
+                            playerComp.sendInventory();
+                            return "{\"status\": \"success\"}";
+                        }
+                        return "{\"error\": \"Invalid quantity or empty slot\"}";
                     }
                     return "{\"error\": \"Player component not found\"}";
                 } catch (Exception e) {
