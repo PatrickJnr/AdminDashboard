@@ -598,7 +598,7 @@ tbody tr:hover td {
     position: relative;
     display: inline-block;
     box-sizing: border-box;
-    padding: 2px;
+    padding: 0.75rem 1.25rem;
     border-radius: 5px;
     border: 0;
     background: #816632;
@@ -1959,3 +1959,110 @@ a:focus-visible {
     background: #E04845;
     box-shadow: 0 4px 15px rgba(255, 94, 91, 0.4);
 }
+
+/* Toggle Switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 24px;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--card-bg); /* Use theme color or default dark grey */
+  border: 1px solid var(--border-color);
+  -webkit-transition: .4s;
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--text-secondary);
+  -webkit-transition: .4s;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--hytale-blue); /* Assuming hytale-blue var exists, or use #007bff */
+  border-color: var(--hytale-blue);
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(24px);
+  -ms-transform: translateX(24px);
+  transform: translateX(24px);
+  background-color: white;
+}
+
+/* World Tab Specifics */
+.world-controls-grid {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.world-controls-grid button {
+    padding: 1.5rem 1rem; /* Larger touch targets */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.world-controls-grid button .material-symbols-outlined {
+    font-size: 1.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.broadcast-group {
+    display: flex;
+    gap: 1rem; /* Increased from default */
+}
+
+.broadcast-group .btn {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+
+
+/* Mod Toggle Switch */
+.mod-list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; max-height: 400px; overflow-y: auto; padding-right: 0.5rem; }
+.mod-item-toggle { display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.3); padding: 0.75rem 1rem; border: 1px solid var(--hytale-border); border-radius: 4px; }
+.mod-item-toggle span { font-size: 0.875rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 1rem; }
+.switch { position: relative; display: inline-block; width: 40px; height: 20px; flex-shrink: 0; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #1a1f26; transition: .4s; border: 1px solid var(--hytale-border); }
+.slider:before { position: absolute; content: ''; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: var(--text-secondary); transition: .4s; }
+input:checked + .slider { background-color: rgba(114, 170, 94, 0.2); border-color: var(--success); }
+input:checked + .slider:before { transform: translateX(20px); background-color: var(--success); }
+.slider.round { border-radius: 34px; }
+.slider.round:before { border-radius: 50%; }
+
+/* Restart Warning */
+.restart-warning { display: flex; align-items: center; gap: 0.5rem; background: rgba(255, 193, 7, 0.1); border: 1px solid var(--warning); color: var(--warning); padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.875rem; }
+.restart-warning .material-symbols-outlined { font-size: 1.25rem; }
+
+/* Form Layout */
+.input-row { display: flex; gap: 1rem; width: 100%; }
+.input-row .input-group { flex: 1; min-width: 0; }

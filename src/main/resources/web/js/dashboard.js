@@ -1595,7 +1595,7 @@ function renderWorlds(worlds) {
                 <div class="world-status">${world.loaded ? 'Loaded' : 'Unloaded'} - ${world.players || 0} Players</div>
                 <div class="world-meta">${world.loaded ? (world.ticking ? 'Ticking' : 'Paused') : 'Inactive'}</div>
             </div>
-            <div class="world-actions" style="display: flex; gap: 0.5rem;">
+            <div class="world-actions" style="display: flex; gap: 1rem;">
                 ${world.loaded ? `
                     <button class="btn btn-secondary" onclick="toggleWorldState('${world.name}', ${!world.ticking})">
                         <span class="material-symbols-outlined">${world.ticking ? 'pause' : 'play_arrow'}</span>
@@ -1667,6 +1667,7 @@ function startSync() {
     setInterval(fetchMutes, 5000);
     setInterval(fetchWarps, 10000);
     setInterval(fetchWorlds, 5000);
+    setInterval(fetchWorldInfo, 2000);
     
     fetchStats();
     fetchAdvancedMetrics();
@@ -1680,6 +1681,8 @@ function startSync() {
     fetchLogs();
     fetchConfig();
     fetchWorlds();
+    fetchWorldInfo();
+    fetchGameRules();
 }
 
 // Metrics Implementation
@@ -1918,13 +1921,72 @@ async function fetchConfig() {
         const res = await fetch('/api/config/get', { headers: { 'X-Admin-Token': dashboardToken } });
         const config = await res.json();
         
-        if (document.getElementById('cfg-serverName')) document.getElementById('cfg-serverName').value = config.serverName;
-        if (document.getElementById('cfg-motd')) document.getElementById('cfg-motd').value = config.motd;
-        if (document.getElementById('cfg-maxPlayers')) document.getElementById('cfg-maxPlayers').value = config.maxPlayers;
-        if (document.getElementById('cfg-viewRadius')) document.getElementById('cfg-viewRadius').value = config.maxViewRadius;
+        if (document.getElementById('cfg-serverName')) document.getElementById('cfg-serverName').value = config.serverName || '';
+        if (document.getElementById('cfg-motd')) document.getElementById('cfg-motd').value = config.motd || '';
+        if (document.getElementById('cfg-maxPlayers')) document.getElementById('cfg-maxPlayers').value = config.maxPlayers || 0;
+        if (document.getElementById('cfg-viewRadius')) document.getElementById('cfg-viewRadius').value = config.maxViewRadius || 32;
         
+        // Defaults
+        if (config.defaults) {
+            if (document.getElementById('cfg-defaultWorld')) document.getElementById('cfg-defaultWorld').value = config.defaults.defaultWorld || '';
+            if (document.getElementById('cfg-defaultGameMode')) {
+                // Server returns 'Adventure' or 'Creative' (Title Case)
+                // Select options are also Title Case now. 
+                // We ensure we match exactly, or fallback
+                let gm = config.defaults.defaultGameMode || 'Adventure';
+                // Ensure title case just in case
+                gm = gm.charAt(0).toUpperCase() + gm.slice(1).toLowerCase();
+                document.getElementById('cfg-defaultGameMode').value = gm;
+            }
+        }
+
+        // Timeouts
+        if (config.connectionTimeouts) {
+            if (document.getElementById('cfg-playTimeout')) document.getElementById('cfg-playTimeout').value = config.connectionTimeouts.playTimeout || 0;
+        }
+
+        // Mods
+        const modList = document.getElementById('cfg-mod-list');
+        if (modList && config.mods) {
+            modList.innerHTML = '';
+            // Sort by Mod ID
+            const sortedMods = Object.entries(config.mods).sort((a, b) => a[0].localeCompare(b[0]));
+            
+            for (const [modId, modData] of sortedMods) {
+               const isProtected = modId === 'uk.co.grimtech:AdminWebDash';
+               const div = document.createElement('div');
+               div.className = 'mod-item-toggle';
+               div.setAttribute('data-mod-id', modId.toLowerCase());
+               
+               let toggleHtml = `
+                   <label class="switch">
+                     <input type="checkbox" ${modData.enabled ? 'checked' : ''} data-mod-id="${modId}" onchange="showRestartWarning()">
+                     <span class="slider round"></span>
+                   </label>
+               `;
+
+               if (isProtected) {
+                   toggleHtml = `
+                       <div style="display: flex; align-items: center; gap: 0.5rem;">
+                           <span class="material-symbols-outlined" style="font-size: 1.25rem; color: var(--text-secondary);" title="Cannot be disabled">lock</span>
+                           <label class="switch" style="opacity: 0.5; pointer-events: none;">
+                             <input type="checkbox" checked disabled>
+                             <span class="slider round"></span>
+                           </label>
+                       </div>
+                   `;
+               }
+
+               div.innerHTML = `
+                   <span title="${modId}">${modId}</span>
+                   ${toggleHtml}
+               `;
+               modList.appendChild(div);
+            }
+        }
+
         // Render log levels
-        const llContainer = document.getElementById('log-levels-list');
+        const llContainer = document.getElementById('log-level-list');
         if (llContainer) {
             llContainer.innerHTML = '';
             for (const [pkg, level] of Object.entries(config.logLevels)) {
@@ -1940,12 +2002,49 @@ async function fetchConfig() {
     } catch (e) { console.error('Failed to fetch config', e); }
 }
 
+function filterMods() {
+    const input = document.getElementById('cfg-mod-search');
+    const filter = input.value.toLowerCase();
+    const nodes = document.getElementsByClassName('mod-item-toggle');
+
+    for (let i = 0; i < nodes.length; i++) {
+        const modId = nodes[i].getAttribute('data-mod-id');
+        if (modId.includes(filter)) {
+            nodes[i].style.display = "flex";
+        } else {
+            nodes[i].style.display = "none";
+        }
+    }
+}
+
+function showRestartWarning() {
+    const warning = document.getElementById('cfg-restart-warning');
+    if (warning) warning.style.display = 'flex';
+}
+
 async function updateConfig() {
     const payload = {
         serverName: document.getElementById('cfg-serverName').value,
         motd: document.getElementById('cfg-motd').value,
-        maxPlayers: parseInt(document.getElementById('cfg-maxPlayers').value)
+        maxPlayers: parseInt(document.getElementById('cfg-maxPlayers').value),
+        maxViewRadius: parseInt(document.getElementById('cfg-viewRadius').value),
+        defaults: {
+            defaultWorld: document.getElementById('cfg-defaultWorld').value,
+            defaultGameMode: document.getElementById('cfg-defaultGameMode').value
+        },
+        connectionTimeouts: {
+             playTimeout: parseInt(document.getElementById('cfg-playTimeout').value)
+        },
+        mods: {}
     };
+
+    // Gather mods
+    const modInputs = document.querySelectorAll('#cfg-mod-list input[type="checkbox"]');
+    modInputs.forEach(input => {
+        payload.mods[input.getAttribute('data-mod-id')] = {
+            enabled: input.checked
+        };
+    });
     
     try {
         const res = await fetch('/api/config/set', {
@@ -2887,4 +2986,75 @@ async function addLogLevel() {
             showNotification(data.error || 'Failed to set log level', 'error');
         }
     } catch (e) { showNotification('Request failed', 'error'); }
+}
+
+// World Info & Gamerules
+async function fetchWorldInfo() {
+    if (!dashboardToken || document.hidden) return;
+    // Only fetch if on world tab
+    const tabWorld = document.getElementById('tab-world');
+    if (!tabWorld || !tabWorld.classList.contains('active')) return;
+    
+    try {
+        const res = await fetch('/api/world/info', { headers: { 'X-Admin-Token': dashboardToken } });
+        const data = await res.json();
+        
+        if (data.error) return;
+        
+        const setTxt = (id, txt) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = txt;
+        };
+
+        setTxt('world-name', data.name || 'Unknown World');
+        setTxt('world-dim', `Dimension: ${data.dimension}`);
+        setTxt('world-time', `Time: ${data.time}`);
+        setTxt('world-weather', `Weather: ${data.weather}`);
+        
+    } catch (e) { console.error('Failed to fetch world info', e); }
+}
+
+async function fetchGameRules() {
+    if (!dashboardToken) return;
+    try {
+        const res = await fetch('/api/world/gamerules', { headers: { 'X-Admin-Token': dashboardToken } });
+        const rules = await res.json();
+        
+        if (rules.error) return;
+        
+        const setChecked = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.checked = val;
+        };
+        
+        setChecked('rule-isPvpEnabled', rules.isPvpEnabled);
+        setChecked('rule-isFallDamageEnabled', rules.isFallDamageEnabled);
+        setChecked('rule-isSpawningNPC', rules.isSpawningNPC);
+        setChecked('rule-doDaylightCycle', !rules.isGameTimePaused); // Inverse
+        setChecked('rule-isBlockBreakingAllowed', rules.isBlockBreakingAllowed);
+        setChecked('rule-isBlockPlacementAllowed', rules.isBlockPlacementAllowed);
+        
+    } catch (e) { console.error('Failed to fetch gamerules', e); }
+}
+
+async function updateGameRule(rule, value) {
+    try {
+        const payload = {};
+        payload[rule] = value;
+        
+        await fetch('/api/world/gamerules', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Token': dashboardToken },
+            body: JSON.stringify(payload)
+        });
+        showNotification('Game rule updated', 'success');
+    } catch (e) { 
+        showNotification('Failed to update game rule', 'error');
+        fetchGameRules(); // Revert UI
+    }
+}
+
+async function toggleDaylightCycle(enabled) {
+    // "Daylight Cycle" enabled means "Game Time Paused" is false
+    updateGameRule('isGameTimePaused', !enabled);
 }

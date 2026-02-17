@@ -63,6 +63,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.lang.reflect.Field;
+import java.time.Duration;
+
+import com.hypixel.hytale.server.core.HytaleServerConfig.ModConfig;
+import com.hypixel.hytale.common.plugin.PluginIdentifier;
 
 public class DashboardAPI {
     private static final Gson GSON = new Gson();
@@ -176,6 +181,12 @@ public class DashboardAPI {
              }
         } else if (path.equals("/api/backup/status")) {
             return BackupManager.getBackupStatus();
+        } else if (path.equals("/api/config/get")) {
+            return getServerConfig();
+        } else if (path.equals("/api/config/set") && method.equals("POST")) {
+            return updateServerConfig(body);
+        } else if (path.equals("/api/config/loglevel") && method.equals("POST")) {
+            return setLogLevel(body);
         } else if (path.equals("/api/backup/delete") && method.equals("POST")) {
             return BackupManager.deleteBackup(body);
         } else if (path.equals("/api/console")) {
@@ -208,12 +219,15 @@ public class DashboardAPI {
             return unloadWorld(body);
         } else if (path.equals("/api/worlds/state") && method.equals("POST")) {
             return toggleWorldState(body);
-        } else if (path.equals("/api/config/get")) {
-            return getServerConfig();
-        } else if (path.equals("/api/config/set") && method.equals("POST")) {
-            return updateServerConfig(body);
-        } else if (path.equals("/api/config/loglevel") && method.equals("POST")) {
-            return setLogLevel(body);
+
+        } else if (path.equals("/api/world/info")) {
+            return getWorldInfo();
+        } else if (path.equals("/api/world/gamerules")) {
+            if (method.equals("POST")) {
+                return updateGameRules(body);
+            } else {
+                return getGameRules();
+            }
         }
         
         return "{\"error\": \"Invalid endpoint\"}";
@@ -970,6 +984,8 @@ public class DashboardAPI {
         }
     }
 
+
+
     private static String getServerConfig() {
         try {
             com.hypixel.hytale.server.core.HytaleServerConfig config = HytaleServer.get().getConfig();
@@ -992,6 +1008,22 @@ public class DashboardAPI {
             defaults.addProperty("defaultWorld", config.getDefaults().getWorld());
             defaults.addProperty("defaultGameMode", config.getDefaults().getGameMode().toString());
             result.add("defaults", defaults);
+
+            // Connection Timeouts
+            JsonObject timeouts = new JsonObject();
+            timeouts.addProperty("playTimeout", config.getConnectionTimeouts().getPlay().toMinutes());
+            result.add("connectionTimeouts", timeouts);
+
+            // Mods
+            JsonObject mods = new JsonObject();
+            for (Map.Entry<PluginIdentifier, ModConfig> entry : config.getModConfig().entrySet()) {
+                JsonObject mod = new JsonObject();
+                // ModConfig.enabled is Boolean (nullable), handle null as true (default enabled)
+                Boolean enabled = entry.getValue().getEnabled();
+                mod.addProperty("enabled", enabled != null ? enabled : true);
+                mods.add(entry.getKey().toString(), mod);
+            }
+            result.add("mods", mods);
             
             return GSON.toJson(result);
         } catch (Exception e) {
@@ -1008,6 +1040,38 @@ public class DashboardAPI {
             if (json.has("motd")) config.setMotd(json.get("motd").getAsString());
             if (json.has("maxPlayers")) config.setMaxPlayers(json.get("maxPlayers").getAsInt());
             if (json.has("maxViewRadius")) config.setMaxViewRadius(json.get("maxViewRadius").getAsInt());
+
+            if (json.has("defaults")) {
+                JsonObject d = json.getAsJsonObject("defaults");
+                if (d.has("defaultWorld")) config.getDefaults().setWorld(d.get("defaultWorld").getAsString());
+                if (d.has("defaultGameMode")) config.getDefaults().setGameMode(GameMode.valueOf(d.get("defaultGameMode").getAsString()));
+            }
+
+            if (json.has("connectionTimeouts")) {
+                JsonObject t = json.getAsJsonObject("connectionTimeouts");
+                if (t.has("playTimeout")) config.getConnectionTimeouts().setPlay(Duration.ofMinutes(t.get("playTimeout").getAsLong()));
+            }
+
+            if (json.has("mods")) {
+                JsonObject m = json.getAsJsonObject("mods");
+                for (String key : m.keySet()) {
+                    if (!key.contains(":")) {
+                        getLogger().warning("[DashboardAPI] Skipping invalid mod ID in config update: " + key);
+                        continue;
+                    }
+                    PluginIdentifier id = PluginIdentifier.fromString(key);
+                    boolean enabled = m.getAsJsonObject(key).get("enabled").getAsBoolean();
+                    
+                    ModConfig mc = config.getModConfig().get(id);
+                    if (mc == null) {
+                         mc = new ModConfig();
+                         config.getModConfig().put(id, mc);
+                    }
+                    mc.setEnabled(enabled);
+                    // Mark config as changed since ModConfig modification might not trigger it directly on parent
+                    config.markChanged(); 
+                }
+            }
             
             return "{\"success\": true}";
         } catch (Exception e) {
@@ -2277,6 +2341,130 @@ public class DashboardAPI {
             return "{\"status\": \"success\", \"message\": \"CurseForge cache cleared\"}";
         } catch (Exception e) {
             getLogger().log("ERROR", "Error clearing CurseForge cache", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+    // World Info & Gamerules
+    private static String getWorldInfo() {
+        World world = Universe.get().getDefaultWorld();
+        if (world == null) return "{\"error\": \"No default world loaded\"}";
+
+        JsonObject json = new JsonObject();
+        json.addProperty("name", world.getName());
+        json.addProperty("dimension", 0); // Placeholder
+        json.addProperty("time", world.getWorldConfig().getGameTime().toString());
+        
+        String weather = world.getWorldConfig().getForcedWeather();
+        json.addProperty("weather", weather != null ? weather : "Dynamic");
+        
+        json.addProperty("players", world.getPlayerCount());
+        
+        return GSON.toJson(json);
+    }
+
+    private static String getGameRules() {
+        World world = Universe.get().getDefaultWorld();
+        if (world == null) return "{\"error\": \"No default world loaded\"}";
+        WorldConfig config = world.getWorldConfig();
+
+        JsonObject json = new JsonObject();
+        json.addProperty("isPvpEnabled", config.isPvpEnabled());
+        json.addProperty("isFallDamageEnabled", config.isFallDamageEnabled());
+        json.addProperty("isSpawningNPC", config.isSpawningNPC());
+        json.addProperty("isGameTimePaused", config.isGameTimePaused());
+        
+        // Use reflection for protected fields without getters/setters visible
+        try {
+            // Block Rules live in the Asset WorldConfig, not Universe WorldConfig
+            String gpId = config.getGameplayConfig();
+            com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig gp = 
+                com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig.getAssetMap().getAsset(gpId);
+            
+            boolean bb = true;
+            boolean bp = true;
+            
+            if (gp != null) {
+                com.hypixel.hytale.server.core.asset.type.gameplay.WorldConfig assetConfig = gp.getWorldConfig();
+                
+                Field blockBreaking = assetConfig.getClass().getDeclaredField("allowBlockBreaking");
+                blockBreaking.setAccessible(true);
+                bb = blockBreaking.getBoolean(assetConfig);
+                
+                Field blockPlacement = assetConfig.getClass().getDeclaredField("allowBlockPlacement");
+                blockPlacement.setAccessible(true);
+                bp = blockPlacement.getBoolean(assetConfig);
+            }
+            
+            json.addProperty("isBlockBreakingAllowed", bb);
+            json.addProperty("isBlockPlacementAllowed", bp);
+
+        } catch (Exception e) {
+             getLogger().log("WARN", "Failed to reflect block rules: " + e.getMessage());
+             // Fallback to defaults
+             json.addProperty("isBlockBreakingAllowed", true);
+             json.addProperty("isBlockPlacementAllowed", true);
+        }
+
+        json.addProperty("isAllNPCFrozen", config.isAllNPCFrozen());
+
+        return GSON.toJson(json);
+    }
+
+    private static String updateGameRules(String body) {
+        World world = Universe.get().getDefaultWorld();
+        if (world == null) return "{\"error\": \"No default world loaded\"}";
+        WorldConfig config = world.getWorldConfig();
+
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+
+            if (json.has("isPvpEnabled")) config.setPvpEnabled(json.get("isPvpEnabled").getAsBoolean());
+            if (json.has("isSpawningNPC")) config.setSpawningNPC(json.get("isSpawningNPC").getAsBoolean());
+            if (json.has("isGameTimePaused")) config.setGameTimePaused(json.get("isGameTimePaused").getAsBoolean());
+            if (json.has("isAllNPCFrozen")) config.setIsAllNPCFrozen(json.get("isAllNPCFrozen").getAsBoolean());
+            
+            // Fall Damage (In Universe WorldConfig)
+            if (json.has("isFallDamageEnabled")) {
+                try {
+                    Field field = WorldConfig.class.getDeclaredField("isFallDamageEnabled");
+                    field.setAccessible(true);
+                    field.setBoolean(config, json.get("isFallDamageEnabled").getAsBoolean());
+                } catch (Exception e) {
+                    getLogger().log("WARN", "Failed to set fall damage: " + e.getMessage());
+                }
+            }
+            
+            // Block Breaking/Placement (In Asset WorldConfig via GameplayConfig)
+            if (json.has("isBlockBreakingAllowed") || json.has("isBlockPlacementAllowed")) {
+                try {
+                    String gpId = config.getGameplayConfig();
+                    com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig gp = 
+                        com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig.getAssetMap().getAsset(gpId);
+                    
+                    if (gp != null) {
+                        com.hypixel.hytale.server.core.asset.type.gameplay.WorldConfig assetConfig = gp.getWorldConfig();
+                        
+                        if (json.has("isBlockBreakingAllowed")) {
+                             Field field = assetConfig.getClass().getDeclaredField("allowBlockBreaking");
+                             field.setAccessible(true);
+                             field.setBoolean(assetConfig, json.get("isBlockBreakingAllowed").getAsBoolean());
+                        }
+                        
+                        if (json.has("isBlockPlacementAllowed")) {
+                             Field field = assetConfig.getClass().getDeclaredField("allowBlockPlacement");
+                             field.setAccessible(true);
+                             field.setBoolean(assetConfig, json.get("isBlockPlacementAllowed").getAsBoolean());
+                        }
+                    }
+                } catch (Exception e) {
+                    getLogger().log("WARN", "Failed to set block rules: " + e.getMessage());
+                }
+            }
+
+            config.markChanged();
+            return "{\"success\": true}";
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error updating gamerules", e);
             return "{\"error\": \"" + e.getMessage() + "\"}";
         }
     }
