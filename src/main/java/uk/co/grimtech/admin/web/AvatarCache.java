@@ -31,22 +31,36 @@ public class AvatarCache {
     }
 
     public static byte[] getAvatar(String identifier) {
+        String cacheKey = "avatar_" + identifier;
+        
+        // 1. Check in-memory cache first
+        byte[] cachedInMemory = ResourceCache.get(cacheKey);
+        if (cachedInMemory != null) {
+            return cachedInMemory;
+        }
+
         String filename = identifier + ".png";
         Path cachePath = Paths.get(CACHE_DIR, filename);
 
+        // 2. Check disk cache
         if (Files.exists(cachePath)) {
             try {
-                return Files.readAllBytes(cachePath);
+                byte[] data = Files.readAllBytes(cachePath);
+                if (data != null) {
+                    ResourceCache.put(cacheKey, data, 3600000); // Cache for 1 hour in memory
+                    return data;
+                }
             } catch (IOException e) {
                 getLogger().log("WARN", "Failed to read cached avatar: " + filename, e);
             }
         }
 
-        // Not in cache, download it
+        // 3. Not in cache, download it
         try {
             byte[] data = downloadAvatar(identifier);
             if (data != null) {
                 Files.write(cachePath, data);
+                ResourceCache.put(cacheKey, data, 3600000); // Cache for 1 hour in memory
                 return data;
             }
         } catch (IOException e) {

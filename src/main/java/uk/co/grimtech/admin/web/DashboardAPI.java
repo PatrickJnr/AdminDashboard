@@ -13,14 +13,14 @@ import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.entity.UUIDComponent;
+
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
+
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
@@ -35,7 +35,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.plugin.JavaPlugin;
+
 import com.hypixel.hytale.server.core.plugin.PluginBase;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
 import com.hypixel.hytale.server.core.asset.AssetModule;
@@ -46,7 +46,7 @@ import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifie
 import com.hypixel.hytale.server.core.modules.accesscontrol.AccessControlModule;
 import com.hypixel.hytale.server.core.modules.accesscontrol.ban.InfiniteBan;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+
 import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.metrics.JVMMetrics;
 import org.bson.BsonDocument;
@@ -74,6 +74,25 @@ public class DashboardAPI {
     private static CustomLogger LOGGER;
     private static long lastMetricsLogTime = 0;
     
+    // Memoized Reflection Fields
+    private static java.lang.reflect.Field banProviderField;
+    
+    // Result Caches
+    private static String cachedPlayersJson;
+    private static long playersCacheExpiry = 0;
+    private static String cachedMetricsJson;
+    private static long metricsCacheExpiry = 0;
+    private static String cachedServerStatsJson;
+    private static long serverStatsCacheExpiry = 0;
+
+    static {
+        try {
+            banProviderField = AccessControlModule.class.getDeclaredField("banProvider");
+            banProviderField.setAccessible(true);
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Failed to memoize reflection fields", e);
+        }
+    }
 
     private static CustomLogger getLogger() {
         if (LOGGER == null) {
@@ -88,7 +107,10 @@ public class DashboardAPI {
         if (path.equals("/api/version")) {
             return getVersion();
         } else if (path.equals("/api/players")) {
-            return getPlayers();
+            if (System.currentTimeMillis() < playersCacheExpiry && cachedPlayersJson != null) return cachedPlayersJson;
+            cachedPlayersJson = getPlayers();
+            playersCacheExpiry = System.currentTimeMillis() + 1000; // 1s cache
+            return cachedPlayersJson;
         } else if (path.startsWith("/api/avatar/")) {
             String identifier = path.substring("/api/avatar/".length());
             byte[] avatar = AvatarCache.getAvatar(identifier);
@@ -107,9 +129,22 @@ public class DashboardAPI {
             String uuidStr = path.substring(12, path.length() - 4);
             return getPlayerInventory(uuidStr);
         } else if (path.equals("/api/stats")) {
-            return getServerStats();
+            if (System.currentTimeMillis() < serverStatsCacheExpiry && cachedServerStatsJson != null) return cachedServerStatsJson;
+            cachedServerStatsJson = getServerStats();
+            serverStatsCacheExpiry = System.currentTimeMillis() + 2000; // 2s cache
+            return cachedServerStatsJson;
         } else if (path.equals("/api/metrics")) {
-            return getAdvancedMetrics();
+            if (System.currentTimeMillis() < metricsCacheExpiry && cachedMetricsJson != null) return cachedMetricsJson;
+            cachedMetricsJson = getAdvancedMetrics();
+            metricsCacheExpiry = System.currentTimeMillis() + 5000; // 5s cache
+            return cachedMetricsJson;
+        } else if (path.equals("/api/server/stats")) {
+            if (System.currentTimeMillis() < serverStatsCacheExpiry && cachedServerStatsJson != null) return cachedServerStatsJson;
+            cachedServerStatsJson = getServerStats();
+            serverStatsCacheExpiry = System.currentTimeMillis() + 2000; // 2s cache
+            return cachedServerStatsJson;
+        } else if (path.equals("/api/server/config")) {
+            return getServerConfig();
         } else if (path.equals("/api/broadcast") && method.equals("POST")) {
             return broadcastMessage(body);
         } else if (path.equals("/api/plugins")) {
@@ -458,6 +493,10 @@ public class DashboardAPI {
     }
 
     private static String getItemIcon(String itemId) {
+        String cacheKey = "item_icon_" + itemId;
+        String cached = ResourceCache.get(cacheKey);
+        if (cached != null) return cached;
+
         try {
             // 0. URL Decode the itemId (e.g. hytale%3Astone -> hytale:stone)
             String rawId = itemId;
@@ -548,11 +587,16 @@ public class DashboardAPI {
 
             byte[] imageBytes = Files.readAllBytes(iconPath);
             getLogger().info("[DashboardAPI] Successfully read " + imageBytes.length + " bytes for " + itemId);
-            return "IMAGE_DATA:" + java.util.Base64.getEncoder().encodeToString(imageBytes);
+            String result = "IMAGE_DATA:" + java.util.Base64.getEncoder().encodeToString(imageBytes);
+            ResourceCache.put(cacheKey, result, 0); // Infinite cache for static icons
+            return result;
 
         } catch (Exception e) {
             getLogger().log("WARN", "[DashboardAPI] Error extracting real icon for " + itemId, e);
-            return getFallbackIcon(itemId);
+            String fallback = getFallbackIcon(itemId);
+            // Don't cache fallback infinitely, but maybe for a while? 
+            ResourceCache.put(cacheKey, fallback, 60000); // 1 minute for fallback
+            return fallback;
         }
     }
 
@@ -1237,6 +1281,10 @@ public class DashboardAPI {
     }
 
     private static String getModIcon(String modName) {
+        String cacheKey = "mod_icon_" + modName;
+        String cached = ResourceCache.get(cacheKey);
+        if (cached != null) return cached;
+
         try {
             modName = URLDecoder.decode(modName, StandardCharsets.UTF_8.name());
             AssetPack pack = findAssetPack(modName);
@@ -1250,7 +1298,9 @@ public class DashboardAPI {
                     java.nio.file.Path logoPath = pack.getFileSystem().getPath(logo);
                     byte[] data = java.nio.file.Files.readAllBytes(logoPath);
                     if (data != null && data.length > 0) {
-                        return "IMAGE_DATA:" + java.util.Base64.getEncoder().encodeToString(data);
+                        String result = "IMAGE_DATA:" + java.util.Base64.getEncoder().encodeToString(data);
+                        ResourceCache.put(cacheKey, result, 0); // Infinite cache for static mod icons
+                        return result;
                     }
                 } catch (Exception ignored) {}
             }
@@ -1302,46 +1352,35 @@ public class DashboardAPI {
             String reason = json.has("reason") ? json.get("reason").getAsString() : "Banned by Admin";
             
             PlayerRef ref = Universe.get().getPlayer(uuid);
-            String playerName = ref != null ? ref.getUsername() : uuid.toString();
+            String playerName = (ref != null) ? ref.getUsername() : uuid.toString();
             
-            // Use reflection to access the private banProvider field
-            try {
-                java.lang.reflect.Field field = AccessControlModule.class.getDeclaredField("banProvider");
-                field.setAccessible(true);
-                com.hypixel.hytale.server.core.modules.accesscontrol.provider.HytaleBanProvider banProvider = 
-                    (com.hypixel.hytale.server.core.modules.accesscontrol.provider.HytaleBanProvider) field.get(AccessControlModule.get());
-                
-                // Check if already banned
-                if (banProvider.hasBan(uuid)) {
-                    return "{\"error\": \"Player is already banned\"}";
+            if (banProviderField == null) {
+                return "{\"error\": \"Ban system unavailable (reflection failed)\"}";
+            }
+            
+            com.hypixel.hytale.server.core.modules.accesscontrol.provider.HytaleBanProvider banProvider = 
+                (com.hypixel.hytale.server.core.modules.accesscontrol.provider.HytaleBanProvider) banProviderField.get(AccessControlModule.get());
+            
+            if (banProvider.hasBan(uuid)) {
+                return "{\"error\": \"Player is already banned\"}";
+            }
+            
+            UUID adminUuid = UUID.fromString("00000000-0000-0000-0000-000000000000");
+            InfiniteBan ban = new InfiniteBan(uuid, adminUuid, Instant.now(), reason);
+            
+            boolean added = banProvider.modify(bans -> {
+                bans.put(uuid, ban);
+                return true;
+            });
+            
+            if (added) {
+                if (ref != null && ref.getPacketHandler() != null) {
+                    ref.getPacketHandler().disconnect("Banned: " + reason);
                 }
-                
-                // Get the admin UUID (for now, use a system UUID)
-                UUID adminUuid = UUID.fromString("00000000-0000-0000-0000-000000000000");
-                
-                // Create an infinite ban
-                InfiniteBan ban = new InfiniteBan(uuid, adminUuid, Instant.now(), reason);
-                
-                // Add to ban list using the modify method
-                boolean added = banProvider.modify(bans -> {
-                    bans.put(uuid, ban);
-                    return true;
-                });
-                
-                if (added) {
-                    // Kick if online
-                    if (ref != null && ref.getPacketHandler() != null) {
-                        ref.getPacketHandler().disconnect("Banned: " + reason);
-                    }
-                    
-                    getLogger().info("[API] Banned player " + playerName + " (" + uuid + ") - Reason: " + reason);
-                    return "{\"status\": \"success\", \"message\": \"Player banned\"}";
-                } else {
-                    return "{\"error\": \"Failed to add ban\"}";
-                }
-            } catch (NoSuchFieldException | IllegalAccessException e) {
-                getLogger().log("ERROR", "Failed to access banProvider via reflection", e);
-                return "{\"error\": \"Failed to access ban system: " + e.getMessage() + "\"}";
+                getLogger().info("[API] Banned player " + playerName + " (" + uuid + ") - Reason: " + reason);
+                return "{\"status\": \"success\", \"message\": \"Player banned\"}";
+            } else {
+                return "{\"error\": \"Failed to add ban\"}";
             }
         } catch (Exception e) {
             getLogger().log("ERROR", "Error banning player", e);

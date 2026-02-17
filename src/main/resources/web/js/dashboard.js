@@ -1659,15 +1659,15 @@ async function toggleWorldState(name, ticking) {
 // Update startSync to fetch new data
 function startSync() {
     setInterval(fetchStats, 2000);
-    setInterval(fetchAdvancedMetrics, 2000);
+    setInterval(fetchAdvancedMetrics, 5000); // Aligned with 5s backend cache
     setInterval(() => {
         if (currentConsoleMode === 'chat') fetchChat();
         else fetchConsole();
     }, 2000);
     setInterval(fetchMutes, 5000);
     setInterval(fetchWarps, 10000);
-    setInterval(fetchWorlds, 5000);
-    setInterval(fetchWorldInfo, 2000);
+    setInterval(fetchWorlds, 10000); // Less frequent
+    setInterval(fetchWorldInfo, 5000); // 5s is plenty for world status
     
     fetchStats();
     fetchAdvancedMetrics();

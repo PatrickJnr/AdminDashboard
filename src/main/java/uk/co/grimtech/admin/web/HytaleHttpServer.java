@@ -25,7 +25,9 @@ public class HytaleHttpServer {
         server = HttpServer.create(new InetSocketAddress(port), 0);
         
         // Static assets handler
-        server.createContext("/", new StaticHandler());
+        StaticHandler staticHandler = new StaticHandler();
+        staticHandler.preLoadAssets();
+        server.createContext("/", staticHandler);
         
         // API handler
         server.createContext("/api", new ApiHandler());
@@ -45,9 +47,34 @@ public class HytaleHttpServer {
     }
 
     static class StaticHandler implements HttpHandler {
+        private final java.util.Map<String, byte[]> assetCache = new java.util.HashMap<>();
+        private long lastPreloadTime = 0;
+
+        public void preLoadAssets() {
+            String[] assets = {
+                "/web/index.html",
+                "/web/css/styles.css",
+                "/web/js/dashboard.js",
+                "/web/js/charts.js",
+                "/web/assets/img/logo.png",
+                "/web/assets/fonts/Hytale.woff2"
+                // Add more as needed, but let's stick to core ones or scan
+            };
+            
+            for (String asset : assets) {
+                byte[] data = loadFromResources(asset);
+                if (data != null) {
+                    assetCache.put(asset, data);
+                }
+            }
+            lastPreloadTime = System.currentTimeMillis();
+            AdminWebDashPlugin.getCustomLogger().info("[HTTP] Pre-loaded " + assetCache.size() + " static assets.");
+        }
+
         @Override
         public void handle(HttpExchange t) throws IOException {
-            String path = t.getRequestURI().getPath();
+            String origPath = t.getRequestURI().getPath();
+            String path = origPath;
             
             // Clean URL Routing: Serve index.html for known routes
             if (path.equals("/") || 
@@ -70,40 +97,54 @@ public class HytaleHttpServer {
                 path = "/index.html";
             }
             
-            // For now, let's serve a simple embedded HTML if the file isn't found
-            // In a real scenario, we'd load from resources
-            byte[] response = loadFromResources("/web" + path);
+            String resourcePath = "/web" + path;
+            byte[] response = assetCache.get(resourcePath);
+            
+            if (response == null) {
+                // Fallback to direct load or 404
+                response = loadFromResources(resourcePath);
+            }
+
             if (response == null) {
                 String error = "404 Not Found";
                 t.sendResponseHeaders(404, error.length());
-                OutputStream os = t.getResponseBody();
-                os.write(error.getBytes());
-                os.close();
+                try (OutputStream os = t.getResponseBody()) {
+                    os.write(error.getBytes());
+                }
                 return;
             }
 
-            // Add cache-control headers to prevent browser caching
-            t.getResponseHeaders().set("Cache-Control", "no-cache, no-store, must-revalidate");
-            t.getResponseHeaders().set("Pragma", "no-cache");
-            t.getResponseHeaders().set("Expires", "0");
-            
-            // Add ETag based on current timestamp for cache busting
-            String etag = "\"" + System.currentTimeMillis() + "\"";
-            t.getResponseHeaders().set("ETag", etag);
+            // Content-Type detection
+            String contentType = "text/plain";
+            if (path.endsWith(".html")) contentType = "text/html; charset=utf-8";
+            else if (path.endsWith(".css")) contentType = "text/css";
+            else if (path.endsWith(".js")) contentType = "application/javascript";
+            else if (path.endsWith(".png")) contentType = "image/png";
+            else if (path.endsWith(".jpg") || path.endsWith(".jpeg")) contentType = "image/jpeg";
+            else if (path.endsWith(".svg")) contentType = "image/svg+xml";
+            else if (path.endsWith(".woff2")) contentType = "font/woff2";
+
+            t.getResponseHeaders().set("Content-Type", contentType);
+
+            // Caching headers - Use a static ETag for pre-loaded assets to allow browser caching
+            // but also allow cache-busting via our versioning if needed
+            t.getResponseHeaders().set("Cache-Control", "public, max-age=3600"); // 1 hour
+            t.getResponseHeaders().set("ETag", "\"" + lastPreloadTime + "_" + resourcePath.hashCode() + "\"");
 
             // If it's the HTML file, inject a version parameter into the content
             if (path.endsWith(".html")) {
                 String html = new String(response, java.nio.charset.StandardCharsets.UTF_8);
-                String version = String.valueOf(System.currentTimeMillis());
-                // Inject version as a global variable at the start of the script
+                // Inject version once or on every hit? For now, we keep it dynamic if we want live updates
+                // but we could also pre-process this.
+                String version = String.valueOf(lastPreloadTime);
                 html = html.replace("<script>", "<script>\n        const APP_VERSION = '" + version + "';\n        ");
                 response = html.getBytes(java.nio.charset.StandardCharsets.UTF_8);
             }
 
             t.sendResponseHeaders(200, response.length);
-            OutputStream os = t.getResponseBody();
-            os.write(response);
-            os.close();
+            try (OutputStream os = t.getResponseBody()) {
+                os.write(response);
+            }
         }
 
         private byte[] loadFromResources(String path) {
