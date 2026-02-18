@@ -1280,10 +1280,11 @@ document.head.appendChild(style);
 
 // ==================== NEW FEATURES ====================
 
-// Gamemode (Disabled - API compatibility issues)
+// Gamemode
 async function setGamemode(uuid, gamemode) {
+    if (!dashboardToken) return;
     try {
-        const response = await fetch('/api/gamemode', {
+        const response = await fetch('/api/player/gamemode', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -1293,7 +1294,8 @@ async function setGamemode(uuid, gamemode) {
         });
         const data = await response.json();
         if (data.status === 'success') {
-            showNotification(`Gamemode changed to ${gamemode}`, 'success');
+            showNotification(`Gamemode changed to ${gamemode} for ${currentActionPlayer.name}`, 'success');
+            fetchStats(); // Refresh to show new gamemode in table
         } else {
             showNotification(data.error || 'Failed to change gamemode', 'error');
         }
@@ -1330,16 +1332,50 @@ async function healPlayer(uuid) {
     }
 }
 
-// Time Control (Disabled - API compatibility issues)
+// Time Control
 async function setTime(time) {
-    showNotification('Time control is temporarily disabled due to API compatibility issues', 'error');
-    // TODO: Re-enable once correct Hytale API methods are identified
+    if (!dashboardToken) return;
+    try {
+        const response = await fetch('/api/world/set-time', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ time: time })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            showNotification(`Time set to ${time}`, 'success');
+        } else {
+            showNotification(data.error || 'Failed to set time', 'error');
+        }
+    } catch (error) {
+        showNotification('Error setting time: ' + error.message, 'error');
+    }
 }
 
-// Weather Control (Disabled - API compatibility issues)
+// Weather Control
 async function setWeather(weather) {
-    showNotification('Weather control is temporarily disabled due to API compatibility issues', 'error');
-    // TODO: Re-enable once correct Hytale API methods are identified
+    if (!dashboardToken) return;
+    try {
+        const response = await fetch('/api/world/set-weather', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Token': dashboardToken
+            },
+            body: JSON.stringify({ weather: weather })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            showNotification(`Weather set to ${weather}`, 'success');
+        } else {
+            showNotification(data.error || 'Failed to set weather', 'error');
+        }
+    } catch (error) {
+        showNotification('Error setting weather: ' + error.message, 'error');
+    }
 }
 
 // Mute System
@@ -1686,15 +1722,29 @@ async function executeWarpTeleport(uuid, playerName) {
     }
 }
 
-// Give Item (Disabled - API compatibility issues)
+// Give Item
 async function giveItem(uuid, name) {
-    const itemId = await customPrompt('Enter item ID (e.g., hytale:stone):', '', 'Give Item');
-    if (!itemId) return;
+    if (!dashboardToken) return;
     
-    const quantityStr = await customPrompt('Enter quantity (1-999):', '1', 'Give Item');
-    if (!quantityStr) return;
+    // Check if the give item modal is open, if so we might want to get data from it
+    const modalInput = document.getElementById('giveitem-search');
+    const isModalOpen = document.getElementById('giveitem-modal').classList.contains('active');
     
-    const quantity = parseInt(quantityStr);
+    let itemId, quantity;
+    
+    if (isModalOpen) {
+        // This is handled via the confirm button listener in openGiveItemModal
+        return;
+    } else {
+        itemId = await customPrompt('Enter item ID (e.g., hytale:stone):', '', 'Give Item');
+        if (!itemId) return;
+        
+        const quantityStr = await customPrompt('Enter quantity (1-999):', '1', 'Give Item');
+        if (!quantityStr) return;
+        
+        quantity = parseInt(quantityStr);
+    }
+    
     if (isNaN(quantity) || quantity < 1 || quantity > 999) {
         showNotification('Invalid quantity. Must be between 1 and 999', 'error');
         return;
@@ -2061,6 +2111,8 @@ async function fetchAdvancedMetrics() {
 }
 
 // Logs Implementation
+let currentLogContent = "";
+
 async function fetchLogs() {
     if (!dashboardToken) return;
     try {
@@ -2103,14 +2155,52 @@ async function viewLog(name) {
             headers: { 'X-Admin-Token': dashboardToken }
         });
         const data = await res.json();
-        const viewer = document.getElementById('log-viewer-content');
-        if (viewer) {
-            viewer.textContent = data.content;
-            viewer.scrollTop = viewer.scrollHeight;
-        }
+        currentLogContent = data.content || "";
+        renderFilteredLogs();
+        
         const nameDisplay = document.getElementById('current-log-name');
         if (nameDisplay) nameDisplay.textContent = name;
-    } catch (e) { showNotification('Failed to load log', 'error'); }
+    } catch (e) { 
+        console.error('Failed to load log', e);
+        showNotification('Failed to load log', 'error'); 
+    }
+}
+
+function filterLogs() {
+    renderFilteredLogs();
+}
+
+function renderFilteredLogs() {
+    const viewer = document.getElementById('log-viewer-content');
+    if (!viewer) return;
+
+    const searchTerm = document.getElementById('log-search')?.value.toLowerCase() || "";
+    const levelFilter = document.getElementById('log-level-filter')?.value || "";
+
+    if (!currentLogContent) {
+        viewer.textContent = "Log file is empty or not loaded.";
+        return;
+    }
+
+    const lines = currentLogContent.split('\n');
+    const filteredLines = lines.filter(line => {
+        // Match level like "[... INFO]" or "INFO:"
+        const matchesLevel = levelFilter === "" || 
+                           line.includes(` ${levelFilter}]`) || 
+                           line.includes(`[${levelFilter}]`) ||
+                           line.includes(`${levelFilter}:`);
+        const matchesSearch = searchTerm === "" || line.toLowerCase().includes(searchTerm);
+        return matchesLevel && matchesSearch;
+    });
+
+    if (filteredLines.length === 0) {
+        viewer.textContent = "No log entries match the current filters.";
+    } else {
+        viewer.textContent = filteredLines.join('\n');
+    }
+    
+    // Auto-scroll to bottom
+    viewer.scrollTop = viewer.scrollHeight;
 }
 
 async function deleteLogFile(name) {

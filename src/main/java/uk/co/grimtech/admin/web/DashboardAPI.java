@@ -70,7 +70,7 @@ import java.util.concurrent.TimeUnit;
 import java.lang.reflect.Field;
 import java.time.Duration;
 
-import com.hypixel.hytale.server.core.HytaleServerConfig.ModConfig;
+import com.hypixel.hytale.server.core.config.ModConfig;
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
 
 public class DashboardAPI {
