@@ -1284,7 +1284,7 @@ document.head.appendChild(style);
 async function setGamemode(uuid, gamemode) {
     if (!dashboardToken) return;
     try {
-        const response = await fetch('/api/player/gamemode', {
+        const response = await fetch('/api/gamemode', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -1332,51 +1332,6 @@ async function healPlayer(uuid) {
     }
 }
 
-// Time Control
-async function setTime(time) {
-    if (!dashboardToken) return;
-    try {
-        const response = await fetch('/api/world/set-time', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'X-Admin-Token': dashboardToken
-            },
-            body: JSON.stringify({ time: time })
-        });
-        const data = await response.json();
-        if (data.status === 'success') {
-            showNotification(`Time set to ${time}`, 'success');
-        } else {
-            showNotification(data.error || 'Failed to set time', 'error');
-        }
-    } catch (error) {
-        showNotification('Error setting time: ' + error.message, 'error');
-    }
-}
-
-// Weather Control
-async function setWeather(weather) {
-    if (!dashboardToken) return;
-    try {
-        const response = await fetch('/api/world/set-weather', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'X-Admin-Token': dashboardToken
-            },
-            body: JSON.stringify({ weather: weather })
-        });
-        const data = await response.json();
-        if (data.status === 'success') {
-            showNotification(`Weather set to ${weather}`, 'success');
-        } else {
-            showNotification(data.error || 'Failed to set weather', 'error');
-        }
-    } catch (error) {
-        showNotification('Error setting weather: ' + error.message, 'error');
-    }
-}
 
 // Mute System
 async function mutePlayer(uuid, name) {
