@@ -15,7 +15,7 @@ if %ERRORLEVEL% neq 0 (
     exit /b %ERRORLEVEL%
 )
 
-set JAR_NAME=AdminWebDash-1.0.1.jar
+set JAR_NAME=AdminWebDash-1.0.2.jar
 set DEST_DIR1=C:\Users\PatrickJr\AppData\Roaming\Hytale\UserData\Mods\
 set DEST_DIR2=F:\HyServerDocker\mods\
 
