@@ -49,7 +49,7 @@
 - Added **Server Console** view to monitor raw server logs in real-time.
 - Toggle between formatted Chat and raw Console views instantly.
 
-## Version 1.0.0 - February 10, 2026
+## Version 1.0.0 - 10th February 2026
 
 ### What's in the Mod
 
