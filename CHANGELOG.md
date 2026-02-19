@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 1.0.1 - February 18, 2026
+## Version 1.0.1 - 19th February 2026
 
 ### Maintenance
 - Built for 2026.02.18-f3b8fff95
