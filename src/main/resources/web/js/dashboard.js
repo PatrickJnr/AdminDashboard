@@ -2238,6 +2238,7 @@ async function fetchConfig() {
             if (document.getElementById('cfg-discordChannelLogs')) document.getElementById('cfg-discordChannelLogs').value = wdConfig.discordChannelLogs || '';
             if (document.getElementById('cfg-discordChannelAlerts')) document.getElementById('cfg-discordChannelAlerts').value = wdConfig.discordChannelAlerts || '';
             if (document.getElementById('cfg-discordChannelJoins')) document.getElementById('cfg-discordChannelJoins').value = wdConfig.discordChannelJoins || '';
+            if (document.getElementById('cfg-discordCommandPrefix')) document.getElementById('cfg-discordCommandPrefix').value = wdConfig.discordCommandPrefix || '!cmd ';
             
             // HTTPS Config
             if (document.getElementById('cfg-useHttps')) document.getElementById('cfg-useHttps').checked = wdConfig.useHttps || false;
@@ -2368,6 +2369,7 @@ async function updateConfig() {
     payload.discordChannelLogs = document.getElementById('cfg-discordChannelLogs')?.value.trim() || '';
     payload.discordChannelAlerts = document.getElementById('cfg-discordChannelAlerts')?.value.trim() || '';
     payload.discordChannelJoins = document.getElementById('cfg-discordChannelJoins')?.value.trim() || '';
+    payload.discordCommandPrefix = document.getElementById('cfg-discordCommandPrefix')?.value || '!cmd ';
 
     // HTTPS Config
     payload.useHttps = document.getElementById('cfg-useHttps')?.checked || false;

@@ -8,9 +8,9 @@ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.event.events.player.PlayerChatEvent;
 import uk.co.grimtech.admin.web.ChatLog;
 import uk.co.grimtech.admin.web.HytaleHttpServer;
+import uk.co.grimtech.admin.web.DashboardAPI;
 import uk.co.grimtech.admin.util.MuteTracker;
 import uk.co.grimtech.admin.util.WarpManager;
-import uk.co.grimtech.admin.util.BackupManager;
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.FileReader;
@@ -26,7 +26,6 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
-import com.hypixel.hytale.server.core.console.ConsoleSender;
 
 public class AdminWebDashPlugin extends JavaPlugin {
     private static AdminWebDashPlugin instance;
@@ -45,6 +44,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
     private static String discordChannelLogs = "";
     private static String discordChannelAlerts = "";
     private static String discordChannelJoins = "";
+    private static String discordCommandPrefix = "!cmd ";
     
     private static boolean useHttps = false;
     private static String keystorePath = "keystore.jks";
@@ -86,6 +86,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
     public static String getDiscordChannelLogs() { return discordChannelLogs; }
     public static String getDiscordChannelAlerts() { return discordChannelAlerts; }
     public static String getDiscordChannelJoins() { return discordChannelJoins; }
+    public static String getDiscordCommandPrefix() { return discordCommandPrefix; }
 
     public static boolean useHttps() { return useHttps; }
     public static String getKeystorePath() { return keystorePath; }
@@ -221,6 +222,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
                     if (config.has("discordChannelLogs")) discordChannelLogs = config.get("discordChannelLogs").getAsString();
                     if (config.has("discordChannelAlerts")) discordChannelAlerts = config.get("discordChannelAlerts").getAsString();
                     if (config.has("discordChannelJoins")) discordChannelJoins = config.get("discordChannelJoins").getAsString();
+                    if (config.has("discordCommandPrefix")) discordCommandPrefix = config.get("discordCommandPrefix").getAsString();
                     
                     if (config.has("useHttps")) useHttps = config.get("useHttps").getAsBoolean();
                     if (config.has("keystorePath")) keystorePath = config.get("keystorePath").getAsString();
@@ -251,6 +253,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
             config.addProperty("discordChannelLogs", discordChannelLogs);
             config.addProperty("discordChannelAlerts", discordChannelAlerts);
             config.addProperty("discordChannelJoins", discordChannelJoins);
+            config.addProperty("discordCommandPrefix", discordCommandPrefix);
             
             config.addProperty("useHttps", useHttps);
             config.addProperty("keystorePath", keystorePath);
@@ -353,23 +356,160 @@ public class AdminWebDashPlugin extends JavaPlugin {
             String channelId = event.getChannel().getId();
             
             String content = event.getMessage().getContentRaw();
-            if (content.startsWith("!cmd ") && (discordChannelLogs.isEmpty() || channelId.equals(discordChannelLogs))) {
-                String cmd = content.substring(5).trim();
+            if (content.startsWith(discordCommandPrefix) && (discordChannelLogs.isEmpty() || channelId.equals(discordChannelLogs))) {
+                String cmd = content.substring(discordCommandPrefix.length()).trim();
                 if (cmd.startsWith("/")) cmd = cmd.substring(1);
                 
                 DiscordCommandSender sender = new DiscordCommandSender(event.getChannel());
                 
                 try {
-                    // Execute command safely and natively caputure the asynchronous output
-                    CommandManager.get().handleCommand((CommandSender) sender, cmd).whenComplete((result, exception) -> {
-                        if (exception != null) {
-                            sender.sendMessage(com.hypixel.hytale.server.core.Message.raw("❌ Execution Exception: " + exception.getMessage()));
+                    String[] args = cmd.split(" ");
+                    String action = args[0].toLowerCase();
+                    boolean isCustom = false;
+                    
+                    if (args.length >= 2) {
+                        if (action.equals("heal") || action.equals("kick") || action.equals("ban") || 
+                            action.equals("gamemode") || action.equals("give") || action.equals("mute") || 
+                            action.equals("unmute") || action.equals("unban") || action.equals("clearinv")) {
+                            
+                            isCustom = true;
+                            handleCustomCommand(cmd, args, action, sender, event.getChannel());
                         }
-                        sender.flush();
-                    });
+                    } 
+                    if (action.equals("time") || action.equals("weather")) {
+                        isCustom = true;
+                        handleCustomCommand(cmd, args, action, sender, event.getChannel());
+                    }
+                    
+                    if (!isCustom) {
+                        // Execute command safely and natively caputure the asynchronous output
+                        CommandManager.get().handleCommand((CommandSender) sender, cmd).whenComplete((result, exception) -> {
+                            if (exception != null) {
+                                sender.sendMessage(com.hypixel.hytale.server.core.Message.raw("❌ Execution Exception: " + exception.getMessage()));
+                            }
+                            sender.flush();
+                        });
+                    }
                 } catch (Exception e) {
                     event.getChannel().sendMessage("❌ Error dispatching command: " + e.getMessage()).queue();
                 }
+            }
+        }
+
+        private void handleCustomCommand(String cmd, String[] args, String action, DiscordCommandSender sender, net.dv8tion.jda.api.entities.channel.middleman.MessageChannel channel) {
+            // time and weather
+            if (action.equals("time")) {
+                if (args.length >= 2) {
+                    JsonObject payload = new JsonObject();
+                    payload.addProperty("time", args[1]);
+                    String res = DashboardAPI.setTime(GSON.toJson(payload));
+                    sendApiResponse(channel, res);
+                } else {
+                    channel.sendMessage("Usage: " + discordCommandPrefix + "time <morning/noon/evening/night/0-24000>").queue();
+                }
+                return;
+            }
+            if (action.equals("weather")) {
+                if (args.length >= 2) {
+                    JsonObject payload = new JsonObject();
+                    payload.addProperty("weather", args[1]);
+                    String res = DashboardAPI.setWeather(GSON.toJson(payload));
+                    sendApiResponse(channel, res);
+                } else {
+                    channel.sendMessage("Usage: " + discordCommandPrefix + "weather <clear/rain/storm/snow>").queue();
+                }
+                return;
+            }
+
+            if (args.length < 2) {
+                channel.sendMessage("Usage: " + discordCommandPrefix + "<action> <player> [args]").queue();
+                return;
+            }
+            
+            String playerName = args[1];
+            String uuid = null;
+            
+            // Look up UUID
+            java.util.List<com.hypixel.hytale.server.core.universe.PlayerRef> players = com.hypixel.hytale.server.core.universe.Universe.get().getPlayers();
+            for (com.hypixel.hytale.server.core.universe.PlayerRef ref : players) {
+                if (ref.getUsername().equalsIgnoreCase(playerName)) {
+                    uuid = ref.getUuid().toString();
+                    break;
+                }
+            }
+            
+            if (uuid == null) {
+                channel.sendMessage("Player not found online: " + playerName).queue();
+                return;
+            }
+            
+            JsonObject payload = new JsonObject();
+            payload.addProperty("uuid", uuid);
+            String response = "";
+            
+            switch (action) {
+                case "heal":
+                    response = DashboardAPI.healPlayer(GSON.toJson(payload));
+                    break;
+                case "clearinv":
+                    response = DashboardAPI.clearInventory(GSON.toJson(payload));
+                    break;
+                case "kick":
+                    payload.addProperty("reason", args.length > 2 ? cmd.substring(action.length() + playerName.length() + 2).trim() : "Kicked via Discord");
+                    response = DashboardAPI.kickPlayer(GSON.toJson(payload));
+                    break;
+                case "ban":
+                    payload.addProperty("reason", args.length > 2 ? cmd.substring(action.length() + playerName.length() + 2).trim() : "Banned via Discord");
+                    response = DashboardAPI.banPlayer(GSON.toJson(payload));
+                    break;
+                case "unban":
+                    response = DashboardAPI.unbanPlayer(GSON.toJson(payload));
+                    break;
+                case "mute":
+                    payload.addProperty("reason", args.length > 2 ? cmd.substring(action.length() + playerName.length() + 2).trim() : "Muted via Discord");
+                    response = DashboardAPI.mutePlayer(GSON.toJson(payload));
+                    break;
+                case "unmute":
+                    response = DashboardAPI.unmutePlayer(GSON.toJson(payload));
+                    break;
+                case "gamemode":
+                    if (args.length > 2) {
+                        payload.addProperty("gamemode", args[2]);
+                        response = DashboardAPI.setGamemode(GSON.toJson(payload));
+                    } else {
+                        channel.sendMessage("Usage: " + discordCommandPrefix + "gamemode <player> <Creative/Adventure/Spectator>").queue();
+                        return;
+                    }
+                    break;
+                case "give":
+                    if (args.length > 2) {
+                        payload.addProperty("item", args[2]);
+                        payload.addProperty("count", args.length > 3 ? Integer.parseInt(args[3]) : 1);
+                        response = DashboardAPI.giveItem(GSON.toJson(payload));
+                    } else {
+                        channel.sendMessage("Usage: " + discordCommandPrefix + "give <player> <item_id> [count]").queue();
+                        return;
+                    }
+                    break;
+                default:
+                    channel.sendMessage("Known custom command not handled: " + action).queue();
+                    return;
+            }
+            sendApiResponse(channel, response);
+        }
+
+        private void sendApiResponse(net.dv8tion.jda.api.entities.channel.middleman.MessageChannel channel, String response) {
+            try {
+                JsonObject result = GSON.fromJson(response, JsonObject.class);
+                if (result.has("status") && result.get("status").getAsString().equals("success")) {
+                    channel.sendMessage("✅ Command executed successfully.").queue();
+                } else if (result.has("error")) {
+                    channel.sendMessage("❌ Error: " + result.get("error").getAsString()).queue();
+                } else {
+                    channel.sendMessage("Result: " + response).queue();
+                }
+            } catch (Exception e) {
+                channel.sendMessage("Result: " + response).queue();
             }
         }
     }
@@ -384,7 +524,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
 
         @Override
         public void sendMessage(@Nonnull com.hypixel.hytale.server.core.Message message) {
-            String text = message.getAnsiMessage();
+            String text = com.hypixel.hytale.server.core.util.MessageUtil.toAnsiString(message).toString();
             if (text != null && !text.isEmpty()) {
                 synchronized (output) {
                     output.append(text).append("\n");

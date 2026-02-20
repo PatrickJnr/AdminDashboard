@@ -1363,6 +1363,7 @@ public class DashboardAPI {
             webDashConfig.addProperty("discordChannelLogs", AdminWebDashPlugin.getDiscordChannelLogs());
             webDashConfig.addProperty("discordChannelAlerts", AdminWebDashPlugin.getDiscordChannelAlerts());
             webDashConfig.addProperty("discordChannelJoins", AdminWebDashPlugin.getDiscordChannelJoins());
+            webDashConfig.addProperty("discordCommandPrefix", AdminWebDashPlugin.getDiscordCommandPrefix());
             
             // HTTPS Config
             webDashConfig.addProperty("useHttps", AdminWebDashPlugin.useHttps());
@@ -1407,6 +1408,7 @@ public class DashboardAPI {
             if (newConfig.has("discordChannelLogs")) currentConfig.addProperty("discordChannelLogs", newConfig.get("discordChannelLogs").getAsString());
             if (newConfig.has("discordChannelAlerts")) currentConfig.addProperty("discordChannelAlerts", newConfig.get("discordChannelAlerts").getAsString());
             if (newConfig.has("discordChannelJoins")) currentConfig.addProperty("discordChannelJoins", newConfig.get("discordChannelJoins").getAsString());
+            if (newConfig.has("discordCommandPrefix")) currentConfig.addProperty("discordCommandPrefix", newConfig.get("discordCommandPrefix").getAsString());
             
             if (newConfig.has("useHttps")) {
                 boolean newHttps = newConfig.get("useHttps").getAsBoolean();
@@ -1451,7 +1453,7 @@ public class DashboardAPI {
         return GSON.toJson(ChatLog.getMessages());
     }
 
-    private static String kickPlayer(String body) {
+    public static String kickPlayer(String body) {
         try {
             JsonObject json = GSON.fromJson(body, JsonObject.class);
             if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
@@ -1472,7 +1474,7 @@ public class DashboardAPI {
         }
     }
 
-    private static String banPlayer(String body) {
+    public static String banPlayer(String body) {
         try {
             JsonObject json = GSON.fromJson(body, JsonObject.class);
             if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
@@ -1732,7 +1734,7 @@ public class DashboardAPI {
         }
     }
     
-    private static String unbanPlayer(String body) {
+    public static String unbanPlayer(String body) {
         try {
             JsonObject json = GSON.fromJson(body, JsonObject.class);
             if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
@@ -1810,7 +1812,7 @@ public class DashboardAPI {
     // NOTE: Some features use reflection or workarounds due to API limitations
     // These implementations are based on available public APIs and component patterns
     
-    private static String clearInventory(String body) {
+    public static String clearInventory(String body) {
         try {
             JsonObject json = GSON.fromJson(body, JsonObject.class);
             if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
@@ -1862,7 +1864,7 @@ public class DashboardAPI {
         }
     }
     
-    private static String healPlayer(String body) {
+    public static String healPlayer(String body) {
         try {
             JsonObject json = GSON.fromJson(body, JsonObject.class);
             if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
@@ -1924,7 +1926,7 @@ public class DashboardAPI {
         }
     }
     
-    private static String mutePlayer(String body) {
+    public static String mutePlayer(String body) {
         try {
             JsonObject json = GSON.fromJson(body, JsonObject.class);
             if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
@@ -1943,7 +1945,7 @@ public class DashboardAPI {
         }
     }
     
-    private static String unmutePlayer(String body) {
+    public static String unmutePlayer(String body) {
         try {
             JsonObject json = GSON.fromJson(body, JsonObject.class);
             if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
@@ -2144,7 +2146,7 @@ public class DashboardAPI {
         }
     }
     
-    private static String setTime(String body) {
+    public static String setTime(String body) {
         try {
             JsonObject json = GSON.fromJson(body, JsonObject.class);
             if (!json.has("time")) return "{\"error\": \"Missing time\"}";
@@ -2206,7 +2208,7 @@ public class DashboardAPI {
         }
     }
     
-    private static String setWeather(String body) {
+    public static String setWeather(String body) {
         try {
             JsonObject json = GSON.fromJson(body, JsonObject.class);
             if (!json.has("weather")) return "{\"error\": \"Missing weather\"}";
@@ -2277,7 +2279,7 @@ public class DashboardAPI {
         }
     }
 
-    private static String setGamemode(String body) {
+    public static String setGamemode(String body) {
         try {
             JsonObject json = GSON.fromJson(body, JsonObject.class);
             if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";
@@ -2334,7 +2336,7 @@ public class DashboardAPI {
         }
     }
     
-    private static String giveItem(String body) {
+    public static String giveItem(String body) {
         try {
             JsonObject json = GSON.fromJson(body, JsonObject.class);
             if (!json.has("uuid")) return "{\"error\": \"Missing UUID\"}";

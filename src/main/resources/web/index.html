@@ -645,10 +645,16 @@
                                 </label>
                             </div>
 
-                            <div class="input-group" style="margin-bottom: 1rem;">
-                                <label>Bot Token <span style="font-size: 0.75rem; color: #ff5e5b;">(Leave blank to keep existing token)</span></label>
-                                <input type="password" id="cfg-discordToken" name="discordToken" placeholder="Paste Discord Bot Token here...">
-                                <small id="cfg-discordToken-status" style="color: var(--hytale-gold); display: none; margin-top: 0.25rem;">Existing token is configured.</small>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label>Bot Token <span style="font-size: 0.75rem; color: #ff5e5b;">(Leave blank to keep existing token)</span></label>
+                                    <input type="password" id="cfg-discordToken" name="discordToken" placeholder="Paste Discord Bot Token here...">
+                                    <small id="cfg-discordToken-status" style="color: var(--hytale-gold); display: none; margin-top: 0.25rem;">Existing token is configured.</small>
+                                </div>
+                                <div class="input-group">
+                                    <label>Command Prefix <span style="font-size: 0.75rem; color: var(--text-secondary);">(Default: !cmd )</span></label>
+                                    <input type="text" id="cfg-discordCommandPrefix" name="discordCommandPrefix" placeholder="!cmd ">
+                                </div>
                             </div>
 
                             <div class="input-row">
