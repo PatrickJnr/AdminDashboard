@@ -2216,6 +2216,44 @@ async function fetchConfig() {
         if (config.connectionTimeouts) {
             if (document.getElementById('cfg-playTimeout')) document.getElementById('cfg-playTimeout').value = config.connectionTimeouts.playTimeout || 0;
         }
+        
+        // Discord Integration Config
+        if (config.webdash) {
+            const wdConfig = config.webdash;
+            
+            if (document.getElementById('cfg-discordEnabled')) document.getElementById('cfg-discordEnabled').checked = wdConfig.discordEnabled || false;
+            
+            // Password fields - show indicator if set
+            const discordTokenStatus = document.getElementById('cfg-discordToken-status');
+            if (discordTokenStatus) {
+                if (wdConfig.hasDiscordToken) {
+                    discordTokenStatus.style.display = 'block';
+                } else {
+                    discordTokenStatus.style.display = 'none';
+                }
+            }
+            if (document.getElementById('cfg-discordToken')) document.getElementById('cfg-discordToken').value = ''; // Always clear real token
+            
+            if (document.getElementById('cfg-discordGuildId')) document.getElementById('cfg-discordGuildId').value = wdConfig.discordGuildId || '';
+            if (document.getElementById('cfg-discordChannelLogs')) document.getElementById('cfg-discordChannelLogs').value = wdConfig.discordChannelLogs || '';
+            if (document.getElementById('cfg-discordChannelAlerts')) document.getElementById('cfg-discordChannelAlerts').value = wdConfig.discordChannelAlerts || '';
+            if (document.getElementById('cfg-discordChannelJoins')) document.getElementById('cfg-discordChannelJoins').value = wdConfig.discordChannelJoins || '';
+            
+            // HTTPS Config
+            if (document.getElementById('cfg-useHttps')) document.getElementById('cfg-useHttps').checked = wdConfig.useHttps || false;
+            if (document.getElementById('cfg-domain')) document.getElementById('cfg-domain').value = wdConfig.domain || '';
+            if (document.getElementById('cfg-keystorePath')) document.getElementById('cfg-keystorePath').value = wdConfig.keystorePath || 'keystore.jks';
+            
+            const keystorePasswordStatus = document.getElementById('cfg-keystorePassword-status');
+            if (keystorePasswordStatus) {
+                if (wdConfig.hasKeystorePassword) {
+                    keystorePasswordStatus.style.display = 'block';
+                } else {
+                    keystorePasswordStatus.style.display = 'none';
+                }
+            }
+            if (document.getElementById('cfg-keystorePassword')) document.getElementById('cfg-keystorePassword').value = '';
+        }
 
         // Mods
         const modList = document.getElementById('cfg-mod-list');
@@ -2318,6 +2356,29 @@ async function updateConfig() {
         };
     });
     
+    // Discord Integration Config
+    payload.discordEnabled = document.getElementById('cfg-discordEnabled')?.checked || false;
+    
+    const discordTokenElem = document.getElementById('cfg-discordToken');
+    if (discordTokenElem && discordTokenElem.value.trim() !== '') {
+        payload.discordToken = discordTokenElem.value.trim();
+    }
+    
+    payload.discordGuildId = document.getElementById('cfg-discordGuildId')?.value.trim() || '';
+    payload.discordChannelLogs = document.getElementById('cfg-discordChannelLogs')?.value.trim() || '';
+    payload.discordChannelAlerts = document.getElementById('cfg-discordChannelAlerts')?.value.trim() || '';
+    payload.discordChannelJoins = document.getElementById('cfg-discordChannelJoins')?.value.trim() || '';
+
+    // HTTPS Config
+    payload.useHttps = document.getElementById('cfg-useHttps')?.checked || false;
+    payload.domain = document.getElementById('cfg-domain')?.value.trim() || '';
+    payload.keystorePath = document.getElementById('cfg-keystorePath')?.value.trim() || 'keystore.jks';
+    
+    const keystorePasswordElem = document.getElementById('cfg-keystorePassword');
+    if (keystorePasswordElem && keystorePasswordElem.value.trim() !== '') {
+        payload.keystorePassword = keystorePasswordElem.value.trim();
+    }
+    
     try {
         const res = await fetch('/api/config/set', {
             method: 'POST',
@@ -2325,12 +2386,56 @@ async function updateConfig() {
             body: JSON.stringify(payload)
         });
         const data = await res.json();
-        if (data.success) {
-            showNotification('Server configuration updated', 'success');
+        if (data.success || data.status === 'success') {
+            let msg = 'Server configuration updated';
+            if (data.requiresRestart) {
+                msg += '. Some changes require a restart to take effect.';
+            }
+            showNotification(msg, 'success');
+            // Refresh to reset password placeholders / status
+            setTimeout(() => { fetchConfig(); }, 500); 
         } else {
             showNotification(data.error || 'Failed to update config', 'error');
         }
     } catch (e) { showNotification('Update request failed', 'error'); }
+}
+
+// Discord
+async function testDiscordConnection() {
+    const btn = document.getElementById('btn-test-discord');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined pulse">network_check</span> Testing...';
+    }
+    
+    const payload = {};
+    const tokenElem = document.getElementById('cfg-discordToken');
+    if (tokenElem && tokenElem.value.trim() !== '') {
+        payload.discordToken = tokenElem.value.trim();
+    }
+    
+    payload.discordChannelLogs = document.getElementById('cfg-discordChannelLogs')?.value.trim() || '';
+    
+    try {
+        const res = await fetch('/api/discord/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Token': dashboardToken },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.status === 'success' || data.success) {
+            showNotification('Discord test successful! Message sent to channel.', 'success');
+        } else {
+            showNotification(data.error || 'Discord connection failed', 'error');
+        }
+    } catch (e) { 
+        showNotification('Discord test request failed', 'error'); 
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-symbols-outlined">network_check</span> Test Connection';
+        }
+    }
 }
 
 // Time Control

@@ -17,6 +17,17 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.UUID;
 
+// JDA Imports
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.requests.GatewayIntent;
+import com.hypixel.hytale.server.core.command.system.CommandManager;
+import com.hypixel.hytale.server.core.command.system.CommandSender;
+import com.hypixel.hytale.server.core.console.ConsoleSender;
+
 public class AdminWebDashPlugin extends JavaPlugin {
     private static AdminWebDashPlugin instance;
     private static CustomLogger LOGGER;
@@ -26,7 +37,22 @@ public class AdminWebDashPlugin extends JavaPlugin {
     private static boolean loggingEnabled = false; // Default to false for production
     private static int port = 9081; // Default port
     private static int backupInterval = 0; // Default disabled
+
+    // Discord Integration & HTTPS Properties
+    private static boolean discordEnabled = false;
+    private static String discordToken = "";
+    private static String discordGuildId = "";
+    private static String discordChannelLogs = "";
+    private static String discordChannelAlerts = "";
+    private static String discordChannelJoins = "";
+    
+    private static boolean useHttps = false;
+    private static String keystorePath = "keystore.jks";
+    private static String keystorePassword = "";
+    private static String domain = "";
+
     private HytaleHttpServer httpServer;
+    private JDA jda;
 
 
     public static AdminWebDashPlugin getInstance() {
@@ -54,6 +80,18 @@ public class AdminWebDashPlugin extends JavaPlugin {
         return backupInterval;
     }
 
+    public static boolean isDiscordEnabled() { return discordEnabled; }
+    public static String getDiscordToken() { return discordToken; }
+    public static String getDiscordGuildId() { return discordGuildId; }
+    public static String getDiscordChannelLogs() { return discordChannelLogs; }
+    public static String getDiscordChannelAlerts() { return discordChannelAlerts; }
+    public static String getDiscordChannelJoins() { return discordChannelJoins; }
+
+    public static boolean useHttps() { return useHttps; }
+    public static String getKeystorePath() { return keystorePath; }
+    public static String getKeystorePassword() { return keystorePassword; }
+    public static String getDomain() { return domain; }
+
     public AdminWebDashPlugin(@Nonnull JavaPluginInit init) {
         super(init);
         instance = this;
@@ -70,8 +108,30 @@ public class AdminWebDashPlugin extends JavaPlugin {
 
         MuteTracker.load();
         WarpManager.load();
-        BackupManager.setSchedule(backupInterval);
-        LOGGER.info("[AdminWebDash] Data trackers initialized");
+        // Start Discord Bot using JDA
+        if (discordEnabled && discordToken != null && !discordToken.isEmpty()) {
+            try {
+                jda = JDABuilder.createDefault(discordToken)
+                        .enableIntents(GatewayIntent.MESSAGE_CONTENT)
+                        .addEventListeners(new DiscordListener())
+                        .build();
+                LOGGER.info("[AdminWebDash] Discord JDA Bot started!");
+                
+                // Keep the timer for updating player count presence
+                new java.util.Timer().scheduleAtFixedRate(new java.util.TimerTask() {
+                    @Override
+                    public void run() {
+                        try {
+                            updateDiscordPresence();
+                        } catch (Exception e) {
+                            LOGGER.log("ERROR", "Failed to sync Discord presence", e);
+                        }
+                    }
+                }, 5000, 30000); // Wait 5s, then every 30s
+            } catch (Exception e) {
+                LOGGER.severe("[AdminWebDash] Failed to initialize JDA Discord Bot: " + e.getMessage());
+            }
+        }
 
         try {
             httpServer = new HytaleHttpServer(port);
@@ -155,12 +215,27 @@ public class AdminWebDashPlugin extends JavaPlugin {
                             }
                         }
                     }
+                    if (config.has("discordEnabled")) discordEnabled = config.get("discordEnabled").getAsBoolean();
+                    if (config.has("discordToken")) discordToken = config.get("discordToken").getAsString();
+                    if (config.has("discordGuildId")) discordGuildId = config.get("discordGuildId").getAsString();
+                    if (config.has("discordChannelLogs")) discordChannelLogs = config.get("discordChannelLogs").getAsString();
+                    if (config.has("discordChannelAlerts")) discordChannelAlerts = config.get("discordChannelAlerts").getAsString();
+                    if (config.has("discordChannelJoins")) discordChannelJoins = config.get("discordChannelJoins").getAsString();
+                    
+                    if (config.has("useHttps")) useHttps = config.get("useHttps").getAsBoolean();
+                    if (config.has("keystorePath")) keystorePath = config.get("keystorePath").getAsString();
+                    if (config.has("keystorePassword")) keystorePassword = config.get("keystorePassword").getAsString();
+                    if (config.has("domain")) domain = config.get("domain").getAsString();
+
                 }
             }
 
             // Generate token if needed
             if (adminToken == null || adminToken.isEmpty()) {
                 adminToken = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+            }
+            if (keystorePassword == null || keystorePassword.isEmpty()) {
+                keystorePassword = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
             }
             
             // Save config with all settings
@@ -169,6 +244,19 @@ public class AdminWebDashPlugin extends JavaPlugin {
             config.addProperty("backupInterval", backupInterval);
             config.addProperty("adminToken", adminToken);
             config.addProperty("loggingEnabled", loggingEnabled);
+            
+            config.addProperty("discordEnabled", discordEnabled);
+            config.addProperty("discordToken", discordToken);
+            config.addProperty("discordGuildId", discordGuildId);
+            config.addProperty("discordChannelLogs", discordChannelLogs);
+            config.addProperty("discordChannelAlerts", discordChannelAlerts);
+            config.addProperty("discordChannelJoins", discordChannelJoins);
+            
+            config.addProperty("useHttps", useHttps);
+            config.addProperty("keystorePath", keystorePath);
+            config.addProperty("keystorePassword", keystorePassword);
+            config.addProperty("domain", domain);
+
             try (FileWriter writer = new FileWriter(configFile)) {
                 GSON.toJson(config, writer);
             }
@@ -236,6 +324,111 @@ public class AdminWebDashPlugin extends JavaPlugin {
         if (httpServer != null) {
             httpServer.stop();
             LOGGER.info("[AdminWebDash] HTTP Server stopped.");
+        }
+        if (jda != null) {
+            jda.shutdown();
+            LOGGER.info("[AdminWebDash] Discord JDA Bot stopped.");
+        }
+    }
+    
+    // Updates the Discord Bot presence to 'Watching X players'
+    private void updateDiscordPresence() {
+        if (jda == null) return;
+        
+        try {
+            int onlinePlayers = com.hypixel.hytale.server.core.universe.Universe.get().getPlayers().size();
+            jda.getPresence().setActivity(Activity.watching(onlinePlayers + " players"));
+        } catch (Exception e) {
+            LOGGER.warning("[AdminWebDash] Failed to sync presence to JDA: " + e.getMessage());
+        }
+    }
+    
+    // Discord JDA Event Listener
+    private class DiscordListener extends ListenerAdapter {
+        @Override
+        public void onMessageReceived(@Nonnull MessageReceivedEvent event) {
+            if (event.getAuthor().isBot()) return;
+            
+            // For security, only listen to designated channels (if configured)
+            String channelId = event.getChannel().getId();
+            
+            String content = event.getMessage().getContentRaw();
+            if (content.startsWith("!cmd ") && (discordChannelLogs.isEmpty() || channelId.equals(discordChannelLogs))) {
+                String cmd = content.substring(5).trim();
+                if (cmd.startsWith("/")) cmd = cmd.substring(1);
+                
+                DiscordCommandSender sender = new DiscordCommandSender(event.getChannel());
+                
+                try {
+                    // Execute command safely and natively caputure the asynchronous output
+                    CommandManager.get().handleCommand((CommandSender) sender, cmd).whenComplete((result, exception) -> {
+                        if (exception != null) {
+                            sender.sendMessage(com.hypixel.hytale.server.core.Message.raw("❌ Execution Exception: " + exception.getMessage()));
+                        }
+                        sender.flush();
+                    });
+                } catch (Exception e) {
+                    event.getChannel().sendMessage("❌ Error dispatching command: " + e.getMessage()).queue();
+                }
+            }
+        }
+    }
+
+    private class DiscordCommandSender implements CommandSender {
+        private final net.dv8tion.jda.api.entities.channel.middleman.MessageChannel channel;
+        private final StringBuilder output = new StringBuilder();
+
+        public DiscordCommandSender(net.dv8tion.jda.api.entities.channel.middleman.MessageChannel channel) {
+            this.channel = channel;
+        }
+
+        @Override
+        public void sendMessage(@Nonnull com.hypixel.hytale.server.core.Message message) {
+            String text = message.getAnsiMessage();
+            if (text != null && !text.isEmpty()) {
+                synchronized (output) {
+                    output.append(text).append("\n");
+                }
+            }
+        }
+
+        @Override
+        @Nonnull
+        public String getDisplayName() {
+            return "Discord";
+        }
+
+        @Override
+        @Nonnull
+        public UUID getUuid() {
+            return new UUID(0, 0); // Console UUID
+        }
+
+        @Override
+        public boolean hasPermission(@Nonnull String id) {
+            return true; // Discord commands run as Console/OP
+        }
+
+        @Override
+        public boolean hasPermission(@Nonnull String id, boolean def) {
+            return true;
+        }
+
+        public void flush() {
+            synchronized (output) {
+                if (output.length() > 0) {
+                    // Strip any tags and send
+                    String text = output.toString().replaceAll("<[^>]*>", "");
+                    // Max Discord message length is 2000
+                    if (text.length() > 1900) {
+                        text = text.substring(0, 1900) + "\n... [TRUNCATED]";
+                    }
+                    channel.sendMessage("```\n" + text + "```").queue();
+                    output.setLength(0);
+                } else {
+                    channel.sendMessage("✅ Command executed (no output).").queue();
+                }
+            }
         }
     }
 }

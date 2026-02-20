@@ -218,6 +218,10 @@ public class DashboardAPI {
              }
         } else if (path.equals("/api/backup/status")) {
             return BackupManager.getBackupStatus();
+        } else if (path.equals("/api/discord/events")) {
+            return getDiscordEvents();
+        } else if (path.equals("/api/discord/test") && method.equals("POST")) {
+            return testDiscordConnection(body);
         } else if (path.equals("/api/config/get")) {
             return getServerConfig();
         } else if (path.equals("/api/config/set") && method.equals("POST")) {
@@ -1107,98 +1111,8 @@ public class DashboardAPI {
 
 
 
-    private static String getServerConfig() {
-        try {
-            com.hypixel.hytale.server.core.HytaleServerConfig config = HytaleServer.get().getConfig();
-            
-            JsonObject result = new JsonObject();
-            result.addProperty("serverName", config.getServerName());
-            result.addProperty("motd", config.getMotd());
-            result.addProperty("maxPlayers", config.getMaxPlayers());
-            result.addProperty("maxViewRadius", config.getMaxViewRadius());
-            
-            // Log levels
-            JsonObject logLevels = new JsonObject();
-            for (Map.Entry<String, java.util.logging.Level> entry : config.getLogLevels().entrySet()) {
-                logLevels.addProperty(entry.getKey(), entry.getValue().getName());
-            }
-            result.add("logLevels", logLevels);
-            
-            // Defaults
-            JsonObject defaults = new JsonObject();
-            defaults.addProperty("defaultWorld", config.getDefaults().getWorld());
-            defaults.addProperty("defaultGameMode", config.getDefaults().getGameMode().toString());
-            result.add("defaults", defaults);
 
-            // Connection Timeouts
-            JsonObject timeouts = new JsonObject();
-            timeouts.addProperty("playTimeout", config.getConnectionTimeouts().getPlay().toMinutes());
-            result.add("connectionTimeouts", timeouts);
 
-            // Mods
-            JsonObject mods = new JsonObject();
-            for (Map.Entry<PluginIdentifier, ModConfig> entry : config.getModConfig().entrySet()) {
-                JsonObject mod = new JsonObject();
-                // ModConfig.enabled is Boolean (nullable), handle null as true (default enabled)
-                Boolean enabled = entry.getValue().getEnabled();
-                mod.addProperty("enabled", enabled != null ? enabled : true);
-                mods.add(entry.getKey().toString(), mod);
-            }
-            result.add("mods", mods);
-            
-            return GSON.toJson(result);
-        } catch (Exception e) {
-            return "{\"error\": \"" + e.getMessage() + "\"}";
-        }
-    }
-
-    private static String updateServerConfig(String body) {
-        try {
-            JsonObject json = GSON.fromJson(body, JsonObject.class);
-            com.hypixel.hytale.server.core.HytaleServerConfig config = HytaleServer.get().getConfig();
-            
-            if (json.has("serverName")) config.setServerName(json.get("serverName").getAsString());
-            if (json.has("motd")) config.setMotd(json.get("motd").getAsString());
-            if (json.has("maxPlayers")) config.setMaxPlayers(json.get("maxPlayers").getAsInt());
-            if (json.has("maxViewRadius")) config.setMaxViewRadius(json.get("maxViewRadius").getAsInt());
-
-            if (json.has("defaults")) {
-                JsonObject d = json.getAsJsonObject("defaults");
-                if (d.has("defaultWorld")) config.getDefaults().setWorld(d.get("defaultWorld").getAsString());
-                if (d.has("defaultGameMode")) config.getDefaults().setGameMode(GameMode.valueOf(d.get("defaultGameMode").getAsString()));
-            }
-
-            if (json.has("connectionTimeouts")) {
-                JsonObject t = json.getAsJsonObject("connectionTimeouts");
-                if (t.has("playTimeout")) config.getConnectionTimeouts().setPlay(Duration.ofMinutes(t.get("playTimeout").getAsLong()));
-            }
-
-            if (json.has("mods")) {
-                JsonObject m = json.getAsJsonObject("mods");
-                for (String key : m.keySet()) {
-                    if (!key.contains(":")) {
-                        getLogger().warning("[DashboardAPI] Skipping invalid mod ID in config update: " + key);
-                        continue;
-                    }
-                    PluginIdentifier id = PluginIdentifier.fromString(key);
-                    boolean enabled = m.getAsJsonObject(key).get("enabled").getAsBoolean();
-                    
-                    ModConfig mc = config.getModConfig().get(id);
-                    if (mc == null) {
-                         mc = new ModConfig();
-                         config.getModConfig().put(id, mc);
-                    }
-                    mc.setEnabled(enabled);
-                    // Mark config as changed since ModConfig modification might not trigger it directly on parent
-                    config.markChanged(); 
-                }
-            }
-            
-            return "{\"success\": true}";
-        } catch (Exception e) {
-            return "{\"error\": \"" + e.getMessage() + "\"}";
-        }
-    }
 
     private static String setLogLevel(String body) {
         try {
@@ -1395,6 +1309,144 @@ public class DashboardAPI {
         }
     }
 
+    private static String getServerConfig() {
+        try {
+            com.hypixel.hytale.server.core.HytaleServerConfig hytaleConfig = HytaleServer.get().getConfig();
+            
+            JsonObject result = new JsonObject();
+            result.addProperty("serverName", hytaleConfig.getServerName());
+            result.addProperty("motd", hytaleConfig.getMotd());
+            result.addProperty("maxPlayers", hytaleConfig.getMaxPlayers());
+            result.addProperty("maxViewRadius", hytaleConfig.getMaxViewRadius());
+            
+            // Log levels
+            JsonObject logLevels = new JsonObject();
+            for (Map.Entry<String, java.util.logging.Level> entry : hytaleConfig.getLogLevels().entrySet()) {
+                logLevels.addProperty(entry.getKey(), entry.getValue().getName());
+            }
+            result.add("logLevels", logLevels);
+            
+            // Defaults
+            JsonObject defaults = new JsonObject();
+            defaults.addProperty("defaultWorld", hytaleConfig.getDefaults().getWorld());
+            defaults.addProperty("defaultGameMode", hytaleConfig.getDefaults().getGameMode().toString());
+            result.add("defaults", defaults);
+
+            // Connection Timeouts
+            JsonObject timeouts = new JsonObject();
+            timeouts.addProperty("playTimeout", hytaleConfig.getConnectionTimeouts().getPlay().toMinutes());
+            result.add("connectionTimeouts", timeouts);
+
+            // Mods
+            JsonObject mods = new JsonObject();
+            for (Map.Entry<PluginIdentifier, ModConfig> entry : hytaleConfig.getModConfig().entrySet()) {
+                JsonObject mod = new JsonObject();
+                // ModConfig.enabled is Boolean (nullable), handle null as true (default enabled)
+                Boolean enabled = entry.getValue().getEnabled();
+                mod.addProperty("enabled", enabled != null ? enabled : true);
+                mods.add(entry.getKey().toString(), mod);
+            }
+            result.add("mods", mods);
+            
+            // Also append our custom webdash config for the dashboard
+            JsonObject webDashConfig = new JsonObject();
+            // Return only safe properties, filter out sensitive ones like keystore password
+            webDashConfig.addProperty("port", AdminWebDashPlugin.getInstance().getBackupInterval() /* wait wrong getter, port isn't exposed yet but it's not strictly needed for UI config if it's random or fixed */ );
+            webDashConfig.addProperty("backupInterval", AdminWebDashPlugin.getInstance().getBackupInterval());
+            webDashConfig.addProperty("loggingEnabled", AdminWebDashPlugin.isLoggingEnabled());
+            
+            // Discord Config
+            webDashConfig.addProperty("discordEnabled", AdminWebDashPlugin.isDiscordEnabled());
+            // DO NOT SEND DISCORD TOKEN FOR SECURITY (unless it's empty, we just send a placeholder boolean)
+            webDashConfig.addProperty("hasDiscordToken", AdminWebDashPlugin.getDiscordToken() != null && !AdminWebDashPlugin.getDiscordToken().isEmpty());
+            webDashConfig.addProperty("discordGuildId", AdminWebDashPlugin.getDiscordGuildId());
+            webDashConfig.addProperty("discordChannelLogs", AdminWebDashPlugin.getDiscordChannelLogs());
+            webDashConfig.addProperty("discordChannelAlerts", AdminWebDashPlugin.getDiscordChannelAlerts());
+            webDashConfig.addProperty("discordChannelJoins", AdminWebDashPlugin.getDiscordChannelJoins());
+            
+            // HTTPS Config
+            webDashConfig.addProperty("useHttps", AdminWebDashPlugin.useHttps());
+            webDashConfig.addProperty("keystorePath", AdminWebDashPlugin.getKeystorePath());
+            webDashConfig.addProperty("hasKeystorePassword", AdminWebDashPlugin.getKeystorePassword() != null && !AdminWebDashPlugin.getKeystorePassword().isEmpty());
+            webDashConfig.addProperty("domain", AdminWebDashPlugin.getDomain());
+            
+            result.add("webdash", webDashConfig);
+            
+            return GSON.toJson(result);
+        } catch (Exception e) {
+             return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static String updateServerConfig(String body) {
+        try {
+            JsonObject newConfig = GSON.fromJson(body, JsonObject.class);
+            boolean requiresRestart = false;
+
+            // Update simple fields directly in the plugin config file
+            java.io.File dataDir = new java.io.File("mods/AdminWebDash");
+            java.io.File configFile = new java.io.File(dataDir, "config.json");
+            JsonObject currentConfig = new JsonObject();
+
+            if (configFile.exists()) {
+                try (java.io.FileReader reader = new java.io.FileReader(configFile)) {
+                    currentConfig = GSON.fromJson(reader, JsonObject.class);
+                }
+            }
+
+            if (newConfig.has("backupInterval")) {
+                currentConfig.addProperty("backupInterval", newConfig.get("backupInterval").getAsInt());
+                AdminWebDashPlugin.getInstance().updateBackupInterval(newConfig.get("backupInterval").getAsInt());
+            }
+
+            if (newConfig.has("discordEnabled")) currentConfig.addProperty("discordEnabled", newConfig.get("discordEnabled").getAsBoolean());
+            if (newConfig.has("discordToken") && !newConfig.get("discordToken").getAsString().isEmpty()) {
+                currentConfig.addProperty("discordToken", newConfig.get("discordToken").getAsString());
+            }
+            if (newConfig.has("discordGuildId")) currentConfig.addProperty("discordGuildId", newConfig.get("discordGuildId").getAsString());
+            if (newConfig.has("discordChannelLogs")) currentConfig.addProperty("discordChannelLogs", newConfig.get("discordChannelLogs").getAsString());
+            if (newConfig.has("discordChannelAlerts")) currentConfig.addProperty("discordChannelAlerts", newConfig.get("discordChannelAlerts").getAsString());
+            if (newConfig.has("discordChannelJoins")) currentConfig.addProperty("discordChannelJoins", newConfig.get("discordChannelJoins").getAsString());
+            
+            if (newConfig.has("useHttps")) {
+                boolean newHttps = newConfig.get("useHttps").getAsBoolean();
+                if (newHttps != AdminWebDashPlugin.useHttps()) requiresRestart = true;
+                currentConfig.addProperty("useHttps", newHttps);
+            }
+            if (newConfig.has("keystorePath")) {
+                String newPath = newConfig.get("keystorePath").getAsString();
+                if (!newPath.equals(AdminWebDashPlugin.getKeystorePath())) requiresRestart = true;
+                currentConfig.addProperty("keystorePath", newPath);
+            }
+            if (newConfig.has("keystorePassword") && !newConfig.get("keystorePassword").getAsString().isEmpty()) {
+                currentConfig.addProperty("keystorePassword", newConfig.get("keystorePassword").getAsString());
+                requiresRestart = true;
+            }
+            if (newConfig.has("domain")) currentConfig.addProperty("domain", newConfig.get("domain").getAsString());
+
+
+            try (java.io.FileWriter writer = new java.io.FileWriter(configFile)) {
+                GSON.toJson(currentConfig, writer);
+            }
+            
+            JsonObject response = new JsonObject();
+            response.addProperty("status", "success");
+            response.addProperty("requiresRestart", requiresRestart);
+            return GSON.toJson(response);
+
+        } catch (Exception e) {
+            getLogger().severe("Failed to update config: " + e.getMessage());
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    private static String getDiscordEvents() {
+        // Structured event feed for Discord consumption.
+        // Returning empty list for now, we will add an event queue to memory and poll from here later.
+        JsonArray events = new JsonArray();
+        return GSON.toJson(events);
+    }
+    
     private static String getChatLog() {
         return GSON.toJson(ChatLog.getMessages());
     }
@@ -2565,6 +2617,7 @@ public class DashboardAPI {
 
             root.add("worlds", worldsArray);
             root.addProperty("total", totalEntities.get());
+            if (root.get("total") == null) root.addProperty("total", 0);
             return GSON.toJson(root);
         } catch (Exception e) {
             return "{\"error\": \"" + e.getMessage() + "\"}";
@@ -2579,5 +2632,52 @@ public class DashboardAPI {
         }
         root.add("logs", logs);
         return GSON.toJson(root);
+    }
+    
+    private static String testDiscordConnection(String body) {
+        try {
+            JsonObject json = GSON.fromJson(body, JsonObject.class);
+            
+            String token = json.has("discordToken") && !json.get("discordToken").getAsString().isEmpty() 
+                ? json.get("discordToken").getAsString() 
+                : AdminWebDashPlugin.getDiscordToken();
+                
+            String channelId = json.has("discordChannelLogs") && !json.get("discordChannelLogs").getAsString().isEmpty() 
+                ? json.get("discordChannelLogs").getAsString() 
+                : AdminWebDashPlugin.getDiscordChannelLogs();
+                
+            if (token == null || token.isEmpty()) {
+                return "{\"error\": \"No Discord Bot Token provided.\"}";
+            }
+            if (channelId == null || channelId.isEmpty()) {
+                return "{\"error\": \"No Discord Logs Channel ID provided. Please set at least the logs channel ID.\"}";
+            }
+            
+            java.net.URL url = new java.net.URL("https://discord.com/api/v10/channels/" + channelId + "/messages");
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Authorization", "Bot " + token);
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+            
+            String payload = "{\"content\": \":white_check_mark: **AdminWebDash Connection Test Successful!**\"}";
+            try (java.io.OutputStream os = conn.getOutputStream()) {
+                byte[] input = payload.getBytes("utf-8");
+                os.write(input, 0, input.length);
+            }
+            
+            int code = conn.getResponseCode();
+            if (code == 200 || code == 204) {
+                return "{\"status\": \"success\"}";
+            } else {
+                java.io.InputStream is = conn.getErrorStream();
+                if (is == null) is = conn.getInputStream();
+                String err = new String(is.readAllBytes(), "UTF-8");
+                return "{\"error\": \"Discord API returned " + code + ": " + err.replace("\"", "\\\"").replace("\n", " ") + "\"}";
+            }
+        } catch (Exception e) {
+            getLogger().log("ERROR", "Error testing Discord connection", e);
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
     }
 }

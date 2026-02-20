@@ -634,6 +634,84 @@
                         </div>
 
                         <div class="config-section">
+                            <h3>Discord Integration</h3>
+                            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Connect your server to a Discord Bot for logging and remote management.</p>
+                            
+                            <div class="input-group" style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                                <label style="margin-bottom: 0;">Enable Discord Bot Integration</label>
+                                <label class="switch">
+                                    <input type="checkbox" id="cfg-discordEnabled" name="discordEnabled">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+
+                            <div class="input-group" style="margin-bottom: 1rem;">
+                                <label>Bot Token <span style="font-size: 0.75rem; color: #ff5e5b;">(Leave blank to keep existing token)</span></label>
+                                <input type="password" id="cfg-discordToken" name="discordToken" placeholder="Paste Discord Bot Token here...">
+                                <small id="cfg-discordToken-status" style="color: var(--hytale-gold); display: none; margin-top: 0.25rem;">Existing token is configured.</small>
+                            </div>
+
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label>Discord Guild (Server) ID</label>
+                                    <input type="text" id="cfg-discordGuildId" name="discordGuildId" placeholder="e.g. 123456789012345678">
+                                </div>
+                                <div class="input-group">
+                                    <label>Logs Channel ID <span style="font-size: 0.75rem; color: var(--text-secondary);">(Optional)</span></label>
+                                    <input type="text" id="cfg-discordChannelLogs" name="discordChannelLogs" placeholder="Channel ID for console logs">
+                                </div>
+                            </div>
+
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label>Alerts Channel ID <span style="font-size: 0.75rem; color: var(--text-secondary);">(Optional)</span></label>
+                                    <input type="text" id="cfg-discordChannelAlerts" name="discordChannelAlerts" placeholder="Channel ID for admin alerts">
+                                </div>
+                                <div class="input-group">
+                                    <label>Player Joins Channel ID <span style="font-size: 0.75rem; color: var(--text-secondary);">(Optional)</span></label>
+                                    <input type="text" id="cfg-discordChannelJoins" name="discordChannelJoins" placeholder="Channel ID for join/leave">
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; justify-content: flex-end;">
+                                <button class="btn btn-secondary" onclick="testDiscordConnection()" style="display: flex; gap: 0.5rem; align-items: center;" id="btn-test-discord">
+                                    <span class="material-symbols-outlined">network_check</span>
+                                    Test Connection
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="config-section">
+                            <h3>HTTPS & Domain</h3>
+                            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Configure secure access to the dashboard. A self-signed cert is generated automatically if no keystore is found when enabled.</p>
+                            
+                            <div class="input-group" style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                                <label style="margin-bottom: 0;">Enable HTTPS</label>
+                                <label class="switch">
+                                    <input type="checkbox" id="cfg-useHttps" name="useHttps">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            
+                            <div class="input-group" style="margin-bottom: 1rem;">
+                                <label>Dashboard Domain <span style="font-size: 0.75rem; color: var(--text-secondary);">(Used for cert generation, e.g. admin.myserver.com)</span></label>
+                                <input type="text" id="cfg-domain" name="domain" placeholder="localhost">
+                            </div>
+
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label>Keystore Path</label>
+                                    <input type="text" id="cfg-keystorePath" name="keystorePath" placeholder="keystore.jks">
+                                </div>
+                                <div class="input-group">
+                                    <label>Keystore Password <span style="font-size: 0.75rem; color: #ff5e5b;">(Leave blank to keep existing)</span></label>
+                                    <input type="password" id="cfg-keystorePassword" name="keystorePassword" placeholder="Auto-generated if left blank initially">
+                                    <small id="cfg-keystorePassword-status" style="color: var(--hytale-gold); display: none; margin-top: 0.25rem;">Existing password is configured.</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="config-section">
                             <h3>Logging Levels</h3>
                             <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Note: Changes take effect immediately but may be lost on restart if not saved to disk.</p>
                             <div id="log-level-list" class="log-level-list"></div>

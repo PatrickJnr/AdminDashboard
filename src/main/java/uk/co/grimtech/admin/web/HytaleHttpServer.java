@@ -12,6 +12,15 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
+import java.io.File;
+import java.io.FileInputStream;
+import java.security.KeyStore;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+import com.sun.net.httpserver.HttpsConfigurator;
+import com.sun.net.httpserver.HttpsParameters;
+import com.sun.net.httpserver.HttpsServer;
 
 public class HytaleHttpServer {
     private final int port;
@@ -22,7 +31,33 @@ public class HytaleHttpServer {
     }
 
     public void start() throws IOException {
-        server = HttpServer.create(new InetSocketAddress(port), 0);
+        int actualPort = port;
+        // If we are using HTTPS, start an HttpsServer instead
+        if (AdminWebDashPlugin.useHttps()) {
+            try {
+                server = HttpsServer.create(new InetSocketAddress(actualPort), 0);
+                SSLContext sslContext = createSSLContext();
+                ((HttpsServer) server).setHttpsConfigurator(new HttpsConfigurator(sslContext) {
+                    public void configure(HttpsParameters params) {
+                        try {
+                            SSLContext c = getSSLContext();
+                            params.setNeedClientAuth(false);
+                            params.setCipherSuites(c.createSSLEngine().getSupportedCipherSuites());
+                            params.setProtocols(c.createSSLEngine().getSupportedProtocols());
+                        } catch (Exception ex) {
+                            System.err.println("Failed to configure HTTPS parameters");
+                        }
+                    }
+                });
+                AdminWebDashPlugin.getCustomLogger().info("[HTTP] Starting HTTPS Server on port " + actualPort);
+            } catch (Exception e) {
+                AdminWebDashPlugin.getCustomLogger().severe("[HTTP] Failed to create HTTPS server, falling back to HTTP: " + e.getMessage());
+                server = HttpServer.create(new InetSocketAddress(actualPort), 0);
+            }
+        } else {
+            server = HttpServer.create(new InetSocketAddress(actualPort), 0);
+            AdminWebDashPlugin.getCustomLogger().info("[HTTP] Starting HTTP Server on port " + actualPort);
+        }
         
         // Static assets handler
         StaticHandler staticHandler = new StaticHandler();
@@ -34,6 +69,83 @@ public class HytaleHttpServer {
 
         server.setExecutor(null); // creates a default executor
         server.start();
+    }
+    
+    private SSLContext createSSLContext() throws Exception {
+        String keystorePath = AdminWebDashPlugin.getKeystorePath();
+        String keystorePassword = AdminWebDashPlugin.getKeystorePassword();
+        
+        File keystoreFile = new File(keystorePath);
+        if (!keystoreFile.isAbsolute()) {
+            keystoreFile = new File("mods/AdminWebDash", keystorePath);
+        }
+        
+        if (!keystoreFile.exists()) {
+            AdminWebDashPlugin.getCustomLogger().info("[HTTP] Keystore not found at " + keystoreFile.getAbsolutePath() + " - generating a self-signed cert...");
+            generateSelfSignedCert(keystoreFile, keystorePassword);
+        }
+
+        char[] password = keystorePassword.toCharArray();
+        KeyStore ks = KeyStore.getInstance("JKS");
+        FileInputStream fis = new FileInputStream(keystoreFile);
+        ks.load(fis, password);
+
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+        kmf.init(ks, password);
+
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+        tmf.init(ks);
+
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+        return sslContext;
+    }
+
+    private void generateSelfSignedCert(File keystoreFile, String password) throws Exception {
+        // Find keytool
+        String javaHome = System.getProperty("java.home");
+        File keytool = new File(javaHome, "bin/keytool");
+        if (!keytool.exists()) {
+            keytool = new File(javaHome, "bin/keytool.exe");
+        }
+        
+        if (!keytool.exists()) {
+            throw new Exception("Could not find keytool at " + keytool.getAbsolutePath());
+        }
+        
+        String domain = AdminWebDashPlugin.getDomain();
+        if (domain == null || domain.isEmpty()) {
+            domain = "localhost";
+        }
+
+        // Ensure parent directory exists
+        File parentDir = keystoreFile.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+            parentDir.mkdirs();
+        }
+
+        // keytool -genkeypair -alias adminwebdash -keyalg RSA -keysize 2048 -storetype JKS -keystore keystore.jks -validity 3650 -storepass password -keypass password -dname "CN=localhost, OU=Hytale, O=Grimtech, L=City, ST=State, C=US"
+        ProcessBuilder pb = new ProcessBuilder(
+            keytool.getAbsolutePath(),
+            "-genkeypair",
+            "-alias", "adminwebdash",
+            "-keyalg", "RSA",
+            "-keysize", "2048",
+            "-storetype", "JKS",
+            "-keystore", keystoreFile.getAbsolutePath(),
+            "-validity", "3650",
+            "-storepass", password,
+            "-keypass", password,
+            "-dname", "CN=" + domain + ", OU=Hytale, O=Grimtech, L=City, ST=State, C=US"
+        );
+        
+        pb.redirectErrorStream(true);
+        Process process = pb.start();
+        int exitCode = process.waitFor();
+        if (exitCode != 0) {
+            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            throw new Exception("keytool failed with exit code " + exitCode + ": " + output);
+        }
     }
     
     public int getActualPort() {
