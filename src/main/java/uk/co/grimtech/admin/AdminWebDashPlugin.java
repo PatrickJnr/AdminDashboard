@@ -376,7 +376,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
                             handleCustomCommand(cmd, args, action, sender, event.getChannel());
                         }
                     } 
-                    if (action.equals("time") || action.equals("weather")) {
+                    if (action.equals("time") || action.equals("weather") || action.equals("help")) {
                         isCustom = true;
                         handleCustomCommand(cmd, args, action, sender, event.getChannel());
                     }
@@ -387,7 +387,15 @@ public class AdminWebDashPlugin extends JavaPlugin {
                             if (exception != null) {
                                 sender.sendMessage(com.hypixel.hytale.server.core.Message.raw("❌ Execution Exception: " + exception.getMessage()));
                             }
-                            sender.flush();
+                            
+                            // Commands like /commands dump spin off their own async tasks before responding.
+                            // We need to wait a tiny bit to ensure they finish formatting and sending messages.
+                            new java.util.Timer().schedule(new java.util.TimerTask() {
+                                @Override
+                                public void run() {
+                                    sender.flush();
+                                }
+                            }, 1000); // 1 second delay
                         });
                     }
                 } catch (Exception e) {
@@ -397,6 +405,30 @@ public class AdminWebDashPlugin extends JavaPlugin {
         }
 
         private void handleCustomCommand(String cmd, String[] args, String action, DiscordCommandSender sender, net.dv8tion.jda.api.entities.channel.middleman.MessageChannel channel) {
+            // custom help command
+            if (action.equals("help")) {
+                StringBuilder helpMsg = new StringBuilder();
+                helpMsg.append("**== Discord Dashboard Commands ==**\n");
+                helpMsg.append("`").append(discordCommandPrefix).append("time <morning/noon/evening/night/0-24000>`\n");
+                helpMsg.append("`").append(discordCommandPrefix).append("weather <clear/rain/storm/snow>`\n");
+                helpMsg.append("`").append(discordCommandPrefix).append("heal <player>`\n");
+                helpMsg.append("`").append(discordCommandPrefix).append("gamemode <player> <Creative/Adventure/Spectator>`\n");
+                helpMsg.append("`").append(discordCommandPrefix).append("give <player> <item_id> [count]`\n");
+                helpMsg.append("`").append(discordCommandPrefix).append("clearinv <player>`\n");
+                helpMsg.append("`").append(discordCommandPrefix).append("kick <player> [reason]`\n");
+                helpMsg.append("`").append(discordCommandPrefix).append("ban <player> [reason]`\n");
+                helpMsg.append("`").append(discordCommandPrefix).append("unban <player uuid>`\n");
+                helpMsg.append("`").append(discordCommandPrefix).append("mute <player> [reason]`\n");
+                helpMsg.append("`").append(discordCommandPrefix).append("unmute <player>`\n\n");
+                
+                String finalMessage = helpMsg.toString();
+                if (finalMessage.length() > 1900) {
+                    finalMessage = finalMessage.substring(0, 1900) + "... [truncated]";
+                }
+                channel.sendMessage(finalMessage).queue();
+                return;
+            }
+
             // time and weather
             if (action.equals("time")) {
                 if (args.length >= 2) {
