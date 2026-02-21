@@ -106,7 +106,9 @@ public class DashboardAPI {
     }
 
     public static String handleRequest(String path, String method, String body) {
-        getLogger().info("[API] " + method + " " + path);
+        if (!path.equals("/api/metrics") && !path.equals("/api/stats") && !path.equals("/api/chat") && !path.equals("/api/world/entities") && !path.equals("/api/players")) {
+            getLogger().info("[API] " + method + " " + path);
+        }
         
         if (path.equals("/api/version")) {
             return getVersion();
@@ -884,7 +886,7 @@ public class DashboardAPI {
             String jsonOutput = GSON.toJson(root);
             // Log once every 30 seconds to avoid spamming
             if (System.currentTimeMillis() - lastMetricsLogTime > 30000) {
-                getLogger().info("[Metrics] Response: " + jsonOutput);
+                // getLogger().info("[Metrics] Response: " + jsonOutput);
                 lastMetricsLogTime = System.currentTimeMillis();
             }
             

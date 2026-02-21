@@ -12,7 +12,27 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MuteTracker {
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = new com.google.gson.GsonBuilder()
+            .registerTypeAdapter(Instant.class, new com.google.gson.TypeAdapter<Instant>() {
+                @Override
+                public void write(com.google.gson.stream.JsonWriter out, Instant value) throws IOException {
+                    if (value == null) {
+                        out.nullValue();
+                    } else {
+                        out.value(value.toString()); // E.g., "2023-10-01T12:00:00Z"
+                    }
+                }
+
+                @Override
+                public Instant read(com.google.gson.stream.JsonReader in) throws IOException {
+                    if (in.peek() == com.google.gson.stream.JsonToken.NULL) {
+                        in.nextNull();
+                        return null;
+                    }
+                    return Instant.parse(in.nextString());
+                }
+            })
+            .create();
     private static final Path MUTES_FILE = Paths.get("mutes.json");
     private static final Map<UUID, Mute> mutes = new ConcurrentHashMap<>();
     
