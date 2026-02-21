@@ -32,10 +32,14 @@ public class HytaleHttpServer {
 
     public void start() throws IOException {
         int actualPort = port;
+        InetSocketAddress address = AdminWebDashPlugin.isReverseProxy() 
+                ? new InetSocketAddress("127.0.0.1", actualPort) 
+                : new InetSocketAddress(actualPort);
+        
         // If we are using HTTPS, start an HttpsServer instead
         if (AdminWebDashPlugin.useHttps()) {
             try {
-                server = HttpsServer.create(new InetSocketAddress(actualPort), 0);
+                server = HttpsServer.create(address, 0);
                 SSLContext sslContext = createSSLContext();
                 ((HttpsServer) server).setHttpsConfigurator(new HttpsConfigurator(sslContext) {
                     public void configure(HttpsParameters params) {
@@ -52,11 +56,11 @@ public class HytaleHttpServer {
                 AdminWebDashPlugin.getCustomLogger().info("[HTTP] Starting HTTPS Server on port " + actualPort);
             } catch (Exception e) {
                 AdminWebDashPlugin.getCustomLogger().severe("[HTTP] Failed to create HTTPS server, falling back to HTTP: " + e.getMessage());
-                server = HttpServer.create(new InetSocketAddress(actualPort), 0);
+                server = HttpServer.create(address, 0);
             }
         } else {
-            server = HttpServer.create(new InetSocketAddress(actualPort), 0);
-            AdminWebDashPlugin.getCustomLogger().info("[HTTP] Starting HTTP Server on port " + actualPort);
+            server = HttpServer.create(address, 0);
+            AdminWebDashPlugin.getCustomLogger().info("[HTTP] Starting HTTP Server on port " + actualPort + (AdminWebDashPlugin.isReverseProxy() ? " (Reverse Proxy Mode - Bound to 127.0.0.1)" : ""));
         }
         
         // Static assets handler
@@ -81,8 +85,15 @@ public class HytaleHttpServer {
         }
         
         if (!keystoreFile.exists()) {
-            AdminWebDashPlugin.getCustomLogger().info("[HTTP] Keystore not found at " + keystoreFile.getAbsolutePath() + " - generating a self-signed cert...");
-            generateSelfSignedCert(keystoreFile, keystorePassword);
+            boolean certGenerated = false;
+            if (AdminWebDashPlugin.isLetsEncrypt() && AdminWebDashPlugin.getDomain() != null && !AdminWebDashPlugin.getDomain().isEmpty()) {
+                AdminWebDashPlugin.getCustomLogger().info("[HTTP] Attempting Let's Encrypt Certificate Generation for " + AdminWebDashPlugin.getDomain());
+                certGenerated = uk.co.grimtech.admin.util.LetsEncryptManager.checkAndRenewCertificate(AdminWebDashPlugin.getDomain(), AdminWebDashPlugin.getLetsEncryptEmail(), keystoreFile, keystorePassword);
+            }
+            if (!certGenerated) {
+                AdminWebDashPlugin.getCustomLogger().info("[HTTP] Keystore not found at " + keystoreFile.getAbsolutePath() + " - generating a self-signed cert...");
+                generateSelfSignedCert(keystoreFile, keystorePassword);
+            }
         }
 
         char[] password = keystorePassword.toCharArray();
@@ -274,9 +285,22 @@ public class HytaleHttpServer {
         public void handle(HttpExchange t) throws IOException {
             String path = t.getRequestURI().getPath();
             String method = t.getRequestMethod();
-            
+
+            // ACME Challenge bypass
+            if (path.startsWith("/.well-known/acme-challenge/")) {
+                String token = path.substring(path.lastIndexOf('/') + 1);
+                String challengeContent = uk.co.grimtech.admin.util.LetsEncryptManager.getChallengeContent(token);
+                if (challengeContent != null) {
+                    t.sendResponseHeaders(200, challengeContent.length());
+                    try (OutputStream os = t.getResponseBody()) {
+                        os.write(challengeContent.getBytes(StandardCharsets.UTF_8));
+                    }
+                    return;
+                }
+            }
+
             // Log EVERY request that hits the API handler
-            AdminWebDashPlugin.getCustomLogger().info("[HTTP] Incoming: " + method + " " + path);
+            AdminWebDashPlugin.getCustomLogger().debug("[HTTP] Incoming: " + method + " " + path);
 
             // Set CORS headers early
             t.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
@@ -290,24 +314,48 @@ public class HytaleHttpServer {
                 return;
             }
 
+            // Get IP Address
+            String clientIp = t.getRemoteAddress().getAddress().getHostAddress();
+            if (AdminWebDashPlugin.isReverseProxy()) {
+                String forwardedFor = t.getRequestHeaders().getFirst("X-Forwarded-For");
+                if (forwardedFor != null && !forwardedFor.isEmpty()) {
+                    clientIp = forwardedFor.split(",")[0].trim();
+                }
+            }
+
+            // IP Allowlist Check
+            if (!uk.co.grimtech.admin.util.AuthManager.isIpAllowed(clientIp)) {
+                sendErrorResponse(t, 403, "Forbidden - IP Not Allowed");
+                return;
+            }
+
             // Token Validation (skip for public endpoints like item icons, avatars, and version)
-            // Note: itemId might be encoded, so check start/end carefully
             boolean isPublicEndpoint = (path.startsWith("/api/item/") || path.startsWith("/api/mod/")) && path.endsWith("/icon") 
                                         || path.equals("/api/version")
                                         || path.startsWith("/api/avatar/");
             
+            String sessionId = getCookie(t, "session_id");
+
+            if (path.equals("/api/login") && "POST".equalsIgnoreCase(method)) {
+                handleLogin(t, clientIp);
+                return;
+            }
+            if (path.equals("/api/logout") && "POST".equalsIgnoreCase(method)) {
+                handleLogout(t, sessionId);
+                return;
+            }
+
             if (!isPublicEndpoint) {
+                // Fallback to X-Admin-Token for immediate backwards compatibility until frontend reloads, but prefer Session
                 String authToken = t.getRequestHeaders().getFirst("X-Admin-Token");
                 String expectedToken = AdminWebDashPlugin.getAdminToken();
-                if (expectedToken != null && !expectedToken.equals(authToken)) {
-                    AdminWebDashPlugin.getCustomLogger().warning("[HTTP] 401 Unauthorized for path: " + path);
-                    String error = "{\"error\": \"Unauthorized - Invalid Token\"}";
-                    t.getResponseHeaders().set("Content-Type", "application/json");
-                    t.sendResponseHeaders(401, error.length());
-                    try (OutputStream os = t.getResponseBody()) {
-                        os.write(error.getBytes(StandardCharsets.UTF_8));
-                    }
-                    t.close();
+                
+                boolean isValidSession = uk.co.grimtech.admin.util.AuthManager.isValidSession(sessionId, clientIp);
+                boolean isValidToken = expectedToken != null && expectedToken.equals(authToken);
+
+                if (!isValidSession && !isValidToken) {
+                    AdminWebDashPlugin.getCustomLogger().warning("[HTTP] 401 Unauthorized for path: " + path + " from IP: " + clientIp);
+                    sendErrorResponse(t, 401, "Unauthorized - Invalid Session or Token");
                     return;
                 }
             }
@@ -350,6 +398,78 @@ public class HytaleHttpServer {
             t.sendResponseHeaders(statusCode, responseBytes.length);
             try (OutputStream os = t.getResponseBody()) {
                 os.write(responseBytes);
+            }
+            t.close();
+        }
+
+        private String getCookie(HttpExchange t, String name) {
+            java.util.List<String> cookies = t.getRequestHeaders().get("Cookie");
+            if (cookies != null) {
+                for (String cookieHeader : cookies) {
+                    String[] parts = cookieHeader.split(";");
+                    for (String part : parts) {
+                        part = part.trim();
+                        if (part.startsWith(name + "=")) {
+                            return part.substring(name.length() + 1);
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        private void handleLogin(HttpExchange t, String ip) throws IOException {
+            if (!uk.co.grimtech.admin.util.AuthManager.canAttemptLogin(ip)) {
+                sendErrorResponse(t, 429, "Too Many Requests - Try again later");
+                return;
+            }
+
+            String authToken = t.getRequestHeaders().getFirst("X-Admin-Token");
+            String expectedToken = AdminWebDashPlugin.getAdminToken();
+
+            if (expectedToken != null && expectedToken.equals(authToken)) {
+                uk.co.grimtech.admin.util.AuthManager.recordSuccessfulLogin(ip);
+                String session = uk.co.grimtech.admin.util.AuthManager.createSession(ip);
+                
+                String cookieStr = "session_id=" + session + "; Path=/; HttpOnly; SameSite=Strict";
+                if (AdminWebDashPlugin.useHttps()) cookieStr += "; Secure";
+                t.getResponseHeaders().add("Set-Cookie", cookieStr);
+                
+                String response = "{\"success\": true}";
+                t.getResponseHeaders().set("Content-Type", "application/json");
+                t.sendResponseHeaders(200, response.length());
+                try (OutputStream os = t.getResponseBody()) {
+                    os.write(response.getBytes(StandardCharsets.UTF_8));
+                }
+            } else {
+                uk.co.grimtech.admin.util.AuthManager.recordFailedLogin(ip);
+                sendErrorResponse(t, 401, "Invalid Admin Token");
+            }
+            t.close();
+        }
+
+        private void handleLogout(HttpExchange t, String sessionId) throws IOException {
+            uk.co.grimtech.admin.util.AuthManager.invalidateSession(sessionId);
+            
+            String cookieStr = "session_id=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict";
+            if (AdminWebDashPlugin.useHttps()) cookieStr += "; Secure";
+            t.getResponseHeaders().add("Set-Cookie", cookieStr);
+            
+            String response = "{\"success\": true}";
+            t.getResponseHeaders().set("Content-Type", "application/json");
+            t.sendResponseHeaders(200, response.length());
+            try (OutputStream os = t.getResponseBody()) {
+                os.write(response.getBytes(StandardCharsets.UTF_8));
+            }
+            t.close();
+        }
+
+        private void sendErrorResponse(HttpExchange t, int code, String msg) throws IOException {
+            String error = "{\"error\": \"" + msg + "\"}";
+            t.getResponseHeaders().set("Content-Type", "application/json");
+            t.sendResponseHeaders(code, error.length());
+            try (OutputStream os = t.getResponseBody()) {
+                os.write(error.getBytes(StandardCharsets.UTF_8));
             }
             t.close();
         }

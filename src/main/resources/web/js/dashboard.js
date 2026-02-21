@@ -1,5 +1,15 @@
 
 
+const originalFetch = window.fetch;
+window.fetch = function() {
+    let [resource, config] = arguments;
+    if(config === undefined) {
+        config = {};
+    }
+    config.credentials = 'same-origin';
+    return originalFetch(resource, config);
+};
+
 const routes = {
     '/': 'dashboard',
     '/dashboard': 'dashboard',
@@ -293,19 +303,27 @@ function login(event) {
     const token = document.getElementById('token-input').value;
     if (!token) return;
     
-    dashboardToken = token;
-    fetchStats(true).then(success => {
-        if (success) {
-            localStorage.setItem('hytale_admin_token', token);
+    // Call /api/login to get the HttpOnly session cookie
+    fetch('/api/login', {
+        method: 'POST',
+        headers: { 'X-Admin-Token': token }
+    }).then(res => {
+        if (res.ok) {
+            dashboardToken = "session_active"; // Just a marker, no longer the actual token
+            localStorage.setItem('hytale_admin_token', 'session_active'); // Keep for UI state
             const overlay = document.getElementById('login-overlay');
             overlay.classList.add('hidden');
             document.getElementById('dashboard-container').classList.remove('dashboard-locked');
             setTimeout(() => overlay.style.display = 'none', 500);
+            fetchStats(true); // Don't block UI on this
             startSync();
         } else {
             document.getElementById('login-error').style.display = 'block';
             dashboardToken = null;
         }
+    }).catch(err => {
+        console.error("Login request failed", err);
+        document.getElementById('login-error').style.display = 'block';
     });
 }
 
@@ -2197,6 +2215,14 @@ async function fetchConfig() {
         if (document.getElementById('cfg-motd')) document.getElementById('cfg-motd').value = config.motd || '';
         if (document.getElementById('cfg-maxPlayers')) document.getElementById('cfg-maxPlayers').value = config.maxPlayers || 0;
         if (document.getElementById('cfg-viewRadius')) document.getElementById('cfg-viewRadius').value = config.maxViewRadius || 32;
+
+        if (document.getElementById('cfg-reverseProxy')) document.getElementById('cfg-reverseProxy').checked = config.reverseProxy || false;
+        if (document.getElementById('cfg-loggingEnabled')) document.getElementById('cfg-loggingEnabled').checked = config.loggingEnabled || false;
+        if (document.getElementById('cfg-logLevel')) document.getElementById('cfg-logLevel').value = config.logLevel || 'INFO';
+        if (document.getElementById('cfg-loginRateLimit')) document.getElementById('cfg-loginRateLimit').value = config.loginRateLimit || 5;
+        if (document.getElementById('cfg-ipAllowlist')) document.getElementById('cfg-ipAllowlist').value = (config.ipAllowlist || []).join(', ');
+        if (document.getElementById('cfg-letsEncrypt')) document.getElementById('cfg-letsEncrypt').checked = config.letsEncrypt || false;
+        if (document.getElementById('cfg-letsEncryptEmail')) document.getElementById('cfg-letsEncryptEmail').value = config.letsEncryptEmail || '';
         
         // Defaults
         if (config.defaults) {
@@ -2356,6 +2382,19 @@ async function updateConfig() {
             enabled: input.checked
         };
     });
+
+    payload.reverseProxy = document.getElementById('cfg-reverseProxy')?.checked || false;
+    payload.loggingEnabled = document.getElementById('cfg-loggingEnabled')?.checked || false;
+    payload.logLevel = document.getElementById('cfg-logLevel')?.value || 'INFO';
+    payload.loginRateLimit = parseInt(document.getElementById('cfg-loginRateLimit')?.value || '5');
+    
+    // IP Allowlist
+    const ips = document.getElementById('cfg-ipAllowlist')?.value || '';
+    payload.ipAllowlist = ips.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+    // Let's encrypt
+    payload.letsEncrypt = document.getElementById('cfg-letsEncrypt')?.checked || false;
+    payload.letsEncryptEmail = document.getElementById('cfg-letsEncryptEmail')?.value.trim() || '';
     
     // Discord Integration Config
     payload.discordEnabled = document.getElementById('cfg-discordEnabled')?.checked || false;

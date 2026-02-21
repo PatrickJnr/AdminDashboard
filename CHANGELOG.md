@@ -1,5 +1,31 @@
 # Changelog
 
+## Version 1.0.2 - 21st February 2026
+
+### New Features
+
+**Discord Bot Integration**
+- Connect a Discord bot to your server for remote management
+- Run server commands directly from Discord (kick, ban, mute, heal, give items, set time/weather, etc.)
+- Live player count shown as the bot's status
+- Dedicated channel support for logs, alerts, and join notifications
+
+**HTTPS & Let's Encrypt Support**
+- Enable HTTPS to secure your dashboard with a proper SSL certificate
+- Automatic certificate generation and renewal via Let's Encrypt — no manual setup needed
+- Falls back to a self-signed certificate automatically if Let's Encrypt isn't configured
+
+**Security Improvements**
+- Added an IP Allowlist to restrict dashboard access to trusted addresses only
+- Login rate limiting to block brute-force attempts
+- Improved session management with secure cookies
+
+### Improvements
+- **Log Filtering:** Filter server logs by level (Info, Warn, Error) and search by keyword
+- **Log Deletion:** Delete old log files directly from the dashboard
+- **Self-Healing HTTPS:** Server automatically generates a certificate on first start if none exists
+- **Config Tab:** SSL, domain, and Let's Encrypt settings now editable from the dashboard UI
+
 ## Version 1.0.1 - 19th February 2026
 
 ### Maintenance

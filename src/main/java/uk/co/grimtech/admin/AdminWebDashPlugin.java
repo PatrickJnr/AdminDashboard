@@ -50,6 +50,16 @@ public class AdminWebDashPlugin extends JavaPlugin {
     private static String keystorePath = "keystore.jks";
     private static String keystorePassword = "";
     private static String domain = "";
+    
+    // Reverse Proxy \u0026 Let's Encrypt Settings
+    private static boolean reverseProxy = false;
+    private static boolean letsEncrypt = false;
+    private static String letsEncryptEmail = "";
+
+    // Security Settings
+    private static int loginRateLimit = 5;
+    private static String logLevel = "INFO";
+    private static java.util.List<String> ipAllowlist = new java.util.ArrayList<>();
 
     private HytaleHttpServer httpServer;
     private JDA jda;
@@ -93,6 +103,14 @@ public class AdminWebDashPlugin extends JavaPlugin {
     public static String getKeystorePassword() { return keystorePassword; }
     public static String getDomain() { return domain; }
 
+    public static boolean isReverseProxy() { return reverseProxy; }
+    public static boolean isLetsEncrypt() { return letsEncrypt; }
+    public static String getLetsEncryptEmail() { return letsEncryptEmail; }
+
+    public static int getLoginRateLimit() { return loginRateLimit; }
+    public static String getLogLevel() { return logLevel; }
+    public static java.util.List<String> getIpAllowlist() { return ipAllowlist; }
+
     public AdminWebDashPlugin(@Nonnull JavaPluginInit init) {
         super(init);
         instance = this;
@@ -109,6 +127,13 @@ public class AdminWebDashPlugin extends JavaPlugin {
 
         MuteTracker.load();
         WarpManager.load();
+        
+        // Start Let's Encrypt scheduled renewal check if enabled
+        if (letsEncrypt) {
+            uk.co.grimtech.admin.util.LetsEncryptManager.startChallengeServer();
+            uk.co.grimtech.admin.util.LetsEncryptManager.startRenewalTask();
+        }
+
         // Start Discord Bot using JDA
         if (discordEnabled && discordToken != null && !discordToken.isEmpty()) {
             try {
@@ -229,6 +254,19 @@ public class AdminWebDashPlugin extends JavaPlugin {
                     if (config.has("keystorePassword")) keystorePassword = config.get("keystorePassword").getAsString();
                     if (config.has("domain")) domain = config.get("domain").getAsString();
 
+                    if (config.has("reverseProxy")) reverseProxy = config.get("reverseProxy").getAsBoolean();
+                    if (config.has("letsEncrypt")) letsEncrypt = config.get("letsEncrypt").getAsBoolean();
+                    if (config.has("letsEncryptEmail")) letsEncryptEmail = config.get("letsEncryptEmail").getAsString();
+
+                    if (config.has("loginRateLimit")) loginRateLimit = config.get("loginRateLimit").getAsInt();
+                    if (config.has("logLevel")) logLevel = config.get("logLevel").getAsString();
+                    if (config.has("ipAllowlist")) {
+                        com.google.gson.JsonArray arr = config.getAsJsonArray("ipAllowlist");
+                        for (com.google.gson.JsonElement el : arr) {
+                            ipAllowlist.add(el.getAsString());
+                        }
+                    }
+
                 }
             }
 
@@ -259,6 +297,18 @@ public class AdminWebDashPlugin extends JavaPlugin {
             config.addProperty("keystorePath", keystorePath);
             config.addProperty("keystorePassword", keystorePassword);
             config.addProperty("domain", domain);
+
+            config.addProperty("reverseProxy", reverseProxy);
+            config.addProperty("letsEncrypt", letsEncrypt);
+            config.addProperty("letsEncryptEmail", letsEncryptEmail);
+            config.addProperty("loginRateLimit", loginRateLimit);
+            config.addProperty("logLevel", logLevel);
+
+            com.google.gson.JsonArray arr = new com.google.gson.JsonArray();
+            for (String ip : ipAllowlist) {
+                arr.add(ip);
+            }
+            config.add("ipAllowlist", arr);
 
             try (FileWriter writer = new FileWriter(configFile)) {
                 GSON.toJson(config, writer);
@@ -324,6 +374,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
 
     @Override
     protected void shutdown() {
+        uk.co.grimtech.admin.util.LetsEncryptManager.stopChallengeServer();
         if (httpServer != null) {
             httpServer.stop();
             LOGGER.info("[AdminWebDash] HTTP Server stopped.");
