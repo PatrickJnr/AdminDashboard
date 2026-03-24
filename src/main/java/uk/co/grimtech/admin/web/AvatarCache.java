@@ -11,7 +11,6 @@ import java.nio.file.Paths;
 public class AvatarCache {
     private static CustomLogger LOGGER;
     
-    // Get logger from main plugin
     private static CustomLogger getLogger() {
         if (LOGGER == null) {
             LOGGER = AdminWebDashPlugin.getCustomLogger();
@@ -33,7 +32,6 @@ public class AvatarCache {
     public static byte[] getAvatar(String identifier) {
         String cacheKey = "avatar_" + identifier;
         
-        // 1. Check in-memory cache first
         byte[] cachedInMemory = ResourceCache.get(cacheKey);
         if (cachedInMemory != null) {
             return cachedInMemory;
@@ -42,12 +40,11 @@ public class AvatarCache {
         String filename = identifier + ".png";
         Path cachePath = Paths.get(CACHE_DIR, filename);
 
-        // 2. Check disk cache
         if (Files.exists(cachePath)) {
             try {
                 byte[] data = Files.readAllBytes(cachePath);
                 if (data != null) {
-                    ResourceCache.put(cacheKey, data, 3600000); // Cache for 1 hour in memory
+                    ResourceCache.put(cacheKey, data, 3600000); 
                     return data;
                 }
             } catch (IOException e) {
@@ -55,12 +52,11 @@ public class AvatarCache {
             }
         }
 
-        // 3. Not in cache, download it
         try {
             byte[] data = downloadAvatar(identifier);
             if (data != null) {
                 Files.write(cachePath, data);
-                ResourceCache.put(cacheKey, data, 3600000); // Cache for 1 hour in memory
+                ResourceCache.put(cacheKey, data, 3600000); 
                 return data;
             }
         } catch (IOException e) {

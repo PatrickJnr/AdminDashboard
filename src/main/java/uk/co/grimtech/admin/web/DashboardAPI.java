@@ -78,10 +78,10 @@ public class DashboardAPI {
     private static CustomLogger LOGGER;
     private static long lastMetricsLogTime = 0;
     
-    // Memoized Reflection Fields
+    
     private static java.lang.reflect.Field banProviderField;
     
-    // Result Caches
+    
     private static String cachedPlayersJson;
     private static long playersCacheExpiry = 0;
     private static String cachedMetricsJson;
@@ -115,21 +115,21 @@ public class DashboardAPI {
         } else if (path.equals("/api/players")) {
             if (System.currentTimeMillis() < playersCacheExpiry && cachedPlayersJson != null) return cachedPlayersJson;
             cachedPlayersJson = getPlayers();
-            playersCacheExpiry = System.currentTimeMillis() + 1000; // 1s cache
+            playersCacheExpiry = System.currentTimeMillis() + 1000; 
             return cachedPlayersJson;
         } else if (path.startsWith("/api/avatar/")) {
             String identifier = path.substring("/api/avatar/".length());
             byte[] avatar = AvatarCache.getAvatar(identifier);
             if (avatar != null) {
-                // Return base64 encoded avatar data
+                
                 return "AVATAR_DATA:" + java.util.Base64.getEncoder().encodeToString(avatar);
             }
             return "{\"error\": \"Avatar not found\"}";
         } else if (path.startsWith("/api/item/") && path.endsWith("/icon")) {
-            String itemId = path.substring(10, path.length() - 5); // Extract item ID
+            String itemId = path.substring(10, path.length() - 5); 
             return getItemIcon(itemId);
         } else if (path.startsWith("/api/mod/") && path.endsWith("/icon")) {
-            String modName = path.substring(9, path.length() - 5); // Extract mod name
+            String modName = path.substring(9, path.length() - 5); 
             return getModIcon(modName);
         } else if (path.startsWith("/api/player/") && path.endsWith("/inv")) {
             String uuidStr = path.substring(12, path.length() - 4);
@@ -137,17 +137,17 @@ public class DashboardAPI {
         } else if (path.equals("/api/stats")) {
             if (System.currentTimeMillis() < serverStatsCacheExpiry && cachedServerStatsJson != null) return cachedServerStatsJson;
             cachedServerStatsJson = getServerStats();
-            serverStatsCacheExpiry = System.currentTimeMillis() + 2000; // 2s cache
+            serverStatsCacheExpiry = System.currentTimeMillis() + 2000; 
             return cachedServerStatsJson;
         } else if (path.equals("/api/metrics")) {
             if (System.currentTimeMillis() < metricsCacheExpiry && cachedMetricsJson != null) return cachedMetricsJson;
             cachedMetricsJson = getAdvancedMetrics();
-            metricsCacheExpiry = System.currentTimeMillis() + 5000; // 5s cache
+            metricsCacheExpiry = System.currentTimeMillis() + 5000; 
             return cachedMetricsJson;
         } else if (path.equals("/api/server/stats")) {
             if (System.currentTimeMillis() < serverStatsCacheExpiry && cachedServerStatsJson != null) return cachedServerStatsJson;
             cachedServerStatsJson = getServerStats();
-            serverStatsCacheExpiry = System.currentTimeMillis() + 2000; // 2s cache
+            serverStatsCacheExpiry = System.currentTimeMillis() + 2000; 
             return cachedServerStatsJson;
         } else if (path.equals("/api/server/config")) {
             return getServerConfig();
@@ -282,9 +282,9 @@ public class DashboardAPI {
     private static String getVersion() {
         JsonObject version = new JsonObject();
         
-        // Try to get version from plugin manifest
+        
         AdminWebDashPlugin plugin = AdminWebDashPlugin.getInstance();
-        String versionString = "1.0.1"; // fallback
+        String versionString = "1.0.1"; 
         
         if (plugin != null && plugin.getManifest() != null) {
             versionString = plugin.getManifest().getVersion().toString();
@@ -294,13 +294,13 @@ public class DashboardAPI {
         version.addProperty("name", "Admin WebDash");
         version.addProperty("author", "Patrick Jr.");
         
-        // System Info
+        
         version.addProperty("javaVersion", System.getProperty("java.version"));
         version.addProperty("osName", System.getProperty("os.name"));
         version.addProperty("osArch", System.getProperty("os.arch"));
         version.addProperty("cores", Runtime.getRuntime().availableProcessors());
         
-        // Memory Usage (Heap)
+        
         Runtime runtime = Runtime.getRuntime();
         long maxMemory = runtime.maxMemory();
         long totalMemory = runtime.totalMemory();
@@ -310,7 +310,7 @@ public class DashboardAPI {
         version.addProperty("heapUsed", usedMemory);
         version.addProperty("heapMax", maxMemory);
         
-        // Disk Usage (Current Partition)
+        
         java.io.File root = new java.io.File(".");
         long totalSpace = root.getTotalSpace();
         long freeSpace = root.getUsableSpace();
@@ -329,7 +329,7 @@ public class DashboardAPI {
             List<CompletableFuture<JsonObject>> futures = new ArrayList<>();
 
             for (PlayerRef ref : players) {
-                // Thread-safe data from PlayerRef
+                
                 final JsonObject playerJson = new JsonObject();
                 playerJson.addProperty("name", ref.getUsername());
                 playerJson.addProperty("uuid", ref.getUuid().toString());
@@ -338,7 +338,7 @@ public class DashboardAPI {
                 Ref<EntityStore> entityRef = ref.getReference();
                 if (entityRef != null && entityRef.isValid()) {
                     Store<EntityStore> store = entityRef.getStore();
-                    // Each Store/World has its own thread, execute there
+                    
                     World world = store.getExternalData().getWorld();
                     
                     CompletableFuture<JsonObject> future = CompletableFuture.supplyAsync(() -> {
@@ -349,36 +349,36 @@ public class DashboardAPI {
                                 
                                 EntityStatMap statMap = store.getComponent(entityRef, EntityStatMap.getComponentType());
                                 if (statMap != null) {
-                                    // Health
+                                    
                                     EntityStatValue healthStat = statMap.get(DefaultEntityStatTypes.getHealth());
                                     if (healthStat != null) {
                                         playerJson.addProperty("health", healthStat.get());
                                         playerJson.addProperty("maxHealth", healthStat.getMax());
                                     }
                                     
-                                    // Stamina
+                                    
                                     EntityStatValue staminaStat = statMap.get(DefaultEntityStatTypes.getStamina());
                                     if (staminaStat != null) {
                                         playerJson.addProperty("stamina", staminaStat.get());
                                         playerJson.addProperty("maxStamina", staminaStat.getMax());
                                     } else {
-                                        // Default values if stamina not available
+                                        
                                         playerJson.addProperty("stamina", 100);
                                         playerJson.addProperty("maxStamina", 100);
                                     }
                                     
-                                    // Mana
+                                    
                                     EntityStatValue manaStat = statMap.get(DefaultEntityStatTypes.getMana());
                                     if (manaStat != null) {
                                         playerJson.addProperty("mana", manaStat.get());
                                         playerJson.addProperty("maxMana", manaStat.getMax());
                                     } else {
-                                        // Default values if mana not available
+                                        
                                         playerJson.addProperty("mana", 100);
                                         playerJson.addProperty("maxMana", 100);
                                     }
                                     
-                                    // Defence (calculated from Physical damage resistance modifiers)
+                                    
                                     double totalDefence = 0.0;
                                     if (playerComp != null) {
                                         Inventory inv = playerComp.getInventory();
@@ -392,11 +392,11 @@ public class DashboardAPI {
                                                         if (item != null && item.getArmor() != null) {
                                                             ItemArmor armor = item.getArmor();
                                                             
-                                                            // Sum up Physical damage resistance
+                                                            
                                                             Map<DamageCause, StaticModifier[]> damageRes = armor.getDamageResistanceValues();
                                                             if (damageRes != null) {
                                                                 for (Map.Entry<DamageCause, StaticModifier[]> entry : damageRes.entrySet()) {
-                                                                    // Look for Physical damage type
+                                                                    
                                                                     if ("Physical".equals(entry.getKey().getId())) {
                                                                         for (StaticModifier mod : entry.getValue()) {
                                                                             totalDefence += mod.getAmount();
@@ -410,7 +410,7 @@ public class DashboardAPI {
                                             }
                                         }
                                     }
-                                    // Convert to percentage (0.4 = 40%)
+                                    
                                     playerJson.addProperty("defence", Math.round(totalDefence * 100));
                                 }
                             }
@@ -433,7 +433,7 @@ public class DashboardAPI {
                 }
             }
 
-            // Wait for all worlds to report back (with timeout for safety)
+            
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                     .get(2, TimeUnit.SECONDS);
 
@@ -465,7 +465,7 @@ public class DashboardAPI {
             Store<EntityStore> store = entityRef.getStore();
             World world = store.getExternalData().getWorld();
             
-            // Run on the world's thread
+            
             JsonObject invJson = CompletableFuture.supplyAsync(() -> {
                 JsonObject json = new JsonObject();
                 try {
@@ -498,7 +498,7 @@ public class DashboardAPI {
                 item.addProperty("count", stack.getQuantity());
                 item.addProperty("slot", i);
 
-                // Add rarity info
+                
                 Item itemAsset = stack.getItem();
                 if (itemAsset != null) {
                     item.addProperty("rarity", itemAsset.getQualityIndex());
@@ -581,14 +581,14 @@ public class DashboardAPI {
         if (cached != null) return cached;
 
         try {
-            // 0. URL Decode the itemId (e.g. hytale%3Astone -> hytale:stone)
+            
             String rawId = itemId;
             itemId = URLDecoder.decode(itemId, StandardCharsets.UTF_8.name());
             if (!rawId.equals(itemId)) {
                 getLogger().info("[DashboardAPI] Decoded itemId: " + rawId + " -> " + itemId);
             }
 
-            // 1. Resolve Namespace
+            
             String namespace = "hytale";
             String assetId = itemId;
             if (itemId.contains(":")) {
@@ -597,21 +597,21 @@ public class DashboardAPI {
                 assetId = parts[1];
             }
 
-            // 2. Get AssetPack (Case-Insensitive)
+            
             AssetPack pack = findAssetPack(namespace);
             if (pack == null) {
                 getLogger().warning("[DashboardAPI] Could not find AssetPack for namespace (tried case-insensitive): " + namespace);
                 return getFallbackIcon(itemId);
             }
 
-            // 3. Get Icon Path from Item config
+            
             Item item = Item.getAssetStore().getAssetMap().getAsset(itemId);
             if (item == null && !itemId.contains(":")) {
-                // Try with namespace if not present
+                
                 item = Item.getAssetStore().getAssetMap().getAsset(namespace + ":" + assetId);
             }
             if (item == null) {
-                // Try with common name variations
+                
                 item = Item.getAssetStore().getAssetMap().getAsset("hytale:" + assetId);
             }
 
@@ -620,8 +620,8 @@ public class DashboardAPI {
                 iconPathStr = item.getIcon();
                 getLogger().info("[DashboardAPI] Resolved Item " + itemId + " icon from config: " + iconPathStr);
             } else {
-                // Manual resolution if Item not found in store
-                // Hytale usually puts icons in Icons/ItemsGenerated or Icons/Entities
+                
+                
                 iconPathStr = "Icons/ItemsGenerated/" + assetId + ".png";
                 getLogger().info("[DashboardAPI] Item " + itemId + " not in store, using manual path prediction: " + iconPathStr);
             }
@@ -631,22 +631,22 @@ public class DashboardAPI {
                 return getFallbackIcon(itemId);
             }
 
-            // 4. Resolve and Read PNG
+            
             Path root = pack.getRoot();
             Path iconPath = null;
             
-            // Try different common Hytale asset structures
+            
             String[] searchBases = {
                 "Common",
                 "Assets/Common",
                 "Assets",
-                "" // Root directly
+                "" 
             };
 
             for (String base : searchBases) {
                 Path attempt = base.isEmpty() ? root.resolve(iconPathStr) : root.resolve(base).resolve(iconPathStr);
                 
-                // Try with and without .png extension
+                
                 if (Files.exists(attempt)) {
                     iconPath = attempt;
                     break;
@@ -671,20 +671,20 @@ public class DashboardAPI {
             byte[] imageBytes = Files.readAllBytes(iconPath);
             getLogger().info("[DashboardAPI] Successfully read " + imageBytes.length + " bytes for " + itemId);
             String result = "IMAGE_DATA:" + java.util.Base64.getEncoder().encodeToString(imageBytes);
-            ResourceCache.put(cacheKey, result, 0); // Infinite cache for static icons
+            ResourceCache.put(cacheKey, result, 0); 
             return result;
 
         } catch (Exception e) {
             getLogger().log("WARN", "[DashboardAPI] Error extracting real icon for " + itemId, e);
             String fallback = getFallbackIcon(itemId);
-            // Don't cache fallback infinitely, but maybe for a while? 
-            ResourceCache.put(cacheKey, fallback, 60000); // 1 minute for fallback
+            
+            ResourceCache.put(cacheKey, fallback, 60000); 
             return fallback;
         }
     }
 
     private static AssetPack findAssetPack(String namespace) {
-        // Log all available packs for debugging
+        
         StringBuilder packNames = new StringBuilder();
         for (AssetPack p : AssetModule.get().getAssetPacks()) {
             packNames.append(p.getName()).append(", ");
@@ -694,15 +694,15 @@ public class DashboardAPI {
         AssetPack pack = AssetModule.get().getAssetPack(namespace);
         if (pack != null) return pack;
 
-        // Manual search across all registered packs for smarter matching
+        
         for (AssetPack p : AssetModule.get().getAssetPacks()) {
             String name = p.getName();
-            // Exact match (case insensitive)
+            
             if (name.equalsIgnoreCase(namespace)) {
                 return p;
             }
             
-            // Hytale style namespace matching (e.g. "Hytale:Hytale" for "hytale")
+            
             if (name.contains(":")) {
                 String prefix = name.split(":")[0];
                 if (prefix.equalsIgnoreCase(namespace)) {
@@ -715,26 +715,26 @@ public class DashboardAPI {
 
     private static String getFallbackIcon(String itemId) {
         try {
-            // Determine color based on item category
+            
             java.awt.Color color;
             String idLower = itemId.toLowerCase();
             
             if (idLower.startsWith("weapon_")) {
-                color = new java.awt.Color(200, 50, 0); // Red/Orange for weapons
+                color = new java.awt.Color(200, 50, 0); 
             } else if (idLower.startsWith("tool_")) {
-                color = new java.awt.Color(160, 160, 160); // Silver/Gray for tools
+                color = new java.awt.Color(160, 160, 160); 
             } else if (idLower.contains("ore_") || idLower.contains("ingredient_ore")) {
-                color = new java.awt.Color(139, 69, 19); // Brown for ores
+                color = new java.awt.Color(139, 69, 19); 
             } else if (idLower.startsWith("armor_")) {
-                color = new java.awt.Color(30, 144, 255); // Blue for armor
+                color = new java.awt.Color(30, 144, 255); 
             } else if (idLower.contains("food_") || idLower.contains("ingredient_food")) {
-                color = new java.awt.Color(255, 105, 180); // Pink for food
+                color = new java.awt.Color(255, 105, 180); 
             } else if (idLower.startsWith("block_") || idLower.startsWith("soil_")) {
-                color = new java.awt.Color(100, 100, 100); // Dark Gray for blocks
+                color = new java.awt.Color(100, 100, 100); 
             } else if (idLower.contains("ingredient_")) {
-                color = new java.awt.Color(154, 205, 50); // Yellow/Green for ingredients
+                color = new java.awt.Color(154, 205, 50); 
             } else {
-                // Default to hash-based color for consistency
+                
                 int hash = itemId.hashCode();
                 int r = Math.abs((hash & 0xFF0000) >> 16);
                 int g = Math.abs((hash & 0x00FF00) >> 8);
@@ -742,31 +742,31 @@ public class DashboardAPI {
                 color = new java.awt.Color(r, g, b);
             }
             
-            // Create a 32x32 PNG with the color
+            
             java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(32, 32, java.awt.image.BufferedImage.TYPE_INT_ARGB);
             java.awt.Graphics2D g2 = img.createGraphics();
             
-            // Fill with color
+            
             g2.setColor(color);
             g2.fillRect(4, 4, 24, 24);
             
-            // Add aesthetic border
+            
             g2.setColor(color.darker());
             g2.setStroke(new java.awt.BasicStroke(2));
             g2.drawRect(4, 4, 23, 23);
             
-            // Add a subtle sheen/highlight
+            
             g2.setColor(new java.awt.Color(255, 255, 255, 60));
             g2.fillRect(6, 6, 10, 4);
             
             g2.dispose();
             
-            // Convert to PNG bytes
+            
             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
             javax.imageio.ImageIO.write(img, "PNG", baos);
             byte[] imageBytes = baos.toByteArray();
             
-            // Return as base64 with IMAGE_DATA prefix
+            
             return "IMAGE_DATA:" + java.util.Base64.getEncoder().encodeToString(imageBytes);
         } catch (Exception e) {
             getLogger().log("WARN", "Error generating fallback icon for " + itemId, e);
@@ -778,11 +778,11 @@ public class DashboardAPI {
         JsonObject stats = new JsonObject();
         stats.addProperty("onlinePlayers", Universe.get().getPlayers().size());
         
-        // Calculate Uptime
+        
         long uptimeMs = System.currentTimeMillis() - AdminWebDashPlugin.getStartTime();
         stats.addProperty("uptimeMs", uptimeMs);
         
-        // Calculate Actual TPS from first world
+        
         double tps = 30.0;
         try {
             java.util.Collection<World> worlds = Universe.get().getWorlds().values();
@@ -791,7 +791,7 @@ public class DashboardAPI {
                 double avgTickNanos = world.getBufferedTickLengthMetricSet().getAverage(0);
                 if (avgTickNanos > 0) {
                     tps = 1000000000.0 / avgTickNanos;
-                    // Cap at 30.0 as it can't realistically exceed it in Hytale's model
+                    
                     if (tps > 30.0) tps = 30.0;
                 }
             }
@@ -800,13 +800,13 @@ public class DashboardAPI {
         }
         stats.addProperty("tps", Math.round(tps * 10.0) / 10.0);
 
-        // Memory usage
+        
         Runtime runtime = Runtime.getRuntime();
         long usedMemory = runtime.totalMemory() - runtime.freeMemory();
         long maxMemory = runtime.maxMemory();
-        stats.addProperty("memory", usedMemory); // Bytes for frontend to format
-        stats.addProperty("memoryUsed", usedMemory / (1024 * 1024)); // MB
-        stats.addProperty("memoryMax", maxMemory / (1024 * 1024)); // MB
+        stats.addProperty("memory", usedMemory); 
+        stats.addProperty("memoryUsed", usedMemory / (1024 * 1024)); 
+        stats.addProperty("memoryMax", maxMemory / (1024 * 1024)); 
         stats.addProperty("memoryPercent", Math.round((double) usedMemory / maxMemory * 100.0));
 
         return GSON.toJson(stats);
@@ -816,37 +816,37 @@ public class DashboardAPI {
         try {
             JsonObject root = new JsonObject();
             
-            // JVM Metrics Registration Dump
+            
             BsonDocument jvmBson = JVMMetrics.METRICS_REGISTRY.dumpToBson(null).asDocument();
             JsonObject jvmJson = bsonToJson(jvmBson);
             
-            // Log structure for debugging if missing fields
+            
             if (!jvmJson.has("System")) {
                 getLogger().info("[Metrics] Missing 'System' key in JVM metrics. Keys found: " + jvmJson.keySet());
             }
             
-            // 1. CPU Usage (Process CPU Load)
+            
             double cpu = 0;
             if (jvmJson.has("System") && jvmJson.getAsJsonObject("System").has("ProcessCpuLoad")) {
                 cpu = jvmJson.getAsJsonObject("System").get("ProcessCpuLoad").getAsDouble();
             }
             root.addProperty("processCpuLoad", cpu);
             
-            // 2. Memory Usage (Heap Used)
+            
             long heapUsed = 0;
             if (jvmJson.has("Memory") && jvmJson.getAsJsonObject("Memory").has("HeapMemoryUsage")) {
                 heapUsed = jvmJson.getAsJsonObject("Memory").getAsJsonObject("HeapMemoryUsage").get("Used").getAsLong();
             }
             root.addProperty("heapUsed", heapUsed);
             
-            // 3. Thread Count
+            
             if (jvmJson.has("Threads")) {
                 root.addProperty("threadCount", jvmJson.getAsJsonArray("Threads").size());
             } else {
                 root.addProperty("threadCount", 0);
             }
             
-            // 4. GC Collections (Sum across all collectors)
+            
             long gcCount = 0;
             if (jvmJson.has("GarbageCollectors")) {
                 for (com.google.gson.JsonElement ge : jvmJson.getAsJsonArray("GarbageCollectors")) {
@@ -858,17 +858,17 @@ public class DashboardAPI {
             }
             root.addProperty("gcCollections", gcCount);
             
-            // 5. Total TPS (Average across worlds)
+            
             double totalTps = 0;
             int worldCount = 0;
             
-            // World Metrics (Detailed and per-world)
+            
             JsonObject worlds = new JsonObject();
             for (World world : Universe.get().getWorlds().values()) {
                 BsonDocument worldBson = World.METRICS_REGISTRY.dumpToBson(world).asDocument();
                 JsonObject worldJson = bsonToJson(worldBson);
                 
-                // Calculate TPS for this specific world
+                
                 double worldTps = 30.0;
                 double avgTickNanos = world.getBufferedTickLengthMetricSet().getAverage(0);
                 if (avgTickNanos > 0) {
@@ -884,9 +884,9 @@ public class DashboardAPI {
             root.addProperty("tps", worldCount > 0 ? (Math.round((totalTps / worldCount) * 10.0) / 10.0) : 30.0);
             
             String jsonOutput = GSON.toJson(root);
-            // Log once every 30 seconds to avoid spamming
+            
             if (System.currentTimeMillis() - lastMetricsLogTime > 30000) {
-                // getLogger().info("[Metrics] Response: " + jsonOutput);
+                
                 lastMetricsLogTime = System.currentTimeMillis();
             }
             
@@ -959,9 +959,9 @@ public class DashboardAPI {
             }
             if (!java.nio.file.Files.exists(logPath)) return "{\"error\": \"Log not found\"}";
             
-            // Read last 1MB of the log to prevent crashing the browser
+            
             long size = java.nio.file.Files.size(logPath);
-            long limit = 1024 * 1024; // 1MB
+            long limit = 1024 * 1024; 
             
             String content;
             if (size > limit) {
@@ -1022,7 +1022,7 @@ public class DashboardAPI {
             Map<String, World> loadedWorlds = universe.getWorlds();
             java.util.Set<String> processedNames = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 
-            // 1. Process all LOADED worlds first (includes instances)
+            
             for (Map.Entry<String, World> entry : loadedWorlds.entrySet()) {
                 String name = entry.getKey();
                 World world = entry.getValue();
@@ -1033,7 +1033,7 @@ public class DashboardAPI {
                 worldJson.addProperty("loaded", true);
                 worldJson.addProperty("ticking", !world.isPaused());
                 
-                // Optimized player counting for this world
+                
                 long playerCount = universe.getPlayers().stream()
                     .filter(pr -> {
                         Ref<EntityStore> ref = pr.getReference();
@@ -1047,7 +1047,7 @@ public class DashboardAPI {
                 jsonArray.add(worldJson);
             }
 
-            // 2. Add UNLOADED worlds found on disk
+            
             Path worldsDir = universe.getPath().resolve("worlds");
             if (Files.exists(worldsDir)) {
                 try (var stream = Files.list(worldsDir)) {
@@ -1170,7 +1170,7 @@ public class DashboardAPI {
         java.util.Set<String> processedPacks = new java.util.HashSet<>();
         
         try {
-            // 1. Add JAR-based java plugins
+            
             List<PluginBase> loadedPlugins = PluginManager.get().getPlugins();
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             
@@ -1185,7 +1185,7 @@ public class DashboardAPI {
                 pObj.addProperty("type", "Mod");
                 pObj.addProperty("iconUrl", "/api/mod/" + encodeForUrl(name) + "/icon");
                 
-                // Try to fetch CurseForge metadata asynchronously
+                
                 CompletableFuture<Void> future = CurseForgeAPI.searchMod(name).thenAccept(cfData -> {
                     if (cfData != null) {
                         if (cfData.has("iconUrl")) {
@@ -1206,14 +1206,14 @@ public class DashboardAPI {
                 
                 plugins.add(pObj);
                 
-                // Track identified packs to avoid duplicates
+                
                 processedPacks.add(name.toLowerCase());
                 if (name.contains(":")) {
                     processedPacks.add(name.split(":")[1].toLowerCase());
                 }
             }
             
-            // 2. Add Asset Packs (covers zipped mods without code)
+            
             for (AssetPack pack : AssetModule.get().getAssetPacks()) {
                 String name = pack.getName();
                 String cleanName = name;
@@ -1226,12 +1226,12 @@ public class DashboardAPI {
 
                 JsonObject pObj = new JsonObject();
                 pObj.addProperty("name", cleanName);
-                pObj.addProperty("version", "1.0"); // Asset packs don't usually have a version in manifest
+                pObj.addProperty("version", "1.0"); 
                 pObj.addProperty("id", name);
                 pObj.addProperty("type", "Asset Pack");
                 pObj.addProperty("iconUrl", "/api/mod/" + encodeForUrl(name) + "/icon");
                 
-                // Try to fetch CurseForge metadata asynchronously
+                
                 CompletableFuture<Void> future = CurseForgeAPI.searchMod(cleanName).thenAccept(cfData -> {
                     if (cfData != null) {
                         if (cfData.has("iconUrl")) {
@@ -1254,7 +1254,7 @@ public class DashboardAPI {
                 processedPacks.add(cleanName.toLowerCase());
             }
             
-            // Wait for all CurseForge lookups to complete (with timeout)
+            
             try {
                 CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                         .get(5, TimeUnit.SECONDS);
@@ -1264,7 +1264,7 @@ public class DashboardAPI {
             
         } catch (Exception e) {
             getLogger().warning("Error getting plugins: " + e.getMessage());
-            // Fallback for safety
+            
             JsonObject pObj = new JsonObject();
             pObj.addProperty("name", "Admin Dashboard");
             pObj.addProperty("version", "0.1");
@@ -1283,7 +1283,7 @@ public class DashboardAPI {
             AssetPack pack = findAssetPack(modName);
             if (pack == null) return "{\"error\": \"Mod not found\"}";
 
-            // Common logo filenames in Hytale mods
+            
             String[] possibleLogos = {"pack.png", "logo.png", "icon.png", "manifest.png"};
             
             for (String logo : possibleLogos) {
@@ -1292,7 +1292,7 @@ public class DashboardAPI {
                     byte[] data = java.nio.file.Files.readAllBytes(logoPath);
                     if (data != null && data.length > 0) {
                         String result = "IMAGE_DATA:" + java.util.Base64.getEncoder().encodeToString(data);
-                        ResourceCache.put(cacheKey, result, 0); // Infinite cache for static mod icons
+                        ResourceCache.put(cacheKey, result, 0); 
                         return result;
                     }
                 } catch (Exception ignored) {}
@@ -1321,45 +1321,45 @@ public class DashboardAPI {
             result.addProperty("maxPlayers", hytaleConfig.getMaxPlayers());
             result.addProperty("maxViewRadius", hytaleConfig.getMaxViewRadius());
             
-            // Log levels
+            
             JsonObject logLevels = new JsonObject();
             for (Map.Entry<String, java.util.logging.Level> entry : hytaleConfig.getLogLevels().entrySet()) {
                 logLevels.addProperty(entry.getKey(), entry.getValue().getName());
             }
             result.add("logLevels", logLevels);
             
-            // Defaults
+            
             JsonObject defaults = new JsonObject();
             defaults.addProperty("defaultWorld", hytaleConfig.getDefaults().getWorld());
             defaults.addProperty("defaultGameMode", hytaleConfig.getDefaults().getGameMode().toString());
             result.add("defaults", defaults);
 
-            // Connection Timeouts
+            
             JsonObject timeouts = new JsonObject();
             timeouts.addProperty("playTimeout", hytaleConfig.getConnectionTimeouts().getPlay().toMinutes());
             result.add("connectionTimeouts", timeouts);
 
-            // Mods
+            
             JsonObject mods = new JsonObject();
             for (Map.Entry<PluginIdentifier, ModConfig> entry : hytaleConfig.getModConfig().entrySet()) {
                 JsonObject mod = new JsonObject();
-                // ModConfig.enabled is Boolean (nullable), handle null as true (default enabled)
+                
                 Boolean enabled = entry.getValue().getEnabled();
                 mod.addProperty("enabled", enabled != null ? enabled : true);
                 mods.add(entry.getKey().toString(), mod);
             }
             result.add("mods", mods);
             
-            // Also append our custom webdash config for the dashboard
+            
             JsonObject webDashConfig = new JsonObject();
-            // Return only safe properties, filter out sensitive ones like keystore password
-            webDashConfig.addProperty("port", AdminWebDashPlugin.getInstance().getBackupInterval() /* wait wrong getter, port isn't exposed yet but it's not strictly needed for UI config if it's random or fixed */ );
+            
+            webDashConfig.addProperty("port", AdminWebDashPlugin.getInstance().getBackupInterval()  );
             webDashConfig.addProperty("backupInterval", AdminWebDashPlugin.getInstance().getBackupInterval());
             webDashConfig.addProperty("loggingEnabled", AdminWebDashPlugin.isLoggingEnabled());
             
-            // Discord Config
+            
             webDashConfig.addProperty("discordEnabled", AdminWebDashPlugin.isDiscordEnabled());
-            // DO NOT SEND DISCORD TOKEN FOR SECURITY (unless it's empty, we just send a placeholder boolean)
+            
             webDashConfig.addProperty("hasDiscordToken", AdminWebDashPlugin.getDiscordToken() != null && !AdminWebDashPlugin.getDiscordToken().isEmpty());
             webDashConfig.addProperty("discordGuildId", AdminWebDashPlugin.getDiscordGuildId());
             webDashConfig.addProperty("discordChannelLogs", AdminWebDashPlugin.getDiscordChannelLogs());
@@ -1367,7 +1367,7 @@ public class DashboardAPI {
             webDashConfig.addProperty("discordChannelJoins", AdminWebDashPlugin.getDiscordChannelJoins());
             webDashConfig.addProperty("discordCommandPrefix", AdminWebDashPlugin.getDiscordCommandPrefix());
             
-            // HTTPS Config
+            
             webDashConfig.addProperty("useHttps", AdminWebDashPlugin.useHttps());
             webDashConfig.addProperty("keystorePath", AdminWebDashPlugin.getKeystorePath());
             webDashConfig.addProperty("hasKeystorePassword", AdminWebDashPlugin.getKeystorePassword() != null && !AdminWebDashPlugin.getKeystorePassword().isEmpty());
@@ -1386,7 +1386,7 @@ public class DashboardAPI {
             JsonObject newConfig = GSON.fromJson(body, JsonObject.class);
             boolean requiresRestart = false;
 
-            // Update simple fields directly in the plugin config file
+            
             java.io.File dataDir = new java.io.File("mods/AdminWebDash");
             java.io.File configFile = new java.io.File(dataDir, "config.json");
             JsonObject currentConfig = new JsonObject();
@@ -1445,8 +1445,8 @@ public class DashboardAPI {
     }
 
     private static String getDiscordEvents() {
-        // Structured event feed for Discord consumption.
-        // Returning empty list for now, we will add an event queue to memory and poll from here later.
+        
+        
         JsonArray events = new JsonArray();
         return GSON.toJson(events);
     }
@@ -1533,15 +1533,15 @@ public class DashboardAPI {
                 return "{\"error\": \"Player not found\"}";
             }
             
-            // Check if player is in OP group
+            
             boolean currentlyOP = PermissionsModule.get().getGroupsForUser(uuid).contains("OP");
             
             if (currentlyOP) {
-                // Remove from OP group
+                
                 PermissionsModule.get().removeUserFromGroup(uuid, "OP");
                 getLogger().info("[API] Revoked OP from " + ref.getUsername() + " (" + uuid + ")");
             } else {
-                // Add to OP group
+                
                 PermissionsModule.get().addUserToGroup(uuid, "OP");
                 getLogger().info("[API] Granted OP to " + ref.getUsername() + " (" + uuid + ")");
             }
@@ -1585,7 +1585,7 @@ public class DashboardAPI {
             Store<EntityStore> targetStore = targetEntityRef.getStore();
             World targetWorld = targetStore.getExternalData().getWorld();
             
-            // Get target position on the target's world thread
+            
             CompletableFuture<Vector3d> targetPosFuture = CompletableFuture.supplyAsync(() -> {
                 TransformComponent targetTransform = targetStore.getComponent(targetEntityRef, TransformComponent.getComponentType());
                 return targetTransform != null ? targetTransform.getPosition() : null;
@@ -1596,7 +1596,7 @@ public class DashboardAPI {
                 return "{\"error\": \"Could not get target position\"}";
             }
             
-            // Teleport player on their world thread
+            
             Store<EntityStore> playerStore = playerEntityRef.getStore();
             World playerWorld = playerStore.getExternalData().getWorld();
             
@@ -1632,7 +1632,6 @@ public class DashboardAPI {
         try {
             JsonArray bansArray = new JsonArray();
             
-            // First, try to read directly from the file to ensure we have the latest data
             java.nio.file.Path bansPath = java.nio.file.Paths.get("bans.json");
             
             if (java.nio.file.Files.exists(bansPath)) {
@@ -1640,11 +1639,9 @@ public class DashboardAPI {
                     String content = new String(java.nio.file.Files.readAllBytes(bansPath), java.nio.charset.StandardCharsets.UTF_8);
                     com.google.gson.JsonArray fileArray = com.google.gson.JsonParser.parseString(content).getAsJsonArray();
                     
-                    // Parse each ban from the file
                     for (com.google.gson.JsonElement element : fileArray) {
                         JsonObject banJson = element.getAsJsonObject();
                         
-                        // Extract the data we need
                         JsonObject displayBan = new JsonObject();
                         displayBan.addProperty("uuid", banJson.get("target").getAsString());
                         displayBan.addProperty("bannedBy", banJson.get("by").getAsString());
@@ -1664,26 +1661,22 @@ public class DashboardAPI {
                 }
             }
             
-            // Fallback: Use reflection to access the private banProvider field
             java.lang.reflect.Field field = AccessControlModule.class.getDeclaredField("banProvider");
             field.setAccessible(true);
             com.hypixel.hytale.server.core.modules.accesscontrol.provider.HytaleBanProvider banProvider = 
                 (com.hypixel.hytale.server.core.modules.accesscontrol.provider.HytaleBanProvider) field.get(AccessControlModule.get());
             
-            // Access the bans map using reflection with proper locking
             java.lang.reflect.Field bansField = banProvider.getClass().getDeclaredField("bans");
             bansField.setAccessible(true);
             @SuppressWarnings("unchecked")
             java.util.Map<UUID, com.hypixel.hytale.server.core.modules.accesscontrol.ban.Ban> bans = 
                 (java.util.Map<UUID, com.hypixel.hytale.server.core.modules.accesscontrol.ban.Ban>) bansField.get(banProvider);
             
-            // Access the fileLock field
             java.lang.reflect.Field lockField = banProvider.getClass().getSuperclass().getDeclaredField("fileLock");
             lockField.setAccessible(true);
             java.util.concurrent.locks.ReadWriteLock lock = 
                 (java.util.concurrent.locks.ReadWriteLock) lockField.get(banProvider);
             
-            // Acquire read lock
             lock.readLock().lock();
             try {
                 for (java.util.Map.Entry<UUID, com.hypixel.hytale.server.core.modules.accesscontrol.ban.Ban> entry : bans.entrySet()) {
@@ -1710,7 +1703,6 @@ public class DashboardAPI {
     
     private static String getBansFile() {
         try {
-            // Read the bans.json file directly from disk
             java.nio.file.Path bansPath = java.nio.file.Paths.get("bans.json");
             
             if (!java.nio.file.Files.exists(bansPath)) {
@@ -1745,7 +1737,6 @@ public class DashboardAPI {
             
             getLogger().info("[API] Attempting to unban player " + uuid);
             
-            // Read the bans.json file directly
             java.nio.file.Path bansPath = java.nio.file.Paths.get("bans.json");
             
             if (!java.nio.file.Files.exists(bansPath)) {
@@ -1753,11 +1744,9 @@ public class DashboardAPI {
                 return "{\"error\": \"Bans file not found\"}";
             }
             
-            // Read and parse the file
             String content = new String(java.nio.file.Files.readAllBytes(bansPath), java.nio.charset.StandardCharsets.UTF_8);
             com.google.gson.JsonArray fileArray = com.google.gson.JsonParser.parseString(content).getAsJsonArray();
             
-            // Find and remove the ban
             boolean found = false;
             com.google.gson.JsonArray newArray = new com.google.gson.JsonArray();
             
@@ -1778,13 +1767,11 @@ public class DashboardAPI {
                 return "{\"error\": \"Player is not banned\"}";
             }
             
-            // Write the updated array back to the file
             String newContent = GSON.toJson(newArray);
             java.nio.file.Files.write(bansPath, newContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             
             getLogger().info("[API] Successfully removed ban from file for " + uuid);
             
-            // Also try to remove from memory cache
             try {
                 java.lang.reflect.Field field = AccessControlModule.class.getDeclaredField("banProvider");
                 field.setAccessible(true);
@@ -1795,7 +1782,7 @@ public class DashboardAPI {
                     banProvider.modify(bans -> {
                         bans.remove(uuid);
                         getLogger().info("[API] Also removed ban from memory cache for " + uuid);
-                        return false; // Don't save again, we already saved to file
+                        return false; 
                     });
                 }
             } catch (Exception e) {
@@ -1808,11 +1795,6 @@ public class DashboardAPI {
             return "{\"error\": \"" + e.getMessage() + "\"}";
         }
     }
-    
-    // ==================== NEW FEATURES ====================
-    
-    // NOTE: Some features use reflection or workarounds due to API limitations
-    // These implementations are based on available public APIs and component patterns
     
     public static String clearInventory(String body) {
         try {
@@ -1897,7 +1879,7 @@ public class DashboardAPI {
                             float healAmount = maxHealth - currentHealth;
                             
                             if (healAmount > 0) {
-                                // Use the public addStatValue method - this properly syncs to client!
+                                
                                 float newHealth = statMap.addStatValue(DefaultEntityStatTypes.getHealth(), healAmount);
                                 getLogger().info("[API] Healed player: " + currentHealth + " -> " + newHealth);
                                 return true;
@@ -1976,7 +1958,7 @@ public class DashboardAPI {
                 }
                 muteJson.addProperty("reason", entry.getValue().reason);
                 
-                // Try to get player name
+                
                 PlayerRef ref = Universe.get().getPlayer(entry.getKey());
                 if (ref != null) {
                     muteJson.addProperty("name", ref.getUsername());
@@ -2126,17 +2108,13 @@ public class DashboardAPI {
             
             Vector3d destination = new Vector3d(warp.x, warp.y, warp.z);
             
-            // Execute on the world thread to get rotation and add teleport component
             playerWorld.execute(() -> {
-                // Get current rotation to preserve it (must be done on world thread)
                 TransformComponent transform = playerStore.getComponent(playerEntityRef, TransformComponent.getComponentType());
                 Vector3f currentRotation = transform != null ? transform.getRotation() : Vector3f.ZERO;
                 
-                // Create Teleport component and add it to the entity
                 Teleport teleport = new Teleport(destination, currentRotation);
                 playerStore.addComponent(playerEntityRef, Teleport.getComponentType(), teleport);
                 
-                // Send message to player
                 playerRef.sendMessage(Message.raw("Teleported to warp: " + warpName));
             });
             
@@ -2156,7 +2134,6 @@ public class DashboardAPI {
             String timeStr = json.get("time").getAsString();
             double dayTime;
             
-            // Convert time string to dayTime value (0.0 to 1.0)
             switch (timeStr.toLowerCase()) {
                 case "midnight":
                     dayTime = 0.0;
@@ -2174,7 +2151,6 @@ public class DashboardAPI {
                     return "{\"error\": \"Invalid time. Use: midnight, sunrise, noon, or sunset\"}";
             }
             
-            // Get the first world (or you could make this configurable)
             java.util.Collection<World> worlds = Universe.get().getWorlds().values();
             if (worlds.isEmpty()) {
                 return "{\"error\": \"No worlds available\"}";
@@ -2183,7 +2159,6 @@ public class DashboardAPI {
             World world = worlds.iterator().next();
             Store<EntityStore> store = world.getEntityStore().getStore();
             
-            // Execute on the world's thread
             CompletableFuture<Boolean> future = CompletableFuture.supplyAsync(() -> {
                 try {
                     WorldTimeResource timeResource = store.getResource(WorldTimeResource.getResourceType());
@@ -2218,10 +2193,9 @@ public class DashboardAPI {
             String weatherStr = json.get("weather").getAsString();
             String weatherId;
             
-            // Map common weather names to Hytale weather IDs
             switch (weatherStr.toLowerCase()) {
                 case "clear":
-                    weatherId = null; // null = clear/default weather
+                    weatherId = null; 
                     break;
                 case "rain":
                     weatherId = "hytale:rain";
@@ -2233,12 +2207,10 @@ public class DashboardAPI {
                     weatherId = "hytale:snow";
                     break;
                 default:
-                    // Allow custom weather IDs
                     weatherId = weatherStr;
                     break;
             }
             
-            // Get the first world (or you could make this configurable)
             java.util.Collection<World> worlds = Universe.get().getWorlds().values();
             if (worlds.isEmpty()) {
                 return "{\"error\": \"No worlds available\"}";
@@ -2247,7 +2219,6 @@ public class DashboardAPI {
             World world = worlds.iterator().next();
             Store<EntityStore> store = world.getEntityStore().getStore();
             
-            // Execute on the world's thread
             final String finalWeatherId = weatherId;
             CompletableFuture<Boolean> future = CompletableFuture.supplyAsync(() -> {
                 try {
@@ -2255,7 +2226,7 @@ public class DashboardAPI {
                     if (weatherResource != null) {
                         weatherResource.setForcedWeather(finalWeatherId);
                         
-                        // Also update the world config
+                        
                         WorldConfig config = world.getWorldConfig();
                         config.setForcedWeather(finalWeatherId);
                         config.markChanged();
@@ -2290,7 +2261,6 @@ public class DashboardAPI {
             UUID uuid = UUID.fromString(json.get("uuid").getAsString());
             String gamemodeStr = json.get("gamemode").getAsString();
             
-            // Parse gamemode
             GameMode gameMode;
             switch (gamemodeStr.toLowerCase()) {
                 case "adventure":
@@ -2348,12 +2318,12 @@ public class DashboardAPI {
             String itemId = json.get("itemId").getAsString();
             int quantity = json.has("quantity") ? json.get("quantity").getAsInt() : 1;
             
-            // Validate quantity
+            
             if (quantity < 1 || quantity > 999) {
                 return "{\"error\": \"Quantity must be between 1 and 999\"}";
             }
             
-            // Get the item from the asset map
+            
             Item item = Item.getAssetMap().getAsset(itemId);
             if (item == null) {
                 return "{\"error\": \"Invalid item ID: " + itemId + "\"}";
@@ -2413,36 +2383,30 @@ public class DashboardAPI {
             JsonObject response = new JsonObject();
             JsonArray itemsArray = new JsonArray();
             
-            // Get all items from the Item asset map (same way as giveItem does)
+            
             var assetMap = Item.getAssetMap();
             
             getLogger().info("[DashboardAPI] Asset map type: " + assetMap.getClass().getName());
             
-            // Iterate through all items using forEach
+            
             assetMap.getAssetMap().forEach((itemId, item) -> {
                 try {
                     if (item != null) {
                         JsonObject itemObj = new JsonObject();
                         itemObj.addProperty("id", itemId);
                         
-                        // Get human-readable name with better conversion
+                        
                         String displayName = itemId;
                         if (itemId.contains(":")) {
                             displayName = itemId.split(":", 2)[1];
                         }
                         
-                        // Convert underscores to spaces
                         displayName = displayName.replace("_", " ");
-                        
-                        // Apply common name mappings for better searchability
                         displayName = applyCommonNameMappings(displayName);
-                        
-                        // Capitalize words
                         displayName = capitalizeWords(displayName);
                         
                         itemObj.addProperty("name", displayName);
                         
-                        // Also store searchable keywords (lowercase, no spaces)
                         String searchKeywords = displayName.toLowerCase().replace(" ", "");
                         itemObj.addProperty("keywords", searchKeywords);
                         
@@ -2469,19 +2433,10 @@ public class DashboardAPI {
     }
     
     private static String applyCommonNameMappings(String name) {
-        // Apply common name transformations for better searchability
-        // This helps users find items using common terms
-        
-        // Rock_Stone_X -> Cobblestone variants
         if (name.toLowerCase().contains("rock stone")) {
             name = name.replace("Rock Stone", "Cobblestone");
             name = name.replace("rock stone", "cobblestone");
         }
-        
-        // Add more mappings as needed
-        // Wood_Plank_X -> Wood Plank variants
-        // Metal_X -> Metal variants
-        // etc.
         
         return name;
     }
@@ -2516,14 +2471,14 @@ public class DashboardAPI {
             return "{\"error\": \"" + e.getMessage() + "\"}";
         }
     }
-    // World Info & Gamerules
+    
     private static String getWorldInfo() {
         World world = Universe.get().getDefaultWorld();
         if (world == null) return "{\"error\": \"No default world loaded\"}";
 
         JsonObject json = new JsonObject();
         json.addProperty("name", world.getName());
-        json.addProperty("dimension", 0); // Placeholder
+        json.addProperty("dimension", 0); 
         json.addProperty("time", world.getWorldConfig().getGameTime().toString());
         
         String weather = world.getWorldConfig().getForcedWeather();
@@ -2545,9 +2500,7 @@ public class DashboardAPI {
         json.addProperty("isSpawningNPC", config.isSpawningNPC());
         json.addProperty("isGameTimePaused", config.isGameTimePaused());
         
-        // Use reflection for protected fields without getters/setters visible
         try {
-            // Block Rules live in the Asset WorldConfig, not Universe WorldConfig
             String gpId = config.getGameplayConfig();
             com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig gp = 
                 com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig.getAssetMap().getAsset(gpId);
@@ -2572,7 +2525,6 @@ public class DashboardAPI {
 
         } catch (Exception e) {
              getLogger().log("WARN", "Failed to reflect block rules: " + e.getMessage());
-             // Fallback to defaults
              json.addProperty("isBlockBreakingAllowed", true);
              json.addProperty("isBlockPlacementAllowed", true);
         }
@@ -2583,7 +2535,7 @@ public class DashboardAPI {
     }
 
     private static String updateGameRules(String body) {
-        // ... (existing updateGameRules code)
+        
         return "{\"success\": true}";
     }
 

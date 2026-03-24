@@ -37,14 +37,12 @@
                 </div>
             </div>
             <div class="sidebar-items">
-                <!-- DASHBOARD -->
                 <div class="sidebar-section-label">Dashboard</div>
                 <button class="sidebar-item active" onclick="switchTab('dashboard')" data-tab="dashboard" title="Dashboard">
                     <span class="material-symbols-outlined">dashboard</span>
                     <span class="sidebar-label">Overview</span>
                 </button>
 
-                <!-- GAMEPLAY -->
                 <div class="sidebar-section-label">Gameplay</div>
                 <button class="sidebar-item" onclick="switchTab('players')" data-tab="players" title="Players">
                     <span class="material-symbols-outlined">group</span>
@@ -55,7 +53,6 @@
                     <span class="sidebar-label">World</span>
                 </button>
 
-                <!-- SYSTEM -->
                 <div class="sidebar-section-label">System</div>
                 <button class="sidebar-item" onclick="switchTab('metrics')" data-tab="metrics" title="Metrics">
                     <span class="material-symbols-outlined">monitoring</span>
@@ -74,7 +71,6 @@
                     <span class="sidebar-label">Config</span>
                 </button>
 
-                <!-- OTHER -->
                 <div class="sidebar-section-label">Other</div>
                 <button class="sidebar-item" onclick="switchTab('info')" data-tab="info" title="Info">
                     <span class="material-symbols-outlined">info</span>
@@ -186,7 +182,6 @@
         </div>
         <div class="tab-content" id="tab-players">
             
-            <!-- Sub-nav for Players -->
             <div class="sub-nav-container" style="margin-bottom: 1.5rem;">
                  <div class="btn-group">
                     <button id="btn-sub-online" class="btn btn-primary" onclick="switchPlayerSubTab('online')">
@@ -198,7 +193,6 @@
                 </div>
             </div>
 
-            <!-- Online Players View -->
             <div id="view-players-online">
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
@@ -225,7 +219,6 @@
                 </div>
             </div>
 
-            <!-- Moderation View -->
             <div id="view-players-banned" style="display: none;">
                 <div class="moderation-grid">
                     <div class="hytale-panel">
@@ -337,7 +330,6 @@
                         </div>
                     </div>
                 </div>
-                <!-- Game Rules Card -->
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
@@ -579,7 +571,6 @@
 
             <div style="display: flex; flex-direction: column; gap: 1.5rem;">
 
-                <!-- GENERAL -->
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
@@ -626,7 +617,6 @@
                     </div>
                 </div>
 
-                <!-- DASHBOARD & SECURITY -->
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
@@ -676,7 +666,6 @@
                     </div>
                 </div>
 
-                <!-- HTTPS & LET'S ENCRYPT -->
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
@@ -726,7 +715,6 @@
                     </div>
                 </div>
 
-                <!-- DISCORD -->
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
@@ -785,7 +773,6 @@
                     </div>
                 </div>
 
-                <!-- MODS -->
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
@@ -799,7 +786,6 @@
                     </div>
                 </div>
 
-                <!-- LOG LEVELS -->
                 <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
@@ -821,7 +807,7 @@
                     </div>
                 </div>
 
-            </div><!-- end flex column -->
+            </div>
         </div>
 
 
@@ -903,8 +889,6 @@
         </div>
 
         <div class="tab-content" id="tab-info">
-            <!-- Top Row: About & Specs -->
-            <!-- Top Row: About -->
             <div style="margin-bottom: 2rem;">
                 <div class="hytale-panel" style="margin-bottom: 0;">
                     <div class="hytale-panel-inner">
@@ -925,9 +909,7 @@
                 </div>
             </div>
 
-            <!-- Bottom Row: Actions -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-                <!-- Discord -->
                 <a href="https://discord.gg/YUxuTa4ZzX" target="_blank" rel="noopener" style="text-decoration: none;">
                     <div class="hytale-panel" style="height: 100%; margin-bottom: 0; transition: transform 0.2s ease;">
                         <div class="hytale-panel-inner" style="display: flex; align-items: center; gap: 1.5rem; padding: 1.5rem; height: 100%;">
@@ -941,7 +923,6 @@
                     </div>
                 </a>
 
-                <!-- Ko-fi -->
                 <a href="https://ko-fi.com/patrickjr" target="_blank" rel="noopener" style="text-decoration: none;">
                     <div class="hytale-panel" style="height: 100%; margin-bottom: 0; transition: transform 0.2s ease;">
                         <div class="hytale-panel-inner" style="display: flex; align-items: center; gap: 1.5rem; padding: 1.5rem; height: 100%;">
@@ -956,7 +937,6 @@
                 </a>
             </div>
 
-            <!-- Footer -->
             <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); text-align: center; color: var(--text-secondary); font-size: 0.875rem;">
                 <p>Version <span id="info-version">Loading...</span> &bull; Developed by Patrick Jr.</p>
             </div>

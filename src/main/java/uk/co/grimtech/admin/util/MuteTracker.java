@@ -19,7 +19,7 @@ public class MuteTracker {
                     if (value == null) {
                         out.nullValue();
                     } else {
-                        out.value(value.toString()); // E.g., "2023-10-01T12:00:00Z"
+                        out.value(value.toString()); 
                     }
                 }
 
@@ -44,7 +44,7 @@ public class MuteTracker {
         public UUID player;
         public UUID mutedBy;
         public Instant timestamp;
-        public Long durationSeconds; // null = permanent
+        public Long durationSeconds; 
         public String reason;
         
         public boolean isExpired() {
@@ -53,7 +53,7 @@ public class MuteTracker {
         }
         
         public long getRemainingSeconds() {
-            if (durationSeconds == null) return -1; // permanent
+            if (durationSeconds == null) return -1; 
             if (isExpired()) return 0;
             long elapsed = Instant.now().getEpochSecond() - timestamp.getEpochSecond();
             return durationSeconds - elapsed;
@@ -68,9 +68,9 @@ public class MuteTracker {
                     new TypeToken<Map<UUID, Mute>>(){}.getType());
                 if (loaded != null) {
                     mutes.putAll(loaded);
-                    // Remove expired mutes
+                    
                     mutes.entrySet().removeIf(e -> e.getValue().isExpired());
-                    save(); // Save cleaned list
+                    save(); 
                     getLogger().info("[MuteTracker] Loaded " + mutes.size() + " active mutes");
                 }
             } catch (Exception e) {
@@ -126,7 +126,7 @@ public class MuteTracker {
     }
     
     public static Map<UUID, Mute> getMutes() {
-        // Remove expired
+        
         mutes.entrySet().removeIf(e -> e.getValue().isExpired());
         return new HashMap<>(mutes);
     }

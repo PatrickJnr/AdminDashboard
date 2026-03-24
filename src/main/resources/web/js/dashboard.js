@@ -71,7 +71,7 @@ function switchTab(tabName, updateHistory = true) {
         activeItem.classList.add('active');
     }
 
-    // history.pushState
+    
     if (updateHistory) {
         const path = '/' + tabName;
         history.pushState({ tab: tabName }, '', path);
@@ -82,7 +82,7 @@ window.addEventListener('popstate', (event) => {
     if (event.state && event.state.tab) {
         switchTab(event.state.tab, false);
     } else {
-        // Fallback for initial load or external navigation
+        
         const path = window.location.pathname;
         const tab = routes[path] || 'dashboard';
         switchTab(tab, false);
@@ -144,10 +144,10 @@ function showNotification(message, type = 'success') {
 
     container.appendChild(toast);
     
-    // Trigger animation
+    
     setTimeout(() => toast.classList.add('visible'), 10);
     
-    // Remove after delay
+    
     setTimeout(() => {
         toast.classList.remove('visible');
         setTimeout(() => toast.remove(), 300);
@@ -303,19 +303,19 @@ function login(event) {
     const token = document.getElementById('token-input').value;
     if (!token) return;
     
-    // Call /api/login to get the HttpOnly session cookie
+    
     fetch('/api/login', {
         method: 'POST',
         headers: { 'X-Admin-Token': token }
     }).then(res => {
         if (res.ok) {
-            dashboardToken = "session_active"; // Just a marker, no longer the actual token
-            localStorage.setItem('hytale_admin_token', 'session_active'); // Keep for UI state
+            dashboardToken = "session_active"; 
+            localStorage.setItem('hytale_admin_token', 'session_active'); 
             const overlay = document.getElementById('login-overlay');
             overlay.classList.add('hidden');
             document.getElementById('dashboard-container').classList.remove('dashboard-locked');
             setTimeout(() => overlay.style.display = 'none', 500);
-            fetchStats(true); // Don't block UI on this
+            fetchStats(true); 
             startSync();
         } else {
             document.getElementById('login-error').style.display = 'block';
@@ -355,13 +355,13 @@ async function fetchVersion() {
             const infoVer = document.getElementById('info-version');
             if (infoVer) infoVer.textContent = 'v' + data.version;
 
-            // System Specs
+            
             if (data.javaVersion) document.getElementById('sys-java').textContent = data.javaVersion;
             if (data.osName) document.getElementById('sys-os-name').textContent = data.osName;
             if (data.osArch) document.getElementById('sys-os-arch').textContent = data.osArch;
             if (data.cores) document.getElementById('sys-cores').textContent = data.cores;
 
-            // Update Memory Stats
+            
             if (data.heapUsed && data.heapMax) {
                 const memPct = Math.round((data.heapUsed / data.heapMax) * 100);
                 const memText = document.getElementById('sys-memory-text');
@@ -370,7 +370,7 @@ async function fetchVersion() {
                 if (memBar) memBar.style.width = `${memPct}%`;
             }
 
-            // Update Disk Stats
+            
             if (data.diskUsed && data.diskTotal) {
                 const diskPct = Math.round((data.diskUsed / data.diskTotal) * 100);
                 const diskText = document.getElementById('sys-disk-text');
@@ -404,12 +404,12 @@ async function fetchStats(isInit = false) {
         document.getElementById('player-count').textContent = stats.onlinePlayers;
         document.getElementById('server-tps').textContent = stats.tps.toFixed(1);
         
-        // Update memory if available
+        
         if (stats.memory) {
             document.getElementById('server-memory').textContent = formatBytes(stats.memory);
         }
         
-        // Update uptime if available
+        
         if (stats.uptimeMs) {
             document.getElementById('server-uptime').textContent = formatUptime(stats.uptimeMs);
         }
@@ -427,7 +427,7 @@ async function fetchStats(isInit = false) {
         console.error('Failed to fetch stats', e);
         updateConnectionStatus('reconnecting');
         
-        // Retry logic
+        
         if (retryCount < MAX_RETRIES) {
             retryCount++;
             setTimeout(() => fetchStats(isInit), 2000 * retryCount);
@@ -491,11 +491,11 @@ function toggleAccordion(id) {
     const isCollapsed = content.classList.contains('collapsed');
     
     if (isCollapsed) {
-        // Expand
+        
         content.classList.remove('collapsed');
         arrow.classList.remove('collapsed');
     } else {
-        // Collapse
+        
         content.classList.add('collapsed');
         arrow.classList.add('collapsed');
     }
@@ -679,7 +679,7 @@ async function handleDrop(e) {
         console.error('Drop error:', err);
     }
     
-    // Cleanup any dragging classes
+    
     document.querySelectorAll('.inv-slot.dragging').forEach(s => s.classList.remove('dragging'));
 }
 
@@ -705,7 +705,7 @@ async function executeMove(fromSection, fromSlot, toSection, toSlot, quantity = 
         
         const data = await response.json();
         if (data.status === 'success') {
-            // Refresh inventory
+            
             viewInv(currentInventoryPlayerUuid);
         } else {
             showNotification(data.error || 'Failed to move item', 'error');
@@ -744,21 +744,21 @@ async function fetchMods() {
         });
         const mods = await res.json();
         
-        // Sort mods alphabetically by name
+        
         mods.sort((a, b) => a.name.localeCompare(b.name));
         
-        // Initialize Router
+        
     const initialPath = window.location.pathname;
     const initialTab = routes[initialPath] || 'server';
-    switchTab(initialTab, false); // Don't push state on initial load
-        // Update counts
+    switchTab(initialTab, false); 
+        
         document.getElementById('mod-count').textContent = mods.length;
         const modCountBadgeServer = document.getElementById('mod-count-badge-server');
         if (modCountBadgeServer) {
             modCountBadgeServer.textContent = mods.length;
         }
         
-        // Populate Server tab mods list
+        
         const listServer = document.getElementById('plugin-list-server');
         if (listServer) {
             listServer.innerHTML = '';
@@ -766,7 +766,7 @@ async function fetchMods() {
                 const div = document.createElement('div');
                 div.className = 'plugin-item';
                 
-                // Build author and downloads info
+                
                 let metaInfo = '';
                 if (mod.author) {
                     metaInfo += `<div style="font-size: 0.6875rem; color: var(--text-secondary);">by ${mod.author}</div>`;
@@ -781,7 +781,7 @@ async function fetchMods() {
                     </div>`;
                 }
                 
-                // Build the HTML
+                
                 div.innerHTML = `
                     <div class="plugin-info">
                         <img src="${mod.iconUrl}" class="plugin-icon" onerror="this.src='https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(mod.name)}'">
@@ -887,7 +887,7 @@ async function viewBansFile() {
             return;
         }
         
-        // Format JSON for display
+        
         let formattedContent;
         try {
             const parsed = JSON.parse(data.content);
@@ -1037,7 +1037,7 @@ function renderPlayers() {
             
             tr.querySelector('.btn-actions').onclick = () => openActionsModal(p.uuid, p.name);
             
-            // Animate in
+            
             setTimeout(() => {
                 tr.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
                 tr.style.opacity = '1';
@@ -1050,17 +1050,17 @@ function renderPlayers() {
         tr.querySelector('.p-health-text').textContent = `${Math.round(p.health)}/${Math.round(p.maxHealth)}`;
         tr.querySelector('.health-bar').style.width = healthPct + '%';
         
-        // Update stamina
+        
         const staminaText = p.stamina !== undefined ? `${Math.round(p.stamina)}/${Math.round(p.maxStamina || 100)}` : 'N/A';
         tr.querySelector('.p-stamina-text').textContent = staminaText;
         tr.querySelector('.stamina-bar').style.width = staminaPct + '%';
         
-        // Update mana
+        
         const manaText = p.mana !== undefined ? `${Math.round(p.mana)}/${Math.round(p.maxMana || 100)}` : 'N/A';
         tr.querySelector('.p-mana-text').textContent = manaText;
         tr.querySelector('.mana-bar').style.width = manaPct + '%';
         
-        // Update defence with percentage
+        
         const defenceDisplay = defence > 0 ? `${defence}%` : '0%';
         tr.querySelector('.p-defence').textContent = defenceDisplay;
         
@@ -1119,7 +1119,7 @@ async function kickPlayer(uuid) {
     }
 }
 
-// Actions Modal
+
 let currentActionPlayer = { uuid: null, name: null };
 
 
@@ -1179,22 +1179,22 @@ async function toggleOP(uuid, name) {
 }
 
 function teleportToPlayer(uuid, name) {
-    // Get list of online players for teleport target
+    
     const otherPlayers = allPlayers.filter(p => p.uuid !== uuid);
     if (otherPlayers.length === 0) {
         showNotification('No other players online to teleport to', 'error');
         return;
     }
     
-    // Show teleport modal
+    
     const modal = document.getElementById('teleport-modal');
     const playerList = document.getElementById('teleport-player-list');
     document.getElementById('teleport-player-name').textContent = `Teleport ${name}`;
     
-    // Clear previous list
+    
     playerList.innerHTML = '';
     
-    // Add each player as a clickable option
+    
     otherPlayers.forEach(player => {
         const item = document.createElement('div');
         item.className = 'teleport-player-item';
@@ -1250,7 +1250,7 @@ function executeTeleport(uuid, name, targetUuid, targetName) {
 
 setInterval(updateServerTime, 1000);
 
-// Debounce search input
+
 let searchTimeout;
 const originalSearchListener = document.getElementById('search').oninput;
 document.getElementById('search').addEventListener('input', (e) => {
@@ -1258,14 +1258,14 @@ document.getElementById('search').addEventListener('input', (e) => {
     searchTimeout = setTimeout(() => renderPlayers(), 300);
 });
 
-// Modal close on escape
+
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeInventory();
     }
 });
 
-// Modal close on overlay click
+
 document.getElementById('inventory-modal').addEventListener('click', (e) => {
     if (e.target.id === 'inventory-modal') {
         closeInventory();
@@ -1290,15 +1290,15 @@ document.getElementById('bans-file-modal').addEventListener('click', (e) => {
     }
 });
 
-// Spin animation for loading
+
 const style = document.createElement('style');
 style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
 document.head.appendChild(style);
 
 
-// ==================== NEW FEATURES ====================
 
-// Gamemode
+
+
 async function setGamemode(uuid, gamemode) {
     if (!dashboardToken) return;
     try {
@@ -1313,7 +1313,7 @@ async function setGamemode(uuid, gamemode) {
         const data = await response.json();
         if (data.status === 'success') {
             showNotification(`Gamemode changed to ${gamemode} for ${currentActionPlayer.name}`, 'success');
-            fetchStats(); // Refresh to show new gamemode in table
+            fetchStats(); 
         } else {
             showNotification(data.error || 'Failed to change gamemode', 'error');
         }
@@ -1322,7 +1322,7 @@ async function setGamemode(uuid, gamemode) {
     }
 }
 
-// Heal Player
+
 async function healPlayer(uuid) {
     if (!await customConfirm('Heal this player to full health?', 'Confirm Heal')) return;
     
@@ -1351,7 +1351,7 @@ async function healPlayer(uuid) {
 }
 
 
-// Mute System
+
 async function mutePlayer(uuid, name) {
     const durations = {
         '5 minutes': 300,
@@ -1479,7 +1479,7 @@ async function fetchMutes() {
     }
 }
 
-// Warp System
+
 let selectedPlayerForWarp = null;
 
 async function fetchWarps() {
@@ -1593,7 +1593,7 @@ async function deleteWarp(name) {
 }
 
 async function teleportPlayerToWarp(warpName) {
-    // Open modal to select which player to teleport
+    
     openWarpTeleportModal(warpName);
 }
 
@@ -1623,7 +1623,7 @@ async function openWarpTeleportModal(warpName) {
             return;
         }
         
-        // Create grid of player avatars
+        
         const grid = document.createElement('div');
         grid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 0.75rem; margin-bottom: 2.5rem;';
         
@@ -1631,7 +1631,7 @@ async function openWarpTeleportModal(warpName) {
             const div = document.createElement('div');
             div.className = 'warp-player-icon';
             
-            // Create avatar image
+            
             const avatarUrl = `/api/avatar/${encodeURIComponent(player.uuid)}`;
             
             div.innerHTML = `
@@ -1659,7 +1659,7 @@ async function executeWarpTeleport(uuid, playerName) {
         return;
     }
     
-    // Store the warp name before closing modal (which sets it to null)
+    
     const warpName = currentWarpForTeleport;
     
     closeWarpTeleportModal();
@@ -1695,18 +1695,18 @@ async function executeWarpTeleport(uuid, playerName) {
     }
 }
 
-// Give Item
+
 async function giveItem(uuid, name) {
     if (!dashboardToken) return;
     
-    // Check if the give item modal is open, if so we might want to get data from it
+    
     const modalInput = document.getElementById('giveitem-search');
     const isModalOpen = document.getElementById('giveitem-modal').classList.contains('active');
     
     let itemId, quantity;
     
     if (isModalOpen) {
-        // This is handled via the confirm button listener in openGiveItemModal
+        
         return;
     } else {
         itemId = await customPrompt('Enter item ID (e.g., hytale:stone):', '', 'Give Item');
@@ -1743,7 +1743,7 @@ async function giveItem(uuid, name) {
     }
 }
 
-// Clear Inventory
+
 async function clearInventory(uuid, name) {
     if (!await customConfirm(`Clear all items from ${name}'s inventory? This cannot be undone!`, 'Confirm Clear Inventory', true)) return;
     
@@ -2396,7 +2396,7 @@ async function updateConfig() {
     payload.letsEncrypt = document.getElementById('cfg-letsEncrypt')?.checked || false;
     payload.letsEncryptEmail = document.getElementById('cfg-letsEncryptEmail')?.value.trim() || '';
     
-    // Discord Integration Config
+    
     payload.discordEnabled = document.getElementById('cfg-discordEnabled')?.checked || false;
     
     const discordTokenElem = document.getElementById('cfg-discordToken');
@@ -2410,7 +2410,7 @@ async function updateConfig() {
     payload.discordChannelJoins = document.getElementById('cfg-discordChannelJoins')?.value.trim() || '';
     payload.discordCommandPrefix = document.getElementById('cfg-discordCommandPrefix')?.value || '!cmd ';
 
-    // HTTPS Config
+    
     payload.useHttps = document.getElementById('cfg-useHttps')?.checked || false;
     payload.domain = document.getElementById('cfg-domain')?.value.trim() || '';
     payload.keystorePath = document.getElementById('cfg-keystorePath')?.value.trim() || 'keystore.jks';
@@ -2433,7 +2433,7 @@ async function updateConfig() {
                 msg += '. Some changes require a restart to take effect.';
             }
             showNotification(msg, 'success');
-            // Refresh to reset password placeholders / status
+            
             setTimeout(() => { fetchConfig(); }, 500); 
         } else {
             showNotification(data.error || 'Failed to update config', 'error');
@@ -2441,7 +2441,7 @@ async function updateConfig() {
     } catch (e) { showNotification('Update request failed', 'error'); }
 }
 
-// Discord
+
 async function testDiscordConnection() {
     const btn = document.getElementById('btn-test-discord');
     if (btn) {
@@ -2479,7 +2479,7 @@ async function testDiscordConnection() {
     }
 }
 
-// Time Control
+
 async function setTime(time) {
     try {
         const response = await fetch('/api/time', {
@@ -2504,7 +2504,7 @@ async function setTime(time) {
     }
 }
 
-// Weather Control
+
 async function setWeather(weather) {
     try {
         const response = await fetch('/api/weather', {
@@ -2529,13 +2529,13 @@ async function setWeather(weather) {
     }
 }
 
-// ==================== CUSTOM MODAL SYSTEM ====================
-// Replace browser confirm(), prompt(), and alert() with custom modals
+
+
 
 let confirmResolve = null;
 let promptResolve = null;
 
-// Custom confirm dialog
+
 function customConfirm(message, title = 'Confirm Action', isDanger = false, allowHtml = false) {
     return new Promise((resolve) => {
         confirmResolve = resolve;
@@ -2557,7 +2557,7 @@ function customConfirm(message, title = 'Confirm Action', isDanger = false, allo
         
         document.getElementById('confirm-modal').classList.add('active');
         
-        // Focus on confirm button
+        
         setTimeout(() => confirmBtn.focus(), 100);
     });
 }
@@ -2570,7 +2570,7 @@ function closeConfirmModal(result) {
     }
 }
 
-// Custom prompt dialog
+
 function customPrompt(message, defaultValue = '', title = 'Input Required') {
     return new Promise((resolve) => {
         promptResolve = resolve;
@@ -2579,14 +2579,14 @@ function customPrompt(message, defaultValue = '', title = 'Input Required') {
         document.getElementById('prompt-input').value = defaultValue;
         document.getElementById('prompt-modal').classList.add('active');
         
-        // Focus on input
+        
         setTimeout(() => {
             const input = document.getElementById('prompt-input');
             input.focus();
             input.select();
         }, 100);
         
-        // Handle Enter key
+        
         const input = document.getElementById('prompt-input');
         input.onkeydown = (e) => {
             if (e.key === 'Enter') {
@@ -2607,10 +2607,10 @@ function closePromptModal(result) {
 }
 
 
-// Removed duplicate console logic
 
 
-// Removed redundant duplicates
+
+
 
 
 function closeAlertModal() {
@@ -2621,7 +2621,7 @@ function closeAlertModal() {
     }
 }
 
-// Close modals on Escape key
+
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         if (document.getElementById('confirm-modal').classList.contains('active')) {
@@ -2636,14 +2636,14 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Close modals on overlay click
+
 document.getElementById('confirm-modal').addEventListener('click', (e) => {
     if (e.target.id === 'confirm-modal') closeConfirmModal(false);
 });
 document.getElementById('prompt-modal').addEventListener('click', (e) => {
     if (e.target.id === 'prompt-modal') closePromptModal(null);
 });
-// Moderation File Viewing
+
 async function viewBansFile() {
     try {
         const res = await fetch('/api/bans/raw', {
@@ -2677,7 +2677,7 @@ function copyBansFile() {
 }
 
 
-// ==================== IMPROVED GAMEMODE MODAL ====================
+
 function openGamemodeModal(uuid, name) {
     const player = allPlayers.find(p => p.uuid === uuid);
     const currentGamemode = player ? player.gameMode : 'Adventure';
@@ -2685,7 +2685,7 @@ function openGamemodeModal(uuid, name) {
     document.getElementById('gamemode-player-name').textContent = `${name} - Change Gamemode`;
     document.getElementById('gamemode-current').textContent = `Current: ${currentGamemode}`;
     
-    // Highlight current gamemode
+    
     const creativeBtn = document.getElementById('gamemode-creative-btn');
     const adventureBtn = document.getElementById('gamemode-adventure-btn');
     
@@ -2698,7 +2698,7 @@ function openGamemodeModal(uuid, name) {
         adventureBtn.classList.add('active-gamemode');
     }
     
-    // Set up click handlers
+    
     creativeBtn.onclick = () => {
         closeGamemodeModal();
         setGamemode(uuid, 'creative');
@@ -2716,7 +2716,7 @@ function closeGamemodeModal() {
     document.getElementById('gamemode-modal').classList.remove('active');
 }
 
-// ==================== IMPROVED GIVE ITEM MODAL ====================
+
 let allItems = [];
 let filteredItems = [];
 let selectedItemForGive = null;
@@ -2727,7 +2727,7 @@ async function openGiveItemModal(uuid, name) {
     document.getElementById('giveitem-quantity').value = '1';
     selectedItemForGive = null;
     
-    // Load items if not already loaded
+    
     if (allItems.length === 0) {
         document.getElementById('giveitem-loading').style.display = 'flex';
         document.getElementById('giveitem-browser').style.display = 'none';
@@ -2736,12 +2736,12 @@ async function openGiveItemModal(uuid, name) {
         document.getElementById('giveitem-browser').style.display = 'block';
     }
     
-    // Show all items initially (sorted alphabetically)
+    
     filteredItems = [...allItems];
     renderItemBrowser();
     updateItemCount();
     
-    // Set up search
+    
     const searchInput = document.getElementById('giveitem-search');
     searchInput.oninput = () => {
         const query = searchInput.value.toLowerCase().trim();
@@ -2753,7 +2753,7 @@ async function openGiveItemModal(uuid, name) {
                 const idLower = item.id.toLowerCase();
                 const keywords = item.keywords || nameLower.replace(/\s+/g, '');
                 
-                // Match against name, ID, or keywords (without spaces)
+                
                 return nameLower.includes(query) || 
                        idLower.includes(query) || 
                        keywords.includes(query.replace(/\s+/g, ''));
@@ -2763,7 +2763,7 @@ async function openGiveItemModal(uuid, name) {
         updateItemCount();
     };
     
-    // Set up give button
+    
     document.getElementById('giveitem-confirm-btn').onclick = () => {
         if (!selectedItemForGive) {
             showNotification('Please select an item first', 'error');
@@ -2780,7 +2780,7 @@ async function openGiveItemModal(uuid, name) {
     
     document.getElementById('giveitem-modal').classList.add('active');
     
-    // Focus search input
+    
     setTimeout(() => searchInput.focus(), 100);
 }
 
@@ -2834,7 +2834,7 @@ function renderItemBrowser() {
         return;
     }
     
-    // Limit to first 100 items for performance
+    
     const itemsToShow = filteredItems.slice(0, 100);
     
     itemsToShow.forEach(item => {
@@ -2859,13 +2859,13 @@ function renderItemBrowser() {
         
         itemCard.onclick = () => {
             selectedItemForGive = item.id;
-            // Update selection visually
+            
             container.querySelectorAll('.item-browser-card').forEach(card => {
                 card.classList.remove('selected');
             });
             itemCard.classList.add('selected');
             
-            // Scroll selected item into view if needed
+            
             itemCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         };
         
@@ -2906,7 +2906,7 @@ async function executeGiveItem(uuid, name, itemId, quantity) {
     }
 }
 
-// Close modals on Escape and overlay click
+
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         if (document.getElementById('gamemode-modal').classList.contains('active')) {
@@ -2918,7 +2918,7 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Add overlay click handlers for new modals
+
 if (document.getElementById('gamemode-modal')) {
     document.getElementById('gamemode-modal').addEventListener('click', (e) => {
         if (e.target.id === 'gamemode-modal') {
@@ -2936,7 +2936,7 @@ if (document.getElementById('giveitem-modal')) {
 }
 
 
-// ==================== CURSEFORGE CACHE MANAGEMENT ====================
+
 async function clearCurseForgeCache() {
     try {
         const response = await fetch('/api/curseforge/clear-cache', {
@@ -2946,7 +2946,7 @@ async function clearCurseForgeCache() {
         const data = await response.json();
         if (data.status === 'success') {
             showNotification('CurseForge cache cleared! Refresh the page to see updated mod info.', 'success');
-            // Optionally refresh mods automatically
+            
             setTimeout(() => {
                 location.reload();
             }, 2000);
@@ -2958,17 +2958,17 @@ async function clearCurseForgeCache() {
     }
 }
 
-// Make it available globally for console access
+
 window.clearCurseForgeCache = clearCurseForgeCache;
 
-// ==================== BACKUP SYSTEM ====================
+
 let backupInterval = 0;
 let pendingBackupFile = null;
 
 async function fetchBackups() {
     if (!dashboardToken) return;
 
-    // Show loading if empty
+    
     const tbody = document.getElementById('backup-list-body');
     if (tbody && tbody.children.length === 0) {
         if(document.getElementById('backup-loading')) document.getElementById('backup-loading').style.display = 'flex';
@@ -2982,7 +2982,7 @@ async function fetchBackups() {
         const backups = await res.json();
         renderBackups(backups);
         
-        // Update badge
+        
         if(document.getElementById('backup-count-badge')) document.getElementById('backup-count-badge').textContent = backups.length;
         
         
@@ -3027,14 +3027,14 @@ function renderBackups(backups) {
     
     if(document.getElementById('backup-empty')) document.getElementById('backup-empty').style.display = 'none';
     
-    // Check for pending backup completion
-    // if (pendingBackupFile) {
-    //    const found = backups.find(b => b.name === pendingBackupFile);
-    //    if (found) {
-    //        showNotification('Backup created successfully', 'success');
-    //        pendingBackupFile = null;
-    //    }
-    // }
+    
+    
+    
+    
+    
+    
+    
+    
 
     backups.forEach(backup => {
         const tr = document.createElement('tr');
@@ -3086,15 +3086,15 @@ async function pollBackupStatus() {
             if (bar) bar.style.width = percent + '%';
             if (percentage) percentage.textContent = percent + '%';
             
-            // Disable buttons
+            
             if (createBtn) createBtn.disabled = true;
             restoreBtns.forEach(b => b.disabled = true);
             deleteBtns.forEach(b => b.disabled = true);
             
         } else {
-            // Backup finished or idle
+            
             if (container && container.style.display !== 'none') {
-                 // Was active, now done
+                 
                  if (status.message === 'Completed') {
                      showNotification('Backup created successfully', 'success');
                      fetchBackups();
@@ -3102,19 +3102,19 @@ async function pollBackupStatus() {
                      showNotification(status.message, 'error');
                  }
                  
-                 // Hide after a brief delay
+                 
                  setTimeout(() => {
                      container.style.display = 'none';
                      if (bar) bar.style.width = '0%';
                  }, 2000);
                  
-                 // Stop polling
+                 
                  if (backupPollInterval) {
                      clearInterval(backupPollInterval);
                      backupPollInterval = null;
                  }
                  
-                 // Re-enable buttons
+                 
                  if (createBtn) createBtn.disabled = false;
                  restoreBtns.forEach(b => b.disabled = false);
                  deleteBtns.forEach(b => b.disabled = false);
@@ -3129,7 +3129,7 @@ async function pollBackupStatus() {
 async function createBackup() {
     if (!dashboardToken) return;
     
-    // showNotification('Starting backup...', 'info');
+    
     
     try {
         const res = await fetch('/api/backup/create', {
@@ -3139,10 +3139,10 @@ async function createBackup() {
         const data = await res.json();
         
         if (data.status === 'success') {
-            // New polling logic
+            
             if (backupPollInterval) clearInterval(backupPollInterval);
             backupPollInterval = setInterval(pollBackupStatus, 1000);
-            pollBackupStatus(); // Immediate check
+            pollBackupStatus(); 
             
         } else {
             showNotification(data.error || 'Backup failed', 'error');
@@ -3245,7 +3245,7 @@ async function updateBackupSchedule() {
     }
 }
 
-// Alias for saveConfig used in index.html
+
 function saveConfig() {
     updateConfig();
 }
@@ -3283,10 +3283,10 @@ async function addLogLevel() {
     } catch (e) { showNotification('Request failed', 'error'); }
 }
 
-// World Info & Gamerules
+
 async function fetchWorldInfo() {
     if (!dashboardToken || document.hidden) return;
-    // Only fetch if on world tab
+    
     const tabWorld = document.getElementById('tab-world');
     if (!tabWorld || !tabWorld.classList.contains('active')) return;
     
@@ -3325,7 +3325,7 @@ async function fetchGameRules() {
         setChecked('rule-isPvpEnabled', rules.isPvpEnabled);
         setChecked('rule-isFallDamageEnabled', rules.isFallDamageEnabled);
         setChecked('rule-isSpawningNPC', rules.isSpawningNPC);
-        setChecked('rule-doDaylightCycle', !rules.isGameTimePaused); // Inverse
+        setChecked('rule-doDaylightCycle', !rules.isGameTimePaused); 
         setChecked('rule-isBlockBreakingAllowed', rules.isBlockBreakingAllowed);
         setChecked('rule-isBlockPlacementAllowed', rules.isBlockPlacementAllowed);
         
@@ -3345,11 +3345,11 @@ async function updateGameRule(rule, value) {
         showNotification('Game rule updated', 'success');
     } catch (e) { 
         showNotification('Failed to update game rule', 'error');
-        fetchGameRules(); // Revert UI
+        fetchGameRules(); 
     }
 }
 
 async function toggleDaylightCycle(enabled) {
-    // "Daylight Cycle" enabled means "Game Time Paused" is false
+    
     updateGameRule('isGameTimePaused', !enabled);
 }

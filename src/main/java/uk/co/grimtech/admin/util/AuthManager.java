@@ -9,13 +9,10 @@ import java.util.UUID;
 import java.util.List;
 
 public class AuthManager {
-    // Maps Session ID to User IP Address
     private static final Map<String, String> activeSessions = new ConcurrentHashMap<>();
     
-    // Maps IP to integer attempts
     private static final Map<String, LoginAttempt> loginAttempts = new ConcurrentHashMap<>();
     
-    // 5 minutes lockout duration
     private static final long LOCKOUT_DURATION_MS = 5 * 60 * 1000L;
     
     private static class LoginAttempt {
@@ -30,7 +27,7 @@ public class AuthManager {
     public static boolean isIpAllowed(String ip) {
         List<String> allowlist = AdminWebDashPlugin.getIpAllowlist();
         if (allowlist == null || allowlist.isEmpty()) {
-            return true; // If empty, allow all
+            return true; 
         }
         return allowlist.contains(ip);
     }
@@ -41,7 +38,7 @@ public class AuthManager {
         
         if (attempt.count >= AdminWebDashPlugin.getLoginRateLimit()) {
             if (System.currentTimeMillis() - attempt.lastAttemptTime > LOCKOUT_DURATION_MS) {
-                // Lockout expired
+                
                 loginAttempts.remove(ip);
                 return true;
             }
@@ -75,11 +72,6 @@ public class AuthManager {
 
     public static boolean isValidSession(String sessionId, String ip) {
         if (sessionId == null || sessionId.isEmpty()) return false;
-        // Basic check, does the session exist.
-        // As a strict security measure, we could verify IP matches:
-        // String boundIp = activeSessions.get(sessionId);
-        // return ip.equals(boundIp);
-        // For now, simpler validation:
         return activeSessions.containsKey(sessionId);
     }
     

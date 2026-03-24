@@ -18,16 +18,16 @@ import java.util.concurrent.CompletableFuture;
 public class CurseForgeAPI {
     private static final String API_KEY = "$2a$10$VJ6wYwy6mFhRg3EB7NabEuD/vGWm4QStItRBOBw4uy5tTaSUMnCF2";
     private static final String BASE_URL = "https://api.curseforge.com/v1";
-    private static final int HYTALE_GAME_ID = 70216; // Hytale's game ID on CurseForge
+    private static final int HYTALE_GAME_ID = 70216; 
     private static final Gson GSON = new Gson();
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
     
-    // Cache for mod metadata with timestamp
+    
     private static final Map<String, CachedMod> modCache = new HashMap<>();
-    private static final long CACHE_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+    private static final long CACHE_DURATION_MS = 15 * 60 * 1000; 
     
     private static class CachedMod {
         JsonObject data;
@@ -47,11 +47,9 @@ public class CurseForgeAPI {
         return AdminWebDashPlugin.getCustomLogger();
     }
     
-    /**
-     * Search for a mod by name on CurseForge
-     */
+    
     public static CompletableFuture<JsonObject> searchMod(String modName) {
-        // Check cache first
+        
         String cacheKey = modName.toLowerCase();
         CachedMod cached = modCache.get(cacheKey);
         if (cached != null && !cached.isExpired()) {
@@ -63,7 +61,7 @@ public class CurseForgeAPI {
             try {
                 getLogger().info("[CurseForge] Searching for mod: " + modName);
                 
-                // Try 1: Search with original name first (no transformation)
+                
                 JsonObject result = searchCurseForge(modName, modName);
                 if (result != null) {
                     getLogger().info("[CurseForge] Found match for " + modName + " (original): " + result.toString());
@@ -71,11 +69,11 @@ public class CurseForgeAPI {
                     return result;
                 }
                 
-                // Try 2: Clean up mod name for search (add spaces before capitals)
+                
                 String searchQuery = modName
                     .replace(":", " ")
                     .replace("_", " ")
-                    .replaceAll("([a-z])([A-Z])", "$1 $2") // Add space before capital letters (CamelCase)
+                    .replaceAll("([a-z])([A-Z])", "$1 $2") 
                     .trim();
                 
                 if (!searchQuery.equals(modName)) {
@@ -88,7 +86,7 @@ public class CurseForgeAPI {
                     }
                 }
                 
-                // Try 3: Without spaces (e.g., "HyShots" instead of "Hy Shots")
+                
                 if (searchQuery.contains(" ")) {
                     String noSpaceQuery = searchQuery.replace(" ", "");
                     if (!noSpaceQuery.equals(modName)) {
@@ -102,7 +100,7 @@ public class CurseForgeAPI {
                     }
                 }
                 
-                // Try 4: Remove common suffixes/words and search again
+                
                 String[] wordsToRemove = {"Tree", "Block", "Item", "Entity", "Mod"};
                 for (String word : wordsToRemove) {
                     String simplifiedQuery = searchQuery.replaceAll("\\b" + word + "\\b", "").replaceAll("\\s+", " ").trim();
@@ -125,14 +123,12 @@ public class CurseForgeAPI {
         });
     }
     
-    /**
-     * Perform the actual CurseForge API search
-     */
+    
     private static JsonObject searchCurseForge(String searchQuery, String originalModName) {
         try {
             String url = BASE_URL + "/mods/search?gameId=" + HYTALE_GAME_ID + 
                         "&searchFilter=" + java.net.URLEncoder.encode(searchQuery, "UTF-8") +
-                        "&pageSize=5"; // Get top 5 results for better matching
+                        "&pageSize=5"; 
             
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
@@ -148,7 +144,7 @@ public class CurseForgeAPI {
             if (response.statusCode() == 200) {
                 JsonObject result = GSON.fromJson(response.body(), JsonObject.class);
                 
-                // Validate response structure
+                
                 if (!result.has("data")) {
                     getLogger().warning("[CurseForge] Invalid response structure for: " + searchQuery);
                     return null;
@@ -157,7 +153,7 @@ public class CurseForgeAPI {
                 JsonArray data = result.getAsJsonArray("data");
                 
                 if (data != null && data.size() > 0) {
-                    // Try to find best match
+                    
                     JsonObject bestMatch = null;
                     int bestScore = 0;
                     
@@ -166,52 +162,52 @@ public class CurseForgeAPI {
                         String cfName = mod.get("name").getAsString();
                         String cfSlug = mod.get("slug").getAsString();
                         
-                        // Normalize both names for comparison (remove spaces, lowercase)
+                        
                         String normalizedCfName = cfName.replaceAll("\\s+", "").toLowerCase();
                         String normalizedCfSlug = cfSlug.replaceAll("[\\s-_]+", "").toLowerCase();
                         String normalizedModName = originalModName.replaceAll("[\\s-_:]+", "").toLowerCase();
                         String normalizedSearchQuery = searchQuery.replaceAll("[\\s-_]+", "").toLowerCase();
                         
-                        // Scoring: prioritize exact matches heavily
+                        
                         int score = 0;
                         
-                        // Highest priority: exact slug match (most reliable identifier)
+                        
                         if (cfSlug.equalsIgnoreCase(originalModName) || normalizedCfSlug.equals(normalizedModName)) {
-                            score = 1000; // Exact slug match - this is the most reliable
+                            score = 1000; 
                         }
-                        // Second priority: exact name match
+                        
                         else if (cfName.equalsIgnoreCase(originalModName) || normalizedCfName.equals(normalizedModName)) {
-                            score = 500; // Exact name match
+                            score = 500; 
                         }
-                        // Third priority: exact match with search query
+                        
                         else if (cfName.equalsIgnoreCase(searchQuery) || normalizedCfSlug.equals(normalizedSearchQuery)) {
-                            score = 400; // Match with processed search query
+                            score = 400; 
                         }
                         else if (normalizedCfName.equals(normalizedSearchQuery)) {
-                            score = 350; // Normalized name matches search query
+                            score = 350; 
                         }
-                        // Fourth priority: slug contains mod name (for partial matches like "hyshots" in "hyslingshots")
+                        
                         else if (normalizedCfSlug.contains(normalizedModName) && normalizedModName.length() >= 5) {
-                            // Calculate score based on how close the match is
+                            
                             int lengthDiff = Math.abs(normalizedCfSlug.length() - normalizedModName.length());
-                            score = 200 - (lengthDiff * 10); // Closer length = higher score
+                            score = 200 - (lengthDiff * 10); 
                         }
                         else if (normalizedCfName.contains(normalizedModName) && normalizedModName.length() >= 5) {
                             int lengthDiff = Math.abs(normalizedCfName.length() - normalizedModName.length());
                             score = 180 - (lengthDiff * 10);
                         }
-                        // Lower priority: partial matches
+                        
                         else if (normalizedCfSlug.startsWith(normalizedModName) || normalizedCfName.startsWith(normalizedModName)) {
-                            score = 70; // Name/slug starts with mod name
+                            score = 70; 
                         } else if (cfName.toLowerCase().contains(originalModName.toLowerCase()) || 
                                    cfName.toLowerCase().contains(searchQuery.toLowerCase())) {
-                            score = 50; // Contains original or search query
+                            score = 50; 
                         } else if (normalizedCfName.contains(normalizedModName) || 
                                    normalizedCfName.contains(normalizedSearchQuery)) {
-                            score = 45; // Contains normalized
+                            score = 45; 
                         } else if (originalModName.toLowerCase().contains(cfName.toLowerCase()) || 
                                    searchQuery.toLowerCase().contains(cfName.toLowerCase())) {
-                            score = 30; // Reverse contains
+                            score = 30; 
                         }
                         
                         getLogger().info("[CurseForge] Candidate: " + cfName + " (slug: " + cfSlug + ", score: " + score + ")" +
@@ -224,39 +220,34 @@ public class CurseForgeAPI {
                     }
                     
                     if (bestMatch == null) {
-                        bestMatch = data.get(0).getAsJsonObject(); // Fallback to first result
+                        bestMatch = data.get(0).getAsJsonObject(); 
                     }
                     
-                    // Extract relevant info
+                    
                     JsonObject modInfo = new JsonObject();
                     modInfo.addProperty("id", bestMatch.get("id").getAsInt());
                     modInfo.addProperty("name", bestMatch.get("name").getAsString());
                     modInfo.addProperty("slug", bestMatch.get("slug").getAsString());
                     
-                    // Get latest file version
                     if (bestMatch.has("latestFiles") && bestMatch.getAsJsonArray("latestFiles").size() > 0) {
                         JsonObject latestFile = bestMatch.getAsJsonArray("latestFiles").get(0).getAsJsonObject();
                         modInfo.addProperty("version", latestFile.get("displayName").getAsString());
                     }
                     
-                    // Get icon/logo
                     if (bestMatch.has("logo")) {
                         JsonObject logo = bestMatch.getAsJsonObject("logo");
                         modInfo.addProperty("iconUrl", logo.get("thumbnailUrl").getAsString());
                     }
                     
-                    // Get author
                     if (bestMatch.has("authors") && bestMatch.getAsJsonArray("authors").size() > 0) {
                         JsonObject author = bestMatch.getAsJsonArray("authors").get(0).getAsJsonObject();
                         modInfo.addProperty("author", author.get("name").getAsString());
                     }
                     
-                    // Get download count
                     if (bestMatch.has("downloadCount")) {
                         modInfo.addProperty("downloads", bestMatch.get("downloadCount").getAsLong());
                     }
                     
-                    // Get CurseForge URL
                     if (bestMatch.has("links")) {
                         JsonObject links = bestMatch.getAsJsonObject("links");
                         if (links.has("websiteUrl")) {
@@ -284,9 +275,7 @@ public class CurseForgeAPI {
         }
     }
     
-    /**
-     * Clear the cache (useful for testing)
-     */
+    
     public static void clearCache() {
         modCache.clear();
         getLogger().info("[CurseForge] Cache cleared");

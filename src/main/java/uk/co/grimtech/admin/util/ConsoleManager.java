@@ -81,7 +81,7 @@ public class ConsoleManager {
             int linesRead = 0;
             StringBuilder sb = new StringBuilder();
 
-            // Read backwards
+            
             while (pointer >= 0 && linesRead < linesToRead) {
                 raf.seek(pointer);
                 int b = raf.read();

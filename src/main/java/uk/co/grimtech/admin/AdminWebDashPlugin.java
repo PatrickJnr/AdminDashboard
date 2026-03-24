@@ -17,7 +17,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.UUID;
 
-// JDA Imports
+
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
@@ -33,11 +33,11 @@ public class AdminWebDashPlugin extends JavaPlugin {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static long startTime;
     private static String adminToken;
-    private static boolean loggingEnabled = false; // Default to false for production
-    private static int port = 9081; // Default port
-    private static int backupInterval = 0; // Default disabled
+    private static boolean loggingEnabled = false; 
+    private static int port = 9081; 
+    private static int backupInterval = 0; 
 
-    // Discord Integration & HTTPS Properties
+    
     private static boolean discordEnabled = false;
     private static String discordToken = "";
     private static String discordGuildId = "";
@@ -51,12 +51,12 @@ public class AdminWebDashPlugin extends JavaPlugin {
     private static String keystorePassword = "";
     private static String domain = "";
     
-    // Reverse Proxy \u0026 Let's Encrypt Settings
+    
     private static boolean reverseProxy = false;
     private static boolean letsEncrypt = false;
     private static String letsEncryptEmail = "";
 
-    // Security Settings
+    
     private static int loginRateLimit = 5;
     private static String logLevel = "INFO";
     private static java.util.List<String> ipAllowlist = new java.util.ArrayList<>();
@@ -128,13 +128,11 @@ public class AdminWebDashPlugin extends JavaPlugin {
         MuteTracker.load();
         WarpManager.load();
         
-        // Start Let's Encrypt scheduled renewal check if enabled
         if (letsEncrypt) {
             uk.co.grimtech.admin.util.LetsEncryptManager.startChallengeServer();
             uk.co.grimtech.admin.util.LetsEncryptManager.startRenewalTask();
         }
 
-        // Start Discord Bot using JDA
         if (discordEnabled && discordToken != null && !discordToken.isEmpty()) {
             try {
                 jda = JDABuilder.createDefault(discordToken)
@@ -143,7 +141,6 @@ public class AdminWebDashPlugin extends JavaPlugin {
                         .build();
                 LOGGER.info("[AdminWebDash] Discord JDA Bot started!");
                 
-                // Keep the timer for updating player count presence
                 new java.util.Timer().scheduleAtFixedRate(new java.util.TimerTask() {
                     @Override
                     public void run() {
@@ -153,7 +150,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
                             LOGGER.log("ERROR", "Failed to sync Discord presence", e);
                         }
                     }
-                }, 5000, 30000); // Wait 5s, then every 30s
+                }, 5000, 30000); 
             } catch (Exception e) {
                 LOGGER.severe("[AdminWebDash] Failed to initialize JDA Discord Bot: " + e.getMessage());
             }
@@ -171,11 +168,11 @@ public class AdminWebDashPlugin extends JavaPlugin {
             System.out.println("[AdminWebDash] Dashboard URL: http://localhost:" + actualPort);
             System.out.println("[AdminWebDash] ========================================");
             
-            // Register Chat Listener using registerAsyncGlobal for IAsyncEvent
+            
             getEventRegistry().registerAsyncGlobal(PlayerChatEvent.class, future -> 
                 future.thenApply(event -> {
                     if (!event.isCancelled()) {
-                        // Check if player is muted
+                        
                         UUID playerUuid = event.getSender().getUuid();
                         if (MuteTracker.isMuted(playerUuid)) {
                             event.setCancelled(true);
@@ -195,7 +192,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
                             }
                             LOGGER.info("[AdminWebDash] Blocked chat from muted player: " + event.getSender().getUsername());
                         } else {
-                            // Only log if not muted
+                            
                             ChatLog.addMessage(event.getSender().getUsername(), event.getContent());
                         }
                     }
@@ -227,14 +224,11 @@ public class AdminWebDashPlugin extends JavaPlugin {
                         loggingEnabled = config.get("loggingEnabled").getAsBoolean();
                     }
                     if (config.has("port")) {
-                        // Check if port is set to 0 (random port)
                         int configPort = config.get("port").getAsInt();
                         if (configPort == 0) {
-                            // Use random available port
                             port = 0;
                         } else {
                             port = configPort;
-                            // Validate port range
                             if (port < 1024 || port > 65535) {
                                 LOGGER.warning("[AdminWebDash] Invalid port " + port + " in config, using default 9081");
                                 port = 9081;
@@ -270,7 +264,6 @@ public class AdminWebDashPlugin extends JavaPlugin {
                 }
             }
 
-            // Generate token if needed
             if (adminToken == null || adminToken.isEmpty()) {
                 adminToken = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
             }
@@ -278,7 +271,6 @@ public class AdminWebDashPlugin extends JavaPlugin {
                 keystorePassword = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
             }
             
-            // Save config with all settings
             JsonObject config = new JsonObject();
             config.addProperty("port", port);
             config.addProperty("backupInterval", backupInterval);
@@ -322,7 +314,6 @@ public class AdminWebDashPlugin extends JavaPlugin {
                 LOGGER.info("[AdminWebDash] ========================================");
             }
             
-            // Note: Actual port will be printed after server starts if using random port
         } catch (Exception e) {
             if (LOGGER != null) {
                 LOGGER.severe("[AdminWebDash] Failed to load/save config: " + e.getMessage());
@@ -332,15 +323,11 @@ public class AdminWebDashPlugin extends JavaPlugin {
 
     private void setupLogger() {
         try {
-            // Use absolute path to ensure we write to the correct location
             File logFile = new File("logs/dashboard.log").getAbsoluteFile();
             File logDir = logFile.getParentFile();
             if (!logDir.exists()) logDir.mkdirs();
-            
-            // Create custom logger that writes directly to file
             LOGGER = new CustomLogger(logFile.getAbsolutePath());
             
-            // Test write
             LOGGER.info("[AdminWebDash] Custom logging initialized to: " + logFile.getAbsolutePath());
         } catch (Exception e) {
             System.err.println("[AdminWebDash] Failed to initialize file logger: " + e.getMessage());
@@ -351,7 +338,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
     public void updateBackupInterval(int interval) {
         backupInterval = interval;
         
-        // Save config
+        
         try {
             File dataDir = new File("mods/AdminWebDash");
             if (!dataDir.exists()) dataDir.mkdirs();
@@ -385,7 +372,6 @@ public class AdminWebDashPlugin extends JavaPlugin {
         }
     }
     
-    // Updates the Discord Bot presence to 'Watching X players'
     private void updateDiscordPresence() {
         if (jda == null) return;
         
@@ -397,13 +383,12 @@ public class AdminWebDashPlugin extends JavaPlugin {
         }
     }
     
-    // Discord JDA Event Listener
+    
     private class DiscordListener extends ListenerAdapter {
         @Override
         public void onMessageReceived(@Nonnull MessageReceivedEvent event) {
             if (event.getAuthor().isBot()) return;
             
-            // For security, only listen to designated channels (if configured)
             String channelId = event.getChannel().getId();
             
             String content = event.getMessage().getContentRaw();
@@ -433,20 +418,20 @@ public class AdminWebDashPlugin extends JavaPlugin {
                     }
                     
                     if (!isCustom) {
-                        // Execute command safely and natively caputure the asynchronous output
+                        
                         CommandManager.get().handleCommand((CommandSender) sender, cmd).whenComplete((result, exception) -> {
                             if (exception != null) {
                                 sender.sendMessage(com.hypixel.hytale.server.core.Message.raw("❌ Execution Exception: " + exception.getMessage()));
                             }
                             
-                            // Commands like /commands dump spin off their own async tasks before responding.
-                            // We need to wait a tiny bit to ensure they finish formatting and sending messages.
+                            
+                            
                             new java.util.Timer().schedule(new java.util.TimerTask() {
                                 @Override
                                 public void run() {
                                     sender.flush();
                                 }
-                            }, 1000); // 1 second delay
+                            }, 1000); 
                         });
                     }
                 } catch (Exception e) {
@@ -456,7 +441,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
         }
 
         private void handleCustomCommand(String cmd, String[] args, String action, DiscordCommandSender sender, net.dv8tion.jda.api.entities.channel.middleman.MessageChannel channel) {
-            // custom help command
+            
             if (action.equals("help")) {
                 StringBuilder helpMsg = new StringBuilder();
                 helpMsg.append("**== Discord Dashboard Commands ==**\n");
@@ -480,7 +465,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
                 return;
             }
 
-            // time and weather
+            
             if (action.equals("time")) {
                 if (args.length >= 2) {
                     JsonObject payload = new JsonObject();
@@ -512,7 +497,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
             String playerName = args[1];
             String uuid = null;
             
-            // Look up UUID
+            
             java.util.List<com.hypixel.hytale.server.core.universe.PlayerRef> players = com.hypixel.hytale.server.core.universe.Universe.get().getPlayers();
             for (com.hypixel.hytale.server.core.universe.PlayerRef ref : players) {
                 if (ref.getUsername().equalsIgnoreCase(playerName)) {
@@ -624,12 +609,12 @@ public class AdminWebDashPlugin extends JavaPlugin {
         @Override
         @Nonnull
         public UUID getUuid() {
-            return new UUID(0, 0); // Console UUID
+            return new UUID(0, 0); 
         }
 
         @Override
         public boolean hasPermission(@Nonnull String id) {
-            return true; // Discord commands run as Console/OP
+            return true; 
         }
 
         @Override
@@ -640,9 +625,9 @@ public class AdminWebDashPlugin extends JavaPlugin {
         public void flush() {
             synchronized (output) {
                 if (output.length() > 0) {
-                    // Strip any tags and send
+                    
                     String text = output.toString().replaceAll("<[^>]*>", "");
-                    // Max Discord message length is 2000
+                    
                     if (text.length() > 1900) {
                         text = text.substring(0, 1900) + "\n... [TRUNCATED]";
                     }

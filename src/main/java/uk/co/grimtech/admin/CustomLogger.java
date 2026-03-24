@@ -7,14 +7,11 @@ import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-/**
- * Custom logger that writes directly to a file, bypassing Java's Logger system
- * which is being intercepted by Hytale's logging infrastructure.
- */
+
 public class CustomLogger {
     private final String logFilePath;
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
-    private final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    private final long MAX_FILE_SIZE = 10 * 1024 * 1024; 
     
     public CustomLogger(String logFilePath) {
         this.logFilePath = logFilePath;

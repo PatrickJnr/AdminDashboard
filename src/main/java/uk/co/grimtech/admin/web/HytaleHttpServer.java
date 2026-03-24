@@ -36,7 +36,7 @@ public class HytaleHttpServer {
                 ? new InetSocketAddress("127.0.0.1", actualPort) 
                 : new InetSocketAddress(actualPort);
         
-        // If we are using HTTPS, start an HttpsServer instead
+        
         if (AdminWebDashPlugin.useHttps()) {
             try {
                 server = HttpsServer.create(address, 0);
@@ -63,15 +63,13 @@ public class HytaleHttpServer {
             AdminWebDashPlugin.getCustomLogger().info("[HTTP] Starting HTTP Server on port " + actualPort + (AdminWebDashPlugin.isReverseProxy() ? " (Reverse Proxy Mode - Bound to 127.0.0.1)" : ""));
         }
         
-        // Static assets handler
         StaticHandler staticHandler = new StaticHandler();
         staticHandler.preLoadAssets();
         server.createContext("/", staticHandler);
         
-        // API handler
         server.createContext("/api", new ApiHandler());
 
-        server.setExecutor(null); // creates a default executor
+        server.setExecutor(null); 
         server.start();
     }
     
@@ -113,7 +111,7 @@ public class HytaleHttpServer {
     }
 
     private void generateSelfSignedCert(File keystoreFile, String password) throws Exception {
-        // Find keytool
+        
         String javaHome = System.getProperty("java.home");
         File keytool = new File(javaHome, "bin/keytool");
         if (!keytool.exists()) {
@@ -129,13 +127,13 @@ public class HytaleHttpServer {
             domain = "localhost";
         }
 
-        // Ensure parent directory exists
+        
         File parentDir = keystoreFile.getParentFile();
         if (parentDir != null && !parentDir.exists()) {
             parentDir.mkdirs();
         }
 
-        // keytool -genkeypair -alias adminwebdash -keyalg RSA -keysize 2048 -storetype JKS -keystore keystore.jks -validity 3650 -storepass password -keypass password -dname "CN=localhost, OU=Hytale, O=Grimtech, L=City, ST=State, C=US"
+        
         ProcessBuilder pb = new ProcessBuilder(
             keytool.getAbsolutePath(),
             "-genkeypair",
@@ -181,7 +179,7 @@ public class HytaleHttpServer {
                 "/web/js/charts.js",
                 "/web/assets/img/logo.png",
                 "/web/assets/fonts/Hytale.woff2"
-                // Add more as needed, but let's stick to core ones or scan
+                
             };
             
             for (String asset : assets) {
@@ -199,7 +197,7 @@ public class HytaleHttpServer {
             String origPath = t.getRequestURI().getPath();
             String path = origPath;
             
-            // Clean URL Routing: Serve index.html for known routes
+            
             if (path.equals("/") || 
                 path.equals("/dashboard") || 
                 path.equals("/server") || 
@@ -215,7 +213,7 @@ public class HytaleHttpServer {
                 path = "/index.html";
             }
             
-            // Legacy redirect (optional, but good for compatibility)
+            
             if (path.equals("/dashboard.html")) {
                 path = "/index.html";
             }
@@ -224,7 +222,7 @@ public class HytaleHttpServer {
             byte[] response = assetCache.get(resourcePath);
             
             if (response == null) {
-                // Fallback to direct load or 404
+                
                 response = loadFromResources(resourcePath);
             }
 
@@ -237,7 +235,6 @@ public class HytaleHttpServer {
                 return;
             }
 
-            // Content-Type detection
             String contentType = "text/plain";
             if (path.endsWith(".html")) contentType = "text/html; charset=utf-8";
             else if (path.endsWith(".css")) contentType = "text/css";
@@ -249,16 +246,16 @@ public class HytaleHttpServer {
 
             t.getResponseHeaders().set("Content-Type", contentType);
 
-            // Caching headers - Use a static ETag for pre-loaded assets to allow browser caching
-            // but also allow cache-busting via our versioning if needed
-            t.getResponseHeaders().set("Cache-Control", "public, max-age=3600"); // 1 hour
+            
+            
+            t.getResponseHeaders().set("Cache-Control", "public, max-age=3600"); 
             t.getResponseHeaders().set("ETag", "\"" + lastPreloadTime + "_" + resourcePath.hashCode() + "\"");
 
-            // If it's the HTML file, inject a version parameter into the content
+            
             if (path.endsWith(".html")) {
                 String html = new String(response, java.nio.charset.StandardCharsets.UTF_8);
-                // Inject version once or on every hit? For now, we keep it dynamic if we want live updates
-                // but we could also pre-process this.
+                
+                
                 String version = String.valueOf(lastPreloadTime);
                 html = html.replace("<script>", "<script>\n        const APP_VERSION = '" + version + "';\n        ");
                 response = html.getBytes(java.nio.charset.StandardCharsets.UTF_8);
@@ -286,7 +283,7 @@ public class HytaleHttpServer {
             String path = t.getRequestURI().getPath();
             String method = t.getRequestMethod();
 
-            // ACME Challenge bypass
+            
             if (path.startsWith("/.well-known/acme-challenge/")) {
                 String token = path.substring(path.lastIndexOf('/') + 1);
                 String challengeContent = uk.co.grimtech.admin.util.LetsEncryptManager.getChallengeContent(token);
@@ -299,22 +296,19 @@ public class HytaleHttpServer {
                 }
             }
 
-            // Log EVERY request that hits the API handler
             AdminWebDashPlugin.getCustomLogger().debug("[HTTP] Incoming: " + method + " " + path);
 
-            // Set CORS headers early
+            
             t.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
             t.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
             t.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, X-Admin-Token");
 
-            // Handle preflight requests
             if ("OPTIONS".equalsIgnoreCase(method)) {
                 t.sendResponseHeaders(204, -1);
                 t.close();
                 return;
             }
 
-            // Get IP Address
             String clientIp = t.getRemoteAddress().getAddress().getHostAddress();
             if (AdminWebDashPlugin.isReverseProxy()) {
                 String forwardedFor = t.getRequestHeaders().getFirst("X-Forwarded-For");
@@ -323,13 +317,13 @@ public class HytaleHttpServer {
                 }
             }
 
-            // IP Allowlist Check
+            
             if (!uk.co.grimtech.admin.util.AuthManager.isIpAllowed(clientIp)) {
                 sendErrorResponse(t, 403, "Forbidden - IP Not Allowed");
                 return;
             }
 
-            // Token Validation (skip for public endpoints like item icons, avatars, and version)
+            
             boolean isPublicEndpoint = (path.startsWith("/api/item/") || path.startsWith("/api/mod/")) && path.endsWith("/icon") 
                                         || path.equals("/api/version")
                                         || path.startsWith("/api/avatar/");
@@ -346,7 +340,7 @@ public class HytaleHttpServer {
             }
 
             if (!isPublicEndpoint) {
-                // Fallback to X-Admin-Token for immediate backwards compatibility until frontend reloads, but prefer Session
+                
                 String authToken = t.getRequestHeaders().getFirst("X-Admin-Token");
                 String expectedToken = AdminWebDashPlugin.getAdminToken();
                 

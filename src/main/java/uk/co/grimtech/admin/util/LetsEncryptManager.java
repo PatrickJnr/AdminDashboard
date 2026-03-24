@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 
 public class LetsEncryptManager {
     private static final String LETS_ENCRYPT_URL = "acme://letsencrypt.org";
-    // For testing without rate limits, could use staging: "acme://letsencrypt.org/staging"
+    
     
     private static final Map<String, String> acmeChallenges = new HashMap<>();
     private static ScheduledExecutorService renewalExecutor;
@@ -44,10 +44,7 @@ public class LetsEncryptManager {
         return acmeChallenges.get(token);
     }
 
-    /**
-     * Starts a lightweight HTTP server on port 80 solely to serve ACME HTTP-01 challenges.
-     * Let's Encrypt always validates on port 80, regardless of what port your HTTPS server runs on.
-     */
+    
     public static void startChallengeServer() {
         if (challengeServerSocket != null && !challengeServerSocket.isClosed()) return;
         try {
@@ -62,7 +59,7 @@ public class LetsEncryptManager {
                                 int len = client.getInputStream().read(buf);
                                 if (len <= 0) { client.close(); return; }
                                 String req = new String(buf, 0, len);
-                                // Parse path from request line
+                                
                                 String path = "";
                                 if (req.startsWith("GET ")) {
                                     int end = req.indexOf(' ', 4);
@@ -255,9 +252,6 @@ public class LetsEncryptManager {
         if (renewalExecutor != null && !renewalExecutor.isShutdown()) return;
 
         renewalExecutor = Executors.newSingleThreadScheduledExecutor();
-        // Check once a day if renewal is needed. Let's Encrypt handles skipping early renewals if cert is valid.
-        // Actually acme4j doesn't easily return the expiry of an existing cert without reading it from keystore.
-        // A simple approach is to rely on triggering it and acme4j or we can read the keystore.
         renewalExecutor.scheduleAtFixedRate(() -> {
             try {
                 if (!AdminWebDashPlugin.isLetsEncrypt()) return;
@@ -281,7 +275,6 @@ public class LetsEncryptManager {
                             long timeRemaining = cert.getNotAfter().getTime() - System.currentTimeMillis();
                             long daysRemaining = TimeUnit.MILLISECONDS.toDays(timeRemaining);
                             if (daysRemaining > 30) {
-                                // Cert is still valid for > 30 days, skip renewal
                                 return;
                             }
                             getLogger().info("[Let's Encrypt] Certificate expires in " + daysRemaining + " days. Initiating renewal.");

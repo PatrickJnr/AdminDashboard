@@ -113,7 +113,7 @@ public class BackupManager {
     }
 
     private static final int MAX_BACKUPS = 10;
-    private static final long MIN_DISK_SPACE_BYTES = 500 * 1024 * 1024; // 500 MB
+    private static final long MIN_DISK_SPACE_BYTES = 500 * 1024 * 1024; 
 
     public static String createBackup() {
         if (isBackingUp) {
@@ -161,7 +161,7 @@ public class BackupManager {
                 } catch (Exception e) {
                     AdminWebDashPlugin.getCustomLogger().log("ERROR", "Backup failed", e);
                     currentStatusMessage = "Failed: " + e.getMessage();
-                    // Try to clean up temp file
+                    
                     try { Files.deleteIfExists(tempFile); } catch (Exception ignored) {}
                 } finally {
                     isBackingUp = false;
@@ -186,7 +186,7 @@ public class BackupManager {
             }
             
             if (backups.size() > MAX_BACKUPS) {
-                // Sort by date (oldest first)
+                
                 backups.sort((p1, p2) -> {
                     try {
                         return Files.getLastModifiedTime(p1).compareTo(Files.getLastModifiedTime(p2));
@@ -235,7 +235,7 @@ public class BackupManager {
             Files.walkFileTree(sourceDir, new java.nio.file.SimpleFileVisitor<Path>() {
                 @Override
                 public java.nio.file.FileVisitResult preVisitDirectory(Path dir, java.nio.file.attribute.BasicFileAttributes attrs) throws IOException {
-                    // Exclude logs directory as it changes frequently causing CRC errors
+                    
                     if (dir.endsWith("logs") || dir.endsWith("Backups")) {
                         return java.nio.file.FileVisitResult.SKIP_SUBTREE;
                     }
@@ -245,16 +245,14 @@ public class BackupManager {
                 @Override
                 public java.nio.file.FileVisitResult visitFile(Path file, java.nio.file.attribute.BasicFileAttributes attrs) throws IOException {
                     try {
-                        // Skip if file is inside logs or backups (double check)
-                        // Also skip the backup file itself if sourceDir is parent of backupDir
+                        
+                        
                         if (file.equals(zipFile)) return java.nio.file.FileVisitResult.CONTINUE;
                         
                         Path targetFile = sourceDir.relativize(file);
                         
                         zos.putNextEntry(new ZipEntry(targetFile.toString()));
                         
-                        // Read file and write to zip
-                        // Handle file read errors gracefully (e.g. file locked/changed)
                         try (InputStream is = Files.newInputStream(file)) {
                              byte[] buffer = new byte[1024];
                              int len;
@@ -269,7 +267,6 @@ public class BackupManager {
                         }
 
                     } catch (IOException e) {
-                         // Similar handling for ZipEntry errors
                          System.err.println("Failed to add zip entry: " + file);
                     }
                     return java.nio.file.FileVisitResult.CONTINUE;
@@ -288,23 +285,23 @@ public class BackupManager {
 
         CompletableFuture.runAsync(() -> {
             try {
-                // 1. Kick players
+                
                 Universe.get().disconnectAllPLayers();
                 AdminWebDashPlugin.getCustomLogger().info("Restoring: All players kicked.");
                 
-                // 2. Unload worlds
+                
                 Universe.get().shutdownAllWorlds();
                 AdminWebDashPlugin.getCustomLogger().info("Restoring: All worlds stopped.");
                 
-                // Wait for file handles to release
+                
                 try { Thread.sleep(3000); } catch (InterruptedException e) {}
 
-                // 3. Unzip backup to Universe directory
+                
                 Path universePath = Universe.get().getPath();
                 AdminWebDashPlugin.getCustomLogger().info("Restoring: Unzipping to " + universePath);
                 unzip(backupFile, universePath);
 
-                // 4. Reload Default World
+                
                 String defaultWorld = HytaleServer.get().getConfig().getDefaults().getWorld();
                 if (defaultWorld != null) {
                      AdminWebDashPlugin.getCustomLogger().info("Restoring: Reloading world " + defaultWorld);
@@ -356,12 +353,12 @@ public class BackupManager {
             
             int interval = json.get("intervalMinutes").getAsInt();
             
-            // Update and save config
+            
             AdminWebDashPlugin.getInstance().updateBackupInterval(interval);
             
-            // scheduling happens via the plugin reloading or we can just update the task here?
-            // The plugin loads config on start. But we also need to update the running task.
-            // setSchedule is called by the plugin start, but we should also call it here for immediate effect.
+            
+            
+            
             setSchedule(interval);
             
             return "{\"status\": \"success\"}";
@@ -378,7 +375,7 @@ public class BackupManager {
             String fileName = json.get("name").getAsString();
             Path backupFile = backupDirectory.resolve(fileName);
             
-            // Security check: ensure we are only deleting files in the backup directory
+            
             if (!backupFile.normalize().startsWith(backupDirectory.normalize())) {
                 return "{\"error\": \"Invalid file path\"}";
             }
@@ -402,7 +399,7 @@ public class BackupManager {
             while ((entry = zis.getNextEntry()) != null) {
                 Path newPath = targetDir.resolve(entry.getName());
                 
-                // Protection against Zip Slip
+                
                 if (!newPath.normalize().startsWith(targetDir.normalize())) {
                     continue;
                 }
