@@ -1,4 +1,5 @@
-
+/* global Chart */
+/* eslint-disable no-unused-vars */
 
 const originalFetch = window.fetch;
 window.fetch = function() {
@@ -1092,7 +1093,7 @@ async function loadSecureAvatar(img, url) {
     }
 }
 
-document.getElementById('search').addEventListener('input', renderPlayers);
+
 
 async function kickPlayer(uuid) {
     const p = allPlayers.find(x => x.uuid === uuid);
@@ -1252,7 +1253,7 @@ setInterval(updateServerTime, 1000);
 
 
 let searchTimeout;
-const originalSearchListener = document.getElementById('search').oninput;
+
 document.getElementById('search').addEventListener('input', (e) => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => renderPlayers(), 300);
@@ -2612,6 +2613,14 @@ function closePromptModal(result) {
 
 
 
+function customAlert(message, title = 'Notice') {
+    return new Promise((resolve) => {
+        window.alertResolve = resolve;
+        document.getElementById('alert-title').textContent = title;
+        document.getElementById('alert-message').textContent = message;
+        document.getElementById('alert-modal').classList.add('active');
+    });
+}
 
 function closeAlertModal() {
     document.getElementById('alert-modal').classList.remove('active');
@@ -2644,22 +2653,7 @@ document.getElementById('prompt-modal').addEventListener('click', (e) => {
     if (e.target.id === 'prompt-modal') closePromptModal(null);
 });
 
-async function viewBansFile() {
-    try {
-        const res = await fetch('/api/bans/raw', {
-            headers: { 'X-Admin-Token': dashboardToken }
-        });
-        const data = await res.json();
-        
-        document.getElementById('bans-file-path').textContent = data.path || 'Unknown';
-        document.getElementById('bans-file-modified').textContent = data.modified || 'Unknown';
-        document.getElementById('bans-file-content').textContent = data.content || '[]';
-        
-        document.getElementById('bans-file-modal').classList.add('active');
-    } catch (e) {
-        showNotification('Failed to read bans file', 'error');
-    }
-}
+
 
 function closeBansFileModal() {
     document.getElementById('bans-file-modal').classList.remove('active');

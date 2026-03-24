@@ -421,7 +421,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
                         
                         CommandManager.get().handleCommand((CommandSender) sender, cmd).whenComplete((result, exception) -> {
                             if (exception != null) {
-                                sender.sendMessage(com.hypixel.hytale.server.core.Message.raw("❌ Execution Exception: " + exception.getMessage()));
+                                sender.sendMessage(com.hypixel.hytale.server.core.Message.raw("[ERROR] Execution Exception: " + exception.getMessage()));
                             }
                             
                             
@@ -435,7 +435,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
                         });
                     }
                 } catch (Exception e) {
-                    event.getChannel().sendMessage("❌ Error dispatching command: " + e.getMessage()).queue();
+                    event.getChannel().sendMessage("[ERROR] Error dispatching command: " + e.getMessage()).queue();
                 }
             }
         }
@@ -570,9 +570,9 @@ public class AdminWebDashPlugin extends JavaPlugin {
             try {
                 JsonObject result = GSON.fromJson(response, JsonObject.class);
                 if (result.has("status") && result.get("status").getAsString().equals("success")) {
-                    channel.sendMessage("✅ Command executed successfully.").queue();
+                    channel.sendMessage("[SUCCESS] Command executed successfully.").queue();
                 } else if (result.has("error")) {
-                    channel.sendMessage("❌ Error: " + result.get("error").getAsString()).queue();
+                    channel.sendMessage("[ERROR] Error: " + result.get("error").getAsString()).queue();
                 } else {
                     channel.sendMessage("Result: " + response).queue();
                 }
@@ -634,7 +634,7 @@ public class AdminWebDashPlugin extends JavaPlugin {
                     channel.sendMessage("```\n" + text + "```").queue();
                     output.setLength(0);
                 } else {
-                    channel.sendMessage("✅ Command executed (no output).").queue();
+                    channel.sendMessage("[SUCCESS] Command executed (no output).").queue();
                 }
             }
         }

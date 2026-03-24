@@ -1,123 +1,90 @@
 # Admin WebDash
-
-**Version 1.0.1**
-
-A powerful web-based administration panel for Hytale servers, providing real-time monitoring and management capabilities through a beautiful Hytale-themed interface.
-
-## Features
-
-### Dashboard Overview
-- **Live Server Stats**: Real-time TPS, Memory Usage, and Player Count monitoring.
-- **Server Activity**: Monitor chat and console logs in real-time.
-- **Quick Actions**: Common tasks accessible directly from the main dashboard.
-
-### Player Management
-- **Unified Player List**: View all online players with detailed stats (Health, Stamina, Mana, Defense).
-- **Moderation Tools**: Built-in Ban, Kick, and Mute (temp/perm) functionality.
-- **Inventory Viewer**: See player inventories in real-time.
-- **Player Actions**: 
-  - Heal / Feed
-  - Clear Inventory
-  - Change Gamemode (Adventure/Creative)
-  - Teleport
-  - Give Items (with visual item browser)
-
-### World & Environment
-- **Multi-World Support**: Monitor all loaded worlds and their individual performance (TPS).
-- **Time & Weather**: Control time of day (Day, Night, Noon, Midnight) and weather (Clear, Rain, Storm).
-- **Warp System**: Create, delete, and teleport to warp points.
-
-### Advanced Metrics
-- **System Performance**: Detailed breakdown of CPU Load, Heap Memory, and Non-Heap Memory.
-- **Thread Analysis**: Monitor active thread counts and Garbage Collection stats.
-- **World Performance**: Per-world TPS tracking to identify lag sources.
-
-### File Management
-- **Backup System**: 
-  - Create full server backups with one click.
-  - Schedule automatic backups (configurable interval).
-  - Restore server from backups.
-  - Download or delete old backups.
-- **Log Explorer**: Browse, view, and download server log files directly from the browser.
-- **Mod List**: View installed mods with metadata and CurseForge integration.
-
-### Server Configuration
-- **Web Config Editor**: Modify server settings (MOTD, Max Players, View Radius) without restarting (hot-reload supported).
-- **Dynamic Logging**: Adjust log levels for specific packages on the fly for debugging.
-
----
-
-## Installation
-
-### Standard Installation
-
-1. Download `AdminWebDash-1.0.1.jar` from the releases page.
-2. Place the JAR file in your Hytale server's `mods` folder.
-3. Start your Hytale server.
-4. Check the console for the **Admin Token** and **Dashboard URL**.
-5. Open your browser and navigate to `http://localhost:9081` (default).
-
-### Docker Installation
-
-If running in Docker, map the dashboard port in your `docker-compose.yml`:
-
-```yaml
-services:
-  hytale:
-    image: ghcr.io/machinastudios/hytale
-    ports:
-      - "9081:9081"  # Admin WebDash
-    volumes:
-      - ./mods:/hytale/mods
-    # ... other config
-```
-
----
-
-## Configuration
-
-The mod creates a `config.json` in `mods/AdminWebDash/`.
-
-```json
-{
-  "port": 9081,
-  "adminToken": "your-secure-token",
-  "backupInterval": 0,
-  "loggingEnabled": false
-}
-```
-
-| Option | Description | Default |
-|Wrapper|---|---|
-| `port` | Web server port. Set to `0` for random. | `9081` |
-| `adminToken` | Security token for login. Auto-generated. | `(Random)` |
-| `backupInterval` | Auto-backup interval in minutes. `0` = Disabled. | `0` |
-| `loggingEnabled` | Write dashboard logs to `logs/dashboard.log`. | `false` |
-
----
-
-## Security
-
-- **Token Authentication**: Access restricted by a secure token.
-- **Local Access Only**: By default, the dashboard is accessible on localhost. Use a reverse proxy (Nginx/Apache) for external access with SSL.
-
----
-
-## Keyboard Shortcuts
-
-| Key | Action |
-|---|---|
-| `Ctrl + R` | Refresh Data |
-| `Ctrl + F` | Focus Search |
-| `Esc` | Close Modals |
-
----
-
-## Support & Credits
-
-Created by **Patrick Jr.**
-
-- **Discord**: [Join the Community](https://discord.gg/YUxuTa4ZzX)
-- **CurseForge**: [PatrickJr's Projects](https://www.curseforge.com/members/patrickjr/projects)
-
-*All rights reserved. This mod is provided as-is for use with Hytale servers.*
+ 
+ **Version 1.0.1**
+ 
+ A powerful, high-performance web administration panel for Hytale servers. Real-time monitoring, player management, and world control through a premium, Hytale-inspired interface.
+ 
+ ## Key Features
+ 
+ ### Dashboard & Monitoring
+ - **Live Stats**: Real-time TPS, Memory Usage (Heap/Non-Heap), and Player Count.
+ - **System Metrics**: Monitor CPU Load and Garbage Collection in real-time.
+ - **Logs & Activity**: Live console and chat stream.
+ 
+ ### Player Management
+ - **Unified List**: Detailed stats (Health, Stamina, Mana, Defense) for all online players.
+ - **Moderation**: One-click Kick, Ban, and Mute (supporting both temp and perm).
+ - **Interactive Control**: 
+   - Real-time Inventory Viewer.
+   - Heal, Feed, and Teleport actions.
+   - Dynamic Item Browser for giving items.
+   - Gamemode switching (Adventure/Creative/Spectator).
+ 
+ ### World & Environment
+ - **Multi-World Support**: Track performance (TPS) per world.
+ - **Atmosphere Control**: Instantly skip time or change weather.
+ - **Warp System**: Manage server warps with ease.
+ 
+ ### Advanced Tools
+ - **Files & Backups**: Browse logs, create full server backups, and manage mod lists (with CurseForge integration).
+ - **Web Config**: Hot-reload server settings (MOTD, Max Players) without downtime.
+ - **Discord Integration**: Bridge your server with Discord for chat logs, alerts, and remote commands.
+ 
+ ---
+ 
+ ## Installation
+ 
+ 1. **Download**: Grab `AdminWebDash-1.0.1.jar` from the releases page.
+ 2. **Setup**: Place the JAR into your Hytale `mods` folder.
+ 3. **Launch**: Start your server. The console will display your **Admin Token** and **Dashboard URL**.
+ 4. **Access**: Navigate to `http://localhost:9081` (default).
+ 
+> **Note:** If running in Docker, ensure port `9081` is mapped in your `docker-compose.yml`.
+ 
+ ---
+ 
+ ## Configuration
+ 
+ Settings are stored in `mods/AdminWebDash/config.json`. The mod automatically generates this on first run.
+ 
+ | Option | Description | Default |
+ | :--- | :--- | :--- |
+ | `port` | Web server port (set `0` for random) | `9081` |
+ | `adminToken` | Secret key for dashboard access | `(Auto-generated)` |
+ | `ipAllowlist` | List of IPs permitted to access the dashboard | `[]` (Allow All) |
+ | `loginRateLimit` | Failed attempts before temporary lockout | `5` |
+ | `backupInterval`| Auto-backup frequency in minutes (`0` = Off) | `0` |
+ | `useHttps` | Enable SSL/TLS encryption | `false` |
+ | `loggingEnabled`| Write dashboard activity to local logs | `false` |
+ 
+ ---
+ 
+ ## Security
+ 
+ - **Authentication**: All API requests require the `X-Admin-Token` header.
+ - **IP Protection**: Use `ipAllowlist` to restrict access to known administrative IPs.
+ - **Brute-Force Prevention**: Automatic lockout after multiple failed login attempts.
+ - **Encryption**: Built-in support for HTTPS and Let's Encrypt.
+ 
+ ---
+ 
+ ## Shortcuts
+ 
+ | Key | Action |
+ | :--- | :--- |
+ | `Ctrl + F` | Focus Search |
+ | `Ctrl + R` | Refresh Data |
+ | `Esc` | Close Active Modal |
+ | `Enter` | Submit Prompt/Confirm |
+ 
+ ---
+ 
+ ## License & Credits
+ 
+ Created by **Patrick Jr.**  
+ Distributed under the [MIT License](LICENSE.md).
+ 
+ - **Discord**: [Join the Community](https://discord.gg/YUxuTa4ZzX)
+ - **CurseForge**: [PatrickJr's Projects](https://www.curseforge.com/members/patrickjr/projects)
+ 
+ *This mod is provided as-is for Hytale server administration.*
