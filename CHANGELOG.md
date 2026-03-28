@@ -1,6 +1,17 @@
 # Changelog
 
-## Version 1.0.2 - 21st February 2026
+## Version 1.0.4 - 27th March 2026
+
+### Refactoring & Compatibility
+- **Hytale API Migration:** Updated for Hytale Server Runtime **2026.03.26-89796e57b**.
+- **Messaging Update:** Migrated all player notifications and disconnection reasons to the new `FormattedMessage` API.
+- **Inventory Sync:** Resolved a compilation error by removing the obsolete `sendInventory()` method; now leveraging the Hytale ECS automatic component synchronization.
+- **API Reliability:** Validated administrative actions against the latest `Universe` and `PlayerRef` internal changes.
+
+## Version 1.0.3 - 21st February 2026
+
+### Maintenance
+- Built for 2026.02.18-f3b8fff95
 
 ### New Features
 

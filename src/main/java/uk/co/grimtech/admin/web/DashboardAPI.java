@@ -559,7 +559,6 @@ public class DashboardAPI {
                         if (finalQuantity > 0) {
                             inv.moveItem(fromSection, fromSlot, finalQuantity, toSection, toSlot);
                             playerComp.markNeedsSave();
-                            playerComp.sendInventory();
                             return "{\"status\": \"success\"}";
                         }
                         return "{\"error\": \"Invalid quantity or empty slot\"}";
@@ -1465,7 +1464,7 @@ public class DashboardAPI {
             
             PlayerRef ref = Universe.get().getPlayer(uuid);
             if (ref != null && ref.getPacketHandler() != null) {
-                ref.getPacketHandler().disconnect(reason);
+                ref.getPacketHandler().disconnect(Message.raw(reason));
                 getLogger().info("[API] Kicked player " + ref.getUsername() + " (" + uuid + ") - Reason: " + reason);
                 return "{\"status\": \"success\", \"message\": \"Player kicked\"}";
             }
@@ -1508,7 +1507,7 @@ public class DashboardAPI {
             
             if (added) {
                 if (ref != null && ref.getPacketHandler() != null) {
-                    ref.getPacketHandler().disconnect("Banned: " + reason);
+                    ref.getPacketHandler().disconnect(Message.raw("Banned: " + reason));
                 }
                 getLogger().info("[API] Banned player " + playerName + " (" + uuid + ") - Reason: " + reason);
                 return "{\"status\": \"success\", \"message\": \"Player banned\"}";
