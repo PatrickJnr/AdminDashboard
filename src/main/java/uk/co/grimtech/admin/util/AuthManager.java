@@ -1,83 +1,84 @@
 package uk.co.grimtech.admin.util;
 
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import uk.co.grimtech.admin.AdminWebDashPlugin;
 import uk.co.grimtech.admin.CustomLogger;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.UUID;
-import java.util.List;
-
 public class AuthManager {
-    private static final Map<String, String> activeSessions = new ConcurrentHashMap<>();
-    
-    private static final Map<String, LoginAttempt> loginAttempts = new ConcurrentHashMap<>();
-    
-    private static final long LOCKOUT_DURATION_MS = 5 * 60 * 1000L;
-    
-    private static class LoginAttempt {
-        int count = 0;
-        long lastAttemptTime = System.currentTimeMillis();
-    }
+  private static final Map<String, String> activeSessions = new ConcurrentHashMap<>();
 
-    private static CustomLogger getLogger() {
-        return AdminWebDashPlugin.getCustomLogger();
-    }
+  private static final Map<String, LoginAttempt> loginAttempts = new ConcurrentHashMap<>();
 
-    public static boolean isIpAllowed(String ip) {
-        List<String> allowlist = AdminWebDashPlugin.getIpAllowlist();
-        if (allowlist == null || allowlist.isEmpty()) {
-            return true; 
-        }
-        return allowlist.contains(ip);
-    }
+  private static final long LOCKOUT_DURATION_MS = 5 * 60 * 1000L;
 
-    public static boolean canAttemptLogin(String ip) {
-        LoginAttempt attempt = loginAttempts.get(ip);
-        if (attempt == null) return true;
-        
-        if (attempt.count >= AdminWebDashPlugin.getLoginRateLimit()) {
-            if (System.currentTimeMillis() - attempt.lastAttemptTime > LOCKOUT_DURATION_MS) {
-                
-                loginAttempts.remove(ip);
-                return true;
-            }
-            return false;
-        }
-        return true;
-    }
+  private static class LoginAttempt {
+    int count = 0;
+    long lastAttemptTime = System.currentTimeMillis();
+  }
 
-    public static void recordFailedLogin(String ip) {
-        loginAttempts.compute(ip, (key, attempt) -> {
-            if (attempt == null) {
-                attempt = new LoginAttempt();
-            }
-            attempt.count++;
-            attempt.lastAttemptTime = System.currentTimeMillis();
-            return attempt;
-        });
-        getLogger().warning("[Auth] Failed login attempt from IP: " + ip);
-    }
+  private static CustomLogger getLogger() {
+    return AdminWebDashPlugin.getCustomLogger();
+  }
 
-    public static void recordSuccessfulLogin(String ip) {
+  public static boolean isIpAllowed(String ip) {
+    List<String> allowlist = AdminWebDashPlugin.getIpAllowlist();
+    if (allowlist == null || allowlist.isEmpty()) {
+      return true;
+    }
+    return allowlist.contains(ip);
+  }
+
+  public static boolean canAttemptLogin(String ip) {
+    LoginAttempt attempt = loginAttempts.get(ip);
+    if (attempt == null) return true;
+
+    if (attempt.count >= AdminWebDashPlugin.getLoginRateLimit()) {
+      if (System.currentTimeMillis() - attempt.lastAttemptTime > LOCKOUT_DURATION_MS) {
+
         loginAttempts.remove(ip);
+        return true;
+      }
+      return false;
     }
+    return true;
+  }
 
-    public static String createSession(String ip) {
-        String sessionId = UUID.randomUUID().toString();
-        activeSessions.put(sessionId, ip);
-        getLogger().info("[Auth] New session created for IP: " + ip);
-        return sessionId;
-    }
+  public static void recordFailedLogin(String ip) {
+    loginAttempts.compute(
+        ip,
+        (key, attempt) -> {
+          if (attempt == null) {
+            attempt = new LoginAttempt();
+          }
+          attempt.count++;
+          attempt.lastAttemptTime = System.currentTimeMillis();
+          return attempt;
+        });
+    getLogger().warning("[Auth] Failed login attempt from IP: " + ip);
+  }
 
-    public static boolean isValidSession(String sessionId, String ip) {
-        if (sessionId == null || sessionId.isEmpty()) return false;
-        return activeSessions.containsKey(sessionId);
+  public static void recordSuccessfulLogin(String ip) {
+    loginAttempts.remove(ip);
+  }
+
+  public static String createSession(String ip) {
+    String sessionId = UUID.randomUUID().toString();
+    activeSessions.put(sessionId, ip);
+    getLogger().info("[Auth] New session created for IP: " + ip);
+    return sessionId;
+  }
+
+  public static boolean isValidSession(String sessionId, String ip) {
+    if (sessionId == null || sessionId.isEmpty()) return false;
+    return activeSessions.containsKey(sessionId);
+  }
+
+  public static void invalidateSession(String sessionId) {
+    if (sessionId != null) {
+      activeSessions.remove(sessionId);
     }
-    
-    public static void invalidateSession(String sessionId) {
-        if (sessionId != null) {
-            activeSessions.remove(sessionId);
-        }
-    }
+  }
 }

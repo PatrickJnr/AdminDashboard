@@ -1,12 +1,18 @@
 # Changelog
 
-## Version 1.0.4 - 27th March 2026
+## [0.8] - 28th March 2026
+ 
+ ### Added
+- **Modernized UI Messaging** - Full migration to the `FormattedMessage` API for all player notifications, alerts, and disconnection reasons, ensuring crisp and localized text rendering across the dashboard.
 
-### Refactoring & Compatibility
-- **Hytale API Migration:** Updated for Hytale Server Runtime **2026.03.26-89796e57b**.
-- **Messaging Update:** Migrated all player notifications and disconnection reasons to the new `FormattedMessage` API.
-- **Inventory Sync:** Resolved a compilation error by removing the obsolete `sendInventory()` method; now leveraging the Hytale ECS automatic component synchronization.
-- **API Reliability:** Validated administrative actions against the latest `Universe` and `PlayerRef` internal changes.
+### Fixed
+- **ECS Inventory Synchronization** - Resolved persistent inventory sync issues by removing obsolete manual networking calls in favor of the Hytale ECS automatic component synchronization.
+- **Search Debouncing & UI Stability** - Refactored the dashboard's search logic with optimized debouncing to prevent UI lag during high-frequency player list filtering.
+- **Modern Hytale Support** - Full update for the latest Hytale server version (`2026.03.26-89796e57b`), ensuring all internal `Universe` and `PlayerRef` lookups are robust.
+- **Codebase Housekeeping** - Performed an extensive refactor to remove redundant comments and stabilize event listeners for a more professional, human-readable source.
+
+### Maintenance
+- Built for Hytale Server Version 2026.03.26-89796e57b.
 
 ## Version 1.0.3 - 21st February 2026
 
