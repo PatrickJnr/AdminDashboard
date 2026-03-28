@@ -4,13 +4,13 @@
 
 ### What's New
 
-**Discord Bot Integration**
+**Discord Bot Integration** [BETA]
 - Connect a Discord bot to your server for remote management.
 - Run server commands directly from Discord (kick, ban, mute, heal, give items, set time/weather, etc.).
 - Live player count shown as the bot's status.
 - Dedicated channel support for logs, alerts, and join notifications.
 
-**HTTPS & Let's Encrypt Support**
+**HTTPS & Let's Encrypt Support** [BETA]
 - Enable HTTPS to secure your dashboard with a proper SSL certificate.
 - Automatic certificate generation and renewal via Let's Encrypt — no manual setup needed.
 - Falls back to a self-signed certificate automatically if Let's Encrypt isn't configured.
