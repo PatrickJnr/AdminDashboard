@@ -811,7 +811,8 @@
         </div>
 
 
-        </div>
+
+
         <div class="tab-content" id="tab-files">
             <div class="hytale-panel">
                 <div class="hytale-panel-inner">
@@ -889,56 +890,46 @@
         </div>
 
         <div class="tab-content" id="tab-info">
-            <div style="margin-bottom: 2rem;">
-                <div class="hytale-panel" style="margin-bottom: 0;">
+            <div class="info-layout">
+                <div class="hytale-panel">
                     <div class="hytale-panel-inner">
                         <div class="card-header">
                             <h2>About Admin WebDash</h2>
                         </div>
-                        <div style="color: var(--text-secondary); line-height: 1.6;">
-                            <p style="margin-bottom: 1rem;">
-                                The <strong>Admin WebDash</strong> is a comprehensive web-based administration tool for Hytale servers. 
-                                It provides real-time monitoring, player management, and server control directly from your browser.
-                            </p>
-                            <p>
-                                Built with performance and usability in mind, it integrates seamlessly with the Hytale server environment 
-                                to give administrators the tools they need to manage their communities effectively.
-                            </p>
+                        <div class="info-text-content">
+                            <p>Admin WebDash is a comprehensive administration tool for Hytale servers, providing real-time monitoring and server control directly from the browser.</p>
+                            <p>This mod and its dashboard are open-source and developed by Patrick Jr. for the Hytale community.</p>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-                <a href="https://discord.gg/YUxuTa4ZzX" target="_blank" rel="noopener" style="text-decoration: none;">
-                    <div class="hytale-panel" style="height: 100%; margin-bottom: 0; transition: transform 0.2s ease;">
-                        <div class="hytale-panel-inner" style="display: flex; align-items: center; gap: 1.5rem; padding: 1.5rem; height: 100%;">
-                            <span class="material-symbols-outlined" style="font-size: 2.5rem; color: #5865F2;">forum</span>
-                            <div style="flex: 1;">
-                                <h3 style="margin-bottom: 0.25rem; color: var(--text-primary); font-size: 1rem;">Join Discord</h3>
-                                <p style="font-size: 0.8125rem; margin-bottom: 0.75rem;">Get support & chat with community.</p>
-                                <div class="btn btn-discord" style="width: 100%; text-align: center;">Join Server</div>
+                <div class="info-links-grid">
+                    <a href="https://discord.gg/YUxuTa4ZzX" target="_blank" rel="noopener" class="info-link-card hytale-panel">
+                        <div class="hytale-panel-inner">
+                            <span class="material-symbols-outlined discord-icon">forum</span>
+                            <div class="info-link-text">
+                                <h3>Join Discord</h3>
+                                <p>Get support & chat with commonity.</p>
+                                <span class="btn btn-secondary btn-sm">JOIN SERVER</span>
                             </div>
                         </div>
-                    </div>
-                </a>
+                    </a>
 
-                <a href="https://ko-fi.com/patrickjr" target="_blank" rel="noopener" style="text-decoration: none;">
-                    <div class="hytale-panel" style="height: 100%; margin-bottom: 0; transition: transform 0.2s ease;">
-                        <div class="hytale-panel-inner" style="display: flex; align-items: center; gap: 1.5rem; padding: 1.5rem; height: 100%;">
-                            <span class="material-symbols-outlined" style="font-size: 2.5rem; color: #FF5E5B;">favorite</span>
-                            <div style="flex: 1;">
-                                <h3 style="margin-bottom: 0.25rem; color: var(--text-primary); font-size: 1rem;">Support Project</h3>
-                                <p style="font-size: 0.8125rem; margin-bottom: 0.75rem;">Support development on Ko-fi.</p>
-                                <div class="btn btn-kofi" style="width: 100%; text-align: center;">Support</div>
+                    <a href="https://ko-fi.com/patrickjr" target="_blank" rel="noopener" class="info-link-card hytale-panel">
+                        <div class="hytale-panel-inner">
+                            <span class="material-symbols-outlined kofi-icon">favorite</span>
+                            <div class="info-link-text">
+                                <h3>Support Project</h3>
+                                <p>Support development on Ko-fi.</p>
+                                <span class="btn btn-secondary btn-sm">SUPPORT</span>
                             </div>
                         </div>
-                    </div>
-                </a>
-            </div>
+                    </a>
+                </div>
 
-            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); text-align: center; color: var(--text-secondary); font-size: 0.875rem;">
-                <p>Version <span id="info-version">Loading...</span> &bull; Developed by Patrick Jr.</p>
+                <div class="info-footer">
+                    <p>Version <span id="info-version">Loading...</span> &bull; Developed by Patrick Jr.</p>
+                </div>
             </div>
         </div>
     </div>
