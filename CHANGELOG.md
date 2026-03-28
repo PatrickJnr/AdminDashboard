@@ -1,47 +1,49 @@
 # Changelog
 
-## [0.8] - 28th March 2026
- 
- ### Added
-- **Modernized UI Messaging** - Full migration to the `FormattedMessage` API for all player notifications, alerts, and disconnection reasons, ensuring crisp and localized text rendering across the dashboard.
+## [1.0.3] - 28th March 2026
 
-### Fixed
-- **ECS Inventory Synchronization** - Resolved persistent inventory sync issues by removing obsolete manual networking calls in favor of the Hytale ECS automatic component synchronization.
-- **Search Debouncing & UI Stability** - Refactored the dashboard's search logic with optimized debouncing to prevent UI lag during high-frequency player list filtering.
-- **Modern Hytale Support** - Full update for the latest Hytale server version (`2026.03.26-89796e57b`), ensuring all internal `Universe` and `PlayerRef` lookups are robust.
-- **Codebase Housekeeping** - Performed an extensive refactor to remove redundant comments and stabilize event listeners for a more professional, human-readable source.
-
-### Maintenance
-- Built for Hytale Server Version 2026.03.26-89796e57b.
-
-## Version 1.0.3 - 21st February 2026
-
-### Maintenance
-- Built for 2026.02.18-f3b8fff95
-
-### New Features
+### What's New
 
 **Discord Bot Integration**
-- Connect a Discord bot to your server for remote management
-- Run server commands directly from Discord (kick, ban, mute, heal, give items, set time/weather, etc.)
-- Live player count shown as the bot's status
-- Dedicated channel support for logs, alerts, and join notifications
+- Connect a Discord bot to your server for remote management.
+- Run server commands directly from Discord (kick, ban, mute, heal, give items, set time/weather, etc.).
+- Live player count shown as the bot's status.
+- Dedicated channel support for logs, alerts, and join notifications.
 
 **HTTPS & Let's Encrypt Support**
-- Enable HTTPS to secure your dashboard with a proper SSL certificate
-- Automatic certificate generation and renewal via Let's Encrypt — no manual setup needed
-- Falls back to a self-signed certificate automatically if Let's Encrypt isn't configured
+- Enable HTTPS to secure your dashboard with a proper SSL certificate.
+- Automatic certificate generation and renewal via Let's Encrypt — no manual setup needed.
+- Falls back to a self-signed certificate automatically if Let's Encrypt isn't configured.
 
 **Security Improvements**
-- Added an IP Allowlist to restrict dashboard access to trusted addresses only
-- Login rate limiting to block brute-force attempts
-- Improved session management with secure cookies
+- Added an IP Allowlist to restrict dashboard access to trusted addresses only.
+- Login rate limiting to block brute-force attempts.
+- Improved session management with secure cookies.
 
-### Improvements
-- **Log Filtering:** Filter server logs by level (Info, Warn, Error) and search by keyword
-- **Log Deletion:** Delete old log files directly from the dashboard
-- **Self-Healing HTTPS:** Server automatically generates a certificate on first start if none exists
-- **Config Tab:** SSL, domain, and Let's Encrypt settings now editable from the dashboard UI
+### UI/UX & Website Improvements
+- **Premium Interface Overhaul:** Replaced standard static styles with a modern, high-contrast, premium dark mode glassmorphism UI.
+- **Glassmorphic Panels:** Introduced multi-layered backdrop-filters with subtle border refractions and inset shadows for authentic depth.
+- **Robust Typography:** Upgraded header texts to feature rich linear gradients (`#ffe98d` to `#cf9a1c`), enhancing readability.
+- **Localized Assets:** Implemented local image resources for window decorations (container corners), maintaining the authentic Hytale aesthetic without external network reliance.
+- **Refined Interactivity:** Stripped hyper-animated layout shifts/bounces on-hover in favor of polished gradient and subtle glow transitions, creating a robust, professional feel based on direct user feedback.
+
+### Added
+- **Modernized UI Messaging:** Full migration to the `FormattedMessage` API for all player notifications, alerts, and disconnection reasons, ensuring crisp and localized text rendering across the dashboard.
+
+### Improvements (General)
+- **Log Filtering:** Filter server logs by level (Info, Warn, Error) and search by keyword.
+- **Log Deletion:** Delete old log files directly from the dashboard.
+- **Self-Healing HTTPS:** Server automatically generates a certificate on first start if none exists.
+- **Config Tab:** SSL, domain, and Let's Encrypt settings now editable from the dashboard UI.
+
+### Fixed
+- **ECS Inventory Synchronization:** Resolved persistent inventory sync issues by removing obsolete manual networking calls in favor of the Hytale ECS automatic component synchronization.
+- **Search Debouncing & UI Stability:** Refactored the dashboard's search logic with optimized debouncing to prevent UI lag during high-frequency player list filtering.
+- **Modern Hytale Support:** Full update for the latest Hytale server version, ensuring all internal `Universe` and `PlayerRef` lookups are robust.
+- **Codebase Housekeeping:** Performed an extensive refactor to remove redundant AI comments and stabilize event listeners for a more professional, human-readable source.
+
+### Maintenance
+- Built and validated for Hytale Server Version 2026.03.26-89796e57b.
 
 ## Version 1.0.1 - 19th February 2026
 
