@@ -1,8 +1,6 @@
 # Admin WebDash
  
- **Version 1.0.1**
- 
- A powerful, high-performance web administration panel for Hytale servers. Real-time monitoring, player management, and world control through a premium, Hytale-inspired interface.
+A powerful, high-performance web administration panel for Hytale servers. Real-time monitoring, player management, and world control through a premium, Hytale-inspired interface.
  
  ## Key Features
  
@@ -12,7 +10,7 @@
  - **Logs & Activity**: Live console and chat stream.
  
  ### Player Management
- - **Unified List**: Detailed stats (Health, Stamina, Mana, Defense) for all online players.
+ - **Unified List**: Detailed stats (Health, Stamina, Mana, Defence) for all online players.
  - **Moderation**: One-click Kick, Ban, and Mute (supporting both temp and perm).
  - **Interactive Control**: 
    - Real-time Inventory Viewer.
